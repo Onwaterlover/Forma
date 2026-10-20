@@ -90,7 +90,11 @@ export function SettingsForm({
       )}
 
       <SectionTitle>{t("settings.ai")}</SectionTitle>
-      <Card><p className="text-sm text-muted">{aiConfigured ? "✓" : t("settings.aiOff")}</p></Card>
+      <Card className={aiConfigured ? "py-1 sm:py-1" : undefined}>
+        {aiConfigured
+          ? <Switch checked={settings.ai} label={t("settings.aiSwitch")} hint={t("settings.aiHint")} onChange={(v) => set({ ai: v })} />
+          : <p className="text-sm text-muted">{t("settings.aiNotConfigured")}</p>}
+      </Card>
 
       <SectionTitle>{t("settings.password")}</SectionTitle>
       <Card>

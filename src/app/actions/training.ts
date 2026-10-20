@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { adaptToLocation, shortenSession } from "@/engine/adapt";
 import { estimateMinutes } from "@/engine/duration";
-import { ENGINE_VERSION, generatePlan } from "@/engine/generator";
+import { ENGINE_VERSION, generatePlan, rebuildSession } from "@/engine/generator";
 import { prescribe } from "@/engine/prescribe";
 import { parseProfile } from "@/engine/profile";
 import { suggestNext } from "@/engine/progression";
@@ -225,24 +225,43 @@ export async function analyzePlan(planId: string) {
 }
 
 // ── Workouts ─────────────────────────────────────────────────────────────
-export async function startWorkout(planId: string | null, sessionKey: string | null, minutes?: number) {
+/** Pseudo-place for "no equipment at all today". */
+const NO_EQUIPMENT = "__none";
+
+export async function startWorkout(planId: string | null, sessionKey: string | null, minutes?: number, place?: string) {
   const user = await requireUser();
   const library = await libraryFor(user.id);
   const plan = planId ? await getPlan(user.id, planId) : null;
   const session = plan?.data.sessions.find((s) => s.key === sessionKey) ?? null;
   let exercises = session?.exercises ?? [];
-  // "Shorter workout": keep the most important work for the time available (the plan itself is unchanged).
-  const profile = minutes ? await getProfile(user.id) : null;
-  if (session && profile && minutes && minutes >= 10 && minutes <= 120) {
-    exercises = shortenSession(session, minutes, { profile, prefs: await getPrefs(user.id), library }).session.exercises;
-  }
   const t = translator(user.locale);
+  const mins = minutes && minutes >= 10 && minutes <= 120 ? minutes : undefined;
+  const profile = mins || place ? await getProfile(user.id) : null;
+  const loc = place && place !== NO_EQUIPMENT ? profile?.locations.find((l) => l.id === place) : undefined;
+  let locationId = session?.locationId ?? null;
+  const suffix: string[] = [];
+  if (session && profile && (mins || place)) {
+    const prefs = await getPrefs(user.id);
+    if (place) {
+      // Another place / no equipment: rebuild the same session for what's available (not just strip it).
+      const equipment = place === NO_EQUIPMENT ? [] : loc?.equipment ?? [];
+      const rebuilt = rebuildSession(profile, session, equipment, { prefs, library, minutes: mins });
+      const adapted = rebuilt?.session ?? adaptToLocation(session, place === NO_EQUIPMENT ? session.locationId : place, { profile, prefs, library }).session;
+      exercises = rebuilt || !mins ? adapted.exercises : shortenSession(adapted, mins, { profile, prefs, library }).session.exercises;
+      locationId = place === NO_EQUIPMENT ? null : place;
+      suffix.push(place === NO_EQUIPMENT ? t("today.noEquipment") : loc?.name ?? "");
+    } else if (mins) {
+      // "Shorter workout": keep the most important work for the time available (the plan itself is unchanged).
+      exercises = shortenSession(session, mins, { profile, prefs, library }).session.exercises;
+    }
+    if (mins) suffix.push(`${mins} ${t("common.min")}`);
+  }
   const id = crypto.randomUUID();
   const histories = await Promise.all(exercises.map((pe) => exerciseHistory(user.id, pe.exerciseId, 3)));
   const payload: WorkoutPayload = {
     id, planId: plan?.id ?? null, planVersion: plan?.current_version ?? null, sessionKey: session?.key ?? null,
-    name: session ? `${session.name ?? t(`template.${session.template}`)}${minutes ? ` (${t("workout.shortened")}, ${minutes} ${t("common.min")})` : ""}` : t("workout.emptyWorkout"),
-    locationId: session?.locationId ?? null, mode: (await getSettings(user.id)).logMode, status: "in_progress",
+    name: session ? `${session.name ?? t(`template.${session.template}`)}${suffix.filter(Boolean).length ? ` (${suffix.filter(Boolean).join(", ")})` : ""}` : t("workout.emptyWorkout"),
+    locationId, mode: (await getSettings(user.id)).logMode, status: "in_progress",
     startedAt: nowIso(), endedAt: null, notes: null, clientUpdatedAt: nowIso(),
     exercises: exercises.map((pe, i) => {
       const ex = library.find((e) => e.id === pe.exerciseId);
@@ -353,8 +372,17 @@ export async function regenerateWithFeedback(raw: unknown): Promise<{ error?: st
   return {};
 }
 
-/** "Not today": record the session as skipped so the rotation moves on to the next one. */
+/** "Not today, later": the session stays next in line (the rotation does not move on). */
+export async function postponeSession(planId: string, sessionKey: string) {
+  await recordNotToday(planId, sessionKey, "postponed");
+}
+
+/** "Skip it": record the session as skipped so the rotation moves on to the next one. */
 export async function skipSession(planId: string, sessionKey: string) {
+  await recordNotToday(planId, sessionKey, "skipped");
+}
+
+async function recordNotToday(planId: string, sessionKey: string, note: "skipped" | "postponed") {
   const user = await requireUser();
   const plan = await getPlan(user.id, planId);
   const session = plan?.data.sessions.find((s) => s.key === sessionKey);
@@ -363,7 +391,7 @@ export async function skipSession(planId: string, sessionKey: string) {
   const now = nowIso();
   await upsertWorkout(user.id, {
     id: crypto.randomUUID(), planId, planVersion: plan.current_version, sessionKey, name: session.name ?? t(`template.${session.template}`),
-    locationId: session.locationId, mode: "simple", status: "abandoned", startedAt: now, endedAt: now, notes: "skipped", clientUpdatedAt: now, exercises: [],
+    locationId: session.locationId, mode: "simple", status: "abandoned", startedAt: now, endedAt: now, notes: note, clientUpdatedAt: now, exercises: [],
   });
   revalidatePath("/");
 }

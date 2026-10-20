@@ -8,7 +8,7 @@ export const en: Dict = {
     close: "Close", search: "Search", loading: "Loading…", error: "Something went wrong", retry: "Try again", yes: "Yes", no: "No",
     optional: "optional", min: "min", kg: "kg", g: "g", ml: "ml", kcal: "kcal", undo: "Undo", saved: "Saved", apply: "Apply",
     accept: "Accept", reject: "Reject", today: "Today", yesterday: "Yesterday", none: "None", estimate: "estimate", skip: "Skip",
-    deleted: "Deleted", change: "Change", of: "of", show: "Show", hide: "Hide", continue: "Continue", or: "or",
+    deleted: "Deleted", change: "Change", of: "of", show: "Show", hide: "Hide", more: "More", continue: "Continue", or: "or",
   },
   auth: {
     login: "Log in", logout: "Log out", register: "Create account", email: "Email", password: "Password", name: "Name",
@@ -258,6 +258,7 @@ export const en: Dict = {
     uploading: "Uploading…", tooLarge: "The photo is too large.", invalid: "Couldn't read that photo.", saved: "Photo saved.", choosePose: "Choose a view",
   },
   today: {
+    skipTitle: "What's up?", optShorter: "I have less time", optShorterHint: "A shorter version — the most important exercises stay.", optPlace: "No gym or equipment today", optPlaceHint: "I'll rebuild the same workout from what you have — still a proper session.", noEquipment: "no equipment", noEquipmentPlace: "No equipment (home, hotel, park)", optPostpone: "Postpone to next time", optPostponeHint: "This workout will wait — nothing is lost.", optSkip: "Skip this workout", optSkipHint: "Move on to the next one in the plan.", postponed: "Postponed. This workout will wait for next time.", postponedToday: "Postponed today — it's waiting for next time.", wherePlace: "Where are you training today?", howLong: "How much time do you have?", fullTime: "As planned",
     clock: "Now", scheduledToday: "Today", scheduledOn: "Planned: {day}", anytime: "Whenever you have time", shorter: "Shorter", skipToday: "Skip", skipped: "Skipped. The next workout is waiting.", shorterTitle: "How much time do you have today?",
     greeting: "Hi, {name}", nextWorkout: "Next workout", noPlan: "You don't have a workout plan yet.", restDay: "Rest day according to your plan. You can still do the next workout if you like.",
     food: "Food today", logFood: "Add food", weight: "Weight today", quickWeight: "Save", modules: "Turn on in settings: {module}",
@@ -271,6 +272,24 @@ export const en: Dict = {
     deleteHint: "Permanently removes all your workouts, diary and settings from this server.", password: "Change password", currentPassword: "Current password", newPassword: "New password",
     passwordChanged: "Password changed. Please log in again.", wrongPassword: "Current password is wrong.", about: "About",
     disclaimer: "This app is not a medical device and doesn't replace advice from a doctor, physiotherapist or dietitian. If you have pain or health concerns, see a professional.",
-    ai: "AI assistant", aiOff: "Off. All core features work without AI.", used: "used", expires: "valid until",
+    ai: "AI assistant", used: "used", expires: "valid until",
+    aiSwitch: "Turn on the AI assistant", aiHint: "Your question and the data it needs (your training plan or that day's food diary, calorie target, latest weight) are sent to Claude (Anthropic). Photos and passwords are never sent. You always confirm changes to your plan or diary first.",
+    aiNotConfigured: "The assistant isn't connected yet: the admin needs to add ANTHROPIC_API_KEY in the Vercel settings (see the README). All core features work without AI.",
+  },
+  assistant: {
+    open: "Assistant", title: "Assistant", placeholder: "Say what to change or ask a question…", send: "Send", thinking: "Thinking…", newChat: "New chat",
+    apply: "Apply", reject: "No thanks", applied: "Applied", rejected: "Dismissed",
+    introTraining: "I can swap an exercise, rebuild your plan from your feedback or answer a training question. I always show changes for you to confirm first.",
+    introNutrition: "I can add food to your diary (values come from the product database, never guesses) or answer a food question. I always show entries for you to confirm first.",
+    exTraining1: "Swap the bench press for something on a machine", exTraining2: "My workouts are too long, shorten them", exTraining3: "My shoulder hurts when I press", exTraining4: "How many sets for back per week is good?",
+    exNutrition1: "Add 2 eggs and a slice of bread for breakfast", exNutrition2: "How much protein am I missing today?", exNutrition3: "What could I eat tonight to hit my protein?", exNutrition4: "Add 650 kcal for dinner out",
+    consentTitle: "Turn on the AI assistant?", enable: "Turn on assistant",
+    swapTitle: "Swap exercise", planTitle: "New plan version", prefTitle: "Mark exercise", foodTitle: "Add to diary", quickTitle: "Quick entry",
+    refused: "I can't help with that one.", empty: "I don't have a good answer for that — try asking another way.",
+    errors: {
+      not_configured: "The assistant isn't connected (no API key).", disabled: "The assistant is turned off in Settings.", limit: "Today's question limit is used up. Come back tomorrow.",
+      key: "The API key is invalid — check ANTHROPIC_API_KEY in Vercel.", busy: "The assistant is busy right now. Try again in a moment.", unavailable: "The assistant is unavailable right now. Try again later.",
+      invalid: "Couldn't send the message.", expired: "This proposal is no longer valid.", stale: "Your plan changed in the meantime — ask for the proposal again.", generic: "Something went wrong. Please try again.",
+    },
   },
 };

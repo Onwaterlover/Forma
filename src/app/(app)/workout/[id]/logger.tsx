@@ -1,11 +1,11 @@
 "use client";
-import { ArrowDown, ArrowUp, Check, CloudOff, MapPin, Minus, NotebookPen, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyWorkoutToPlan } from "@/app/actions/training";
 import { BackButton } from "@/components/back-button";
 import { HowTo } from "@/components/how-to";
-import { Choices, DecimalInput, Sheet, useToast } from "@/components/client";
+import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, Card, cx, Notice } from "@/components/ui";
 import { shortenSession } from "@/engine/adapt";
 import { isPossible } from "@/engine/equipment";
@@ -27,6 +27,8 @@ type Settings = { restTimer: boolean; autoTimer: boolean; showEffort: boolean; l
 const STORE = (id: string) => `forma.workout.${id}`;
 const now = () => new Date().toISOString();
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.max(0, s % 60)).padStart(2, "0")}`;
+/** 75 → "1:15", 3725 → "1:02:05" */
+const clock = (s: number) => (s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` : mmss(s));
 
 function newSet(w: WorkoutPayload, ei: number, j: number, weightKg: number | null): WorkoutSet {
   return { id: `${w.id}:${ei}:${j}:${Math.random().toString(36).slice(2, 6)}`, type: "working", reps: null, weightKg, rir: null, rpe: null, durationS: null, completed: false };
@@ -51,10 +53,12 @@ export function WorkoutLogger({
 
   const [w, setW] = useState<WorkoutPayload>(initial);
   const [sync, setSync] = useState<"saved" | "saving" | "offline">("saved");
-  const [sheet, setSheet] = useState<null | { kind: "swap"; index: number } | { kind: "shorten" } | { kind: "location" } | { kind: "finish" } | { kind: "apply" } | { kind: "delete" } | { kind: "abandon" }>(null);
+  const [sheet, setSheet] = useState<null | { kind: "swap"; index: number } | { kind: "shorten" } | { kind: "location" } | { kind: "finish" } | { kind: "apply" } | { kind: "delete" } | { kind: "abandon" } | { kind: "more" } | { kind: "exercise"; index: number }>(null);
   const [rest, setRest] = useState<{ endsAt: number; total: number } | null>(null);
   const [tick, setTick] = useState(Date.now());
   const [notesOpen, setNotesOpen] = useState<number | null>(null);
+  // Rest suggested by the last completed set (the timer is started manually unless auto-start is on).
+  const [lastRest, setLastRest] = useState(90);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(w);
   const readOnly = w.status !== "in_progress";
@@ -221,34 +225,38 @@ export function WorkoutLogger({
   }, [sheet, w.exercises, lookup, profile, prefs, library, location]);
 
   return (
-    <div className="space-y-4 pb-24">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <BackButton href="/training" label={t("workout.backToTraining")} />
-          <h1 className="text-2xl font-semibold tracking-tight">{w.name}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-            <span className="inline-flex items-center gap-1 tabular-nums"><Timer size={14} aria-hidden />{mmss(elapsed)}</span>
-            {location && <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden />{location.name}</span>}
-            {sync === "offline" && <span className="inline-flex items-center gap-1 text-warning"><CloudOff size={14} aria-hidden />{t("workout.offline")}</span>}
-            {sync === "saving" && <span>{t("workout.syncing")}</span>}
-            {readOnly && <Badge>{w.status === "completed" ? t("common.done") : t("workout.abandon")}</Badge>}
-          </p>
+    <div className="space-y-4 pb-36">
+      <div className="sticky top-0 z-30 -mx-4 border-b border-border bg-bg/95 px-4 pb-3 pt-2 backdrop-blur sm:-mx-6 sm:px-6">
+        <BackButton href="/training" label={t("workout.backToTraining")} />
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold leading-tight">{w.name}</h1>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted">
+              {location && <span className="inline-flex items-center gap-1"><MapPin size={12} aria-hidden />{location.name}</span>}
+              {sync === "offline" && <span className="inline-flex items-center gap-1 text-warning"><CloudOff size={12} aria-hidden />{t("workout.offline")}</span>}
+              {sync === "saving" && <span>{t("workout.syncing")}</span>}
+              {readOnly && <Badge>{w.status === "completed" ? t("common.done") : t("workout.abandon")}</Badge>}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <p className="text-3xl font-semibold tabular-nums tracking-tight" role="timer" aria-label={t("workout.elapsed")}>{clock(elapsed)}</p>
+            {!readOnly && <Button size="sm" onClick={() => setSheet({ kind: "finish" })}>{t("common.done")}</Button>}
+          </div>
         </div>
         {!readOnly && (
-          <div className="w-full sm:w-64">
-            <Choices name="mode" columns={2} value={w.mode} onChange={(mode) => mutate((x) => ({ ...x, mode }))}
-              options={[{ value: "simple", label: t("workout.simple") }, { value: "detailed", label: t("workout.detailed") }]} />
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex rounded-xl bg-surface-2 p-0.5 text-sm" role="radiogroup" aria-label={t("settings.logging")}>
+              {(["simple", "detailed"] as const).map((m) => (
+                <button key={m} type="button" role="radio" aria-checked={w.mode === m} onClick={() => mutate((x) => ({ ...x, mode: m }))}
+                  className={cx("h-8 rounded-lg px-3", w.mode === m ? "bg-surface font-medium shadow-sm" : "text-muted")}>
+                  {t(`workout.${m}`)}
+                </button>
+              ))}
+            </div>
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSheet({ kind: "more" })} aria-label={t("common.more")}><MoreHorizontal size={18} aria-hidden /></Button>
           </div>
         )}
-      </header>
-
-      {!readOnly && (
-        <div className="flex flex-wrap gap-2">
-          {profile && <Button variant="secondary" size="sm" onClick={() => setSheet({ kind: "shorten" })}><Zap size={16} aria-hidden />{t("workout.shorten")}</Button>}
-          {profile && profile.locations.length > 1 && <Button variant="secondary" size="sm" onClick={() => setSheet({ kind: "location" })}><MapPin size={16} aria-hidden />{t("workout.changeLocation")}</Button>}
-          {settings.restTimer && !rest && <Button variant="secondary" size="sm" onClick={() => startRest(90)}><Timer size={16} aria-hidden />{t("workout.restStart")}</Button>}
-        </div>
-      )}
+      </div>
 
       {w.mode === "simple" && !readOnly && <Notice>{t("workout.simpleNote")}</Notice>}
 
@@ -315,7 +323,7 @@ export function WorkoutLogger({
                     </button>
                     {noWeight ? <span /> : (
                       <DecimalInput aria-label={`${t("workout.weight")} ${j + 1}`} value={s.weightKg} disabled={readOnly} placeholder="—"
-                        onChange={(v) => editSet(i, j, { weightKg: v })} className={cx(s.completed && "border-accent/40 bg-accent-soft")} />
+                        onChange={(v) => editSet(i, j, { weightKg: v })} className={cx("h-12 text-lg", s.completed && "border-accent/40 bg-accent-soft")} />
                     )}
                     <input
                       aria-label={`${timeBased ? t("workout.sec") : t("workout.reps")} ${j + 1}`}
@@ -328,7 +336,7 @@ export function WorkoutLogger({
                         editSet(i, j, timeBased ? { durationS: v } : { reps: v });
                       }}
                       onFocus={(ev) => ev.target.select()}
-                      className={cx("h-11 w-full rounded-xl border border-border bg-surface px-3 text-center text-[15px] tabular-nums placeholder:text-muted/60 focus:border-accent focus:outline-none", s.completed && "border-accent/40 bg-accent-soft")}
+                      className={cx("h-12 w-full rounded-xl border border-border bg-surface px-3 text-center text-lg tabular-nums placeholder:text-muted/60 focus:border-accent focus:outline-none", s.completed && "border-accent/40 bg-accent-soft")}
                     />
                     {settings.showEffort && (
                       <input aria-label={`${t("workout.rir")} ${j + 1}`} inputMode="numeric" disabled={readOnly} value={s.rir ?? ""}
@@ -345,9 +353,10 @@ export function WorkoutLogger({
                           ...x,
                           sets: x.sets.map((y, k) => (k === j ? { ...y, ...patch } : k > j && !y.completed && y.weightKg === null && s.weightKg !== null ? { ...y, weightKg: s.weightKg } : y)),
                         }));
+                        if (completing && tg?.restSec) setLastRest(tg.restSec);
                         if (completing && settings.restTimer && settings.autoTimer && tg?.restSec) startRest(tg.restSec);
                       }}
-                      className={cx("grid h-11 w-full place-items-center rounded-xl border", s.completed ? "border-accent bg-accent text-accent-contrast" : "border-border text-muted hover:bg-surface-2")}>
+                      className={cx("grid h-12 w-full place-items-center rounded-xl border", s.completed ? "border-accent bg-accent text-accent-contrast" : "border-border text-muted hover:bg-surface-2")}>
                       <Check size={18} aria-hidden />
                     </button>
                   </div>
@@ -366,18 +375,12 @@ export function WorkoutLogger({
             ) : null}
 
             {!readOnly && (
-              <div className="flex flex-wrap gap-1 border-t border-border pt-2">
+              <div className="flex items-center gap-1 border-t border-border pt-2">
                 {w.mode === "detailed" && (
-                  <>
-                    <Button variant="ghost" size="sm" onClick={() => editEx(i, (x) => ({ ...x, sets: [...x.sets, newSet(w, i, x.sets.length, x.sets.at(-1)?.weightKg ?? null)] }))}><Plus size={15} aria-hidden />{t("workout.addSet").replace("+ ", "")}</Button>
-                    <Button variant="ghost" size="sm" disabled={e.sets.length === 0} onClick={() => editEx(i, (x) => ({ ...x, sets: x.sets.slice(0, -1) }))}><Minus size={15} aria-hidden />{t("workout.removeSet").replace("− ", "")}</Button>
-                  </>
+                  <Button variant="ghost" size="sm" onClick={() => editEx(i, (x) => ({ ...x, sets: [...x.sets, newSet(w, i, x.sets.length, x.sets.at(-1)?.weightKg ?? null)] }))}><Plus size={15} aria-hidden />{t("workout.addSet").replace("+ ", "")}</Button>
                 )}
                 <Button variant="ghost" size="sm" onClick={() => setSheet({ kind: "swap", index: i })}><Repeat size={15} aria-hidden />{t("workout.swap")}</Button>
-                <Button variant="ghost" size="sm" onClick={() => editEx(i, (x) => ({ ...x, skipped: !x.skipped, completed: false }))}><SkipForward size={15} aria-hidden />{t("workout.skip")}</Button>
-                <Button variant="ghost" size="sm" onClick={() => setNotesOpen(notesOpen === i ? null : i)} aria-label={t("workout.notes")}><NotebookPen size={15} aria-hidden /></Button>
-                <Button variant="ghost" size="sm" disabled={i === 0} aria-label="↑" onClick={() => mutate((x) => { const xs = [...x.exercises]; [xs[i - 1], xs[i]] = [xs[i]!, xs[i - 1]!]; return { ...x, exercises: xs }; })}><ArrowUp size={15} /></Button>
-                <Button variant="ghost" size="sm" disabled={i === w.exercises.length - 1} aria-label="↓" onClick={() => mutate((x) => { const xs = [...x.exercises]; [xs[i + 1], xs[i]] = [xs[i]!, xs[i + 1]!]; return { ...x, exercises: xs }; })}><ArrowDown size={15} /></Button>
+                <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSheet({ kind: "exercise", index: i })} aria-label={t("common.more")}><MoreHorizontal size={18} aria-hidden /></Button>
               </div>
             )}
           </Card>
@@ -393,13 +396,29 @@ export function WorkoutLogger({
         </div>
       )}
 
-      {rest && settings.restTimer && (
-        <div role="timer" aria-live="polite" className="fixed inset-x-4 bottom-20 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl bg-text px-4 py-3 text-bg shadow-xl md:bottom-6">
-          <span className="text-lg font-semibold tabular-nums">{restLeft > 0 ? t("workout.restLeft", { t: mmss(restLeft) }) : "0:00 ✓"}</span>
-          <span className="flex gap-2">
-            <button type="button" className="h-9 rounded-lg px-3 text-sm font-medium underline-offset-2 hover:underline" onClick={() => setRest((r) => r && { ...r, endsAt: r.endsAt + 30000 })}>+30s</button>
-            <button type="button" className="h-9 rounded-lg px-3 text-sm font-medium underline-offset-2 hover:underline" onClick={() => setRest(null)}>{t("workout.restStop")}</button>
-          </span>
+      {settings.restTimer && !readOnly && (
+        <div className="fixed inset-x-4 bottom-20 z-40 mx-auto max-w-md md:bottom-6">
+          {rest ? (
+            <div role="timer" aria-live="polite" className="overflow-hidden rounded-2xl bg-text text-bg shadow-xl">
+              <div className="h-1 bg-bg/20"><div className="h-full bg-accent transition-[width] duration-1000 ease-linear" style={{ width: `${Math.max(0, Math.min(100, (restLeft / rest.total) * 100))}%` }} /></div>
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide opacity-70">{t("workout.restTimer")}</p>
+                  <p className="text-4xl font-semibold tabular-nums">{restLeft > 0 ? clock(restLeft) : "0:00"}</p>
+                </div>
+                <div className="flex gap-1.5">
+                  <button type="button" className="h-11 rounded-xl bg-bg/10 px-3 text-sm font-medium" onClick={() => setRest((r) => r && { ...r, endsAt: Math.max(Date.now(), r.endsAt - 15000) })}>−15</button>
+                  <button type="button" className="h-11 rounded-xl bg-bg/10 px-3 text-sm font-medium" onClick={() => setRest((r) => r && { ...r, endsAt: r.endsAt + 15000, total: r.total + 15 })}>+15</button>
+                  <button type="button" className="h-11 rounded-xl bg-bg px-3 text-sm font-semibold text-text" onClick={() => setRest(null)}>{t("workout.restStop")}</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => startRest(lastRest)}
+              className="ml-auto flex h-12 items-center gap-2 rounded-full border border-border bg-surface px-5 font-medium shadow-lg hover:bg-surface-2">
+              <Timer size={18} className="text-accent" aria-hidden />{t("workout.restTimer")} · <span className="tabular-nums">{clock(lastRest)}</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -417,6 +436,32 @@ export function WorkoutLogger({
             ))}
           </ul>
         )}
+      </Sheet>
+
+      <Sheet open={sheet?.kind === "more"} onClose={() => setSheet(null)} title={w.name}>
+        <div className="space-y-2">
+          {profile && <Button full variant="secondary" onClick={() => setSheet({ kind: "shorten" })}><Zap size={16} aria-hidden />{t("workout.shorten")}</Button>}
+          {profile && profile.locations.length > 1 && <Button full variant="secondary" onClick={() => setSheet({ kind: "location" })}><MapPin size={16} aria-hidden />{t("workout.changeLocation")}</Button>}
+          <Button full variant="ghost" className="text-danger" onClick={() => setSheet({ kind: "abandon" })}>{t("workout.abandon")}</Button>
+        </div>
+      </Sheet>
+
+      <Sheet open={sheet?.kind === "exercise"} onClose={() => setSheet(null)} title={sheet?.kind === "exercise" ? w.exercises[sheet.index]?.name ?? "" : ""}>
+        {sheet?.kind === "exercise" && (() => {
+          const i = sheet.index;
+          const e = w.exercises[i];
+          if (!e) return null;
+          const act = (fn: () => void) => () => { fn(); setSheet(null); };
+          return (
+            <div className="grid grid-cols-2 gap-2">
+              {w.mode === "detailed" && <Button variant="secondary" disabled={e.sets.length === 0} onClick={act(() => editEx(i, (x) => ({ ...x, sets: x.sets.slice(0, -1) })))}><Minus size={16} aria-hidden />{t("workout.removeSet").replace("− ", "")}</Button>}
+              <Button variant="secondary" onClick={act(() => editEx(i, (x) => ({ ...x, skipped: !x.skipped, completed: false })))}><SkipForward size={16} aria-hidden />{e.skipped ? t("common.undo") : t("workout.skip")}</Button>
+              <Button variant="secondary" onClick={act(() => setNotesOpen(i))}><NotebookPen size={16} aria-hidden />{t("workout.notes")}</Button>
+              <Button variant="secondary" disabled={i === 0} onClick={act(() => mutate((x) => { const xs = [...x.exercises]; [xs[i - 1], xs[i]] = [xs[i]!, xs[i - 1]!]; return { ...x, exercises: xs }; }))}><ArrowUp size={16} aria-hidden />↑</Button>
+              <Button variant="secondary" disabled={i === w.exercises.length - 1} onClick={act(() => mutate((x) => { const xs = [...x.exercises]; [xs[i + 1], xs[i]] = [xs[i]!, xs[i + 1]!]; return { ...x, exercises: xs }; }))}><ArrowDown size={16} aria-hidden />↓</Button>
+            </div>
+          );
+        })()}
       </Sheet>
 
       <Sheet open={sheet?.kind === "shorten"} onClose={() => setSheet(null)} title={t("workout.shorten")}>

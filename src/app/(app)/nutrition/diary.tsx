@@ -2,7 +2,7 @@
 import { ChevronLeft, ChevronRight, Copy, ListPlus, Plus, Settings2, Utensils } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { copyFromYesterday, editEntry, markDay, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Button, Card, cx, Empty, Input, Meter, Select } from "@/components/ui";
@@ -21,7 +21,7 @@ const shift = (iso: string, d: number) => {
 };
 
 export function Diary({
-  date, today, entries, totals, complete, target, recents, favorites, recipes, showFiber,
+  date, today, entries, totals, complete, target, recents, favorites, recipes, showFiber, assistant,
 }: {
   date: string;
   today: string;
@@ -33,6 +33,7 @@ export function Diary({
   favorites: Product[];
   recipes: RecipeLite[];
   showFiber: boolean;
+  assistant?: ReactNode;
 }) {
   const { t, locale } = useI18n();
   const toast = useToast();
@@ -103,6 +104,7 @@ export function Diary({
         </Button>
         {entries.length > 1 && <Button variant="secondary" onClick={() => { setSelected(entries.filter((e) => e.basis !== "portion").map((e) => e.id)); setSaving(true); }}><ListPlus size={16} aria-hidden />{t("nutrition.saveMeal")}</Button>}
         <Link href="/nutrition/recipes" className="inline-flex h-11 items-center gap-2 rounded-xl px-3 text-[15px] font-medium hover:bg-surface-2"><Utensils size={16} aria-hidden />{t("nutrition.recipes")}</Link>
+        {assistant}
       </div>
 
       {entries.length === 0 ? (

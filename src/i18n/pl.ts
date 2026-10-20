@@ -7,7 +7,7 @@ export const pl = {
     close: "Zamknij", search: "Szukaj", loading: "Ładowanie…", error: "Coś poszło nie tak", retry: "Spróbuj ponownie", yes: "Tak", no: "Nie",
     optional: "opcjonalnie", min: "min", kg: "kg", g: "g", ml: "ml", kcal: "kcal", undo: "Cofnij", saved: "Zapisano", apply: "Zastosuj",
     accept: "Akceptuj", reject: "Odrzuć", today: "Dziś", yesterday: "Wczoraj", none: "Brak", estimate: "szacunek", skip: "Pomiń",
-    deleted: "Usunięto", change: "Zmień", of: "z", show: "Pokaż", hide: "Ukryj", continue: "Kontynuuj", or: "lub",
+    deleted: "Usunięto", change: "Zmień", of: "z", show: "Pokaż", hide: "Ukryj", more: "Więcej", continue: "Kontynuuj", or: "lub",
   },
   auth: {
     login: "Zaloguj się", logout: "Wyloguj", register: "Utwórz konto", email: "E-mail", password: "Hasło", name: "Imię",
@@ -257,6 +257,7 @@ export const pl = {
     uploading: "Wysyłam…", tooLarge: "Zdjęcie jest za duże.", invalid: "Nie udało się odczytać zdjęcia.", saved: "Zdjęcie zapisane.", choosePose: "Wybierz ujęcie",
   },
   today: {
+    skipTitle: "Co się dzieje?", optShorter: "Mam mniej czasu", optShorterHint: "Krótsza wersja — najważniejsze ćwiczenia zostają.", optPlace: "Nie mam dziś siłowni lub sprzętu", optPlaceHint: "Ułożę ten sam trening z tego, co masz pod ręką — dalej pełnowartościowy.", noEquipment: "bez sprzętu", noEquipmentPlace: "Bez sprzętu (dom, hotel, park)", optPostpone: "Przełóż na następny raz", optPostponeHint: "Ten trening poczeka — nic nie przepada.", optSkip: "Pomiń ten trening", optSkipHint: "Przejdę do kolejnego w planie.", postponed: "Przełożone. Ten trening poczeka na następny raz.", postponedToday: "Dziś przełożony — czeka na następną okazję.", wherePlace: "Gdzie dziś trenujesz?", howLong: "Ile masz czasu?", fullTime: "Normalnie",
     clock: "Teraz", scheduledToday: "Na dziś", scheduledOn: "Zaplanowany: {day}", anytime: "Kiedy masz czas", shorter: "Krótszy", skipToday: "Pomiń", skipped: "Pominięto. Następny trening czeka.", shorterTitle: "Ile masz dziś czasu?",
     greeting: "Cześć, {name}", nextWorkout: "Następny trening", noPlan: "Nie masz jeszcze planu treningowego.", restDay: "Dziś wolne według planu. Możesz zrobić kolejny trening, jeśli chcesz.",
     food: "Jedzenie dziś", logFood: "Dodaj jedzenie", weight: "Waga dziś", quickWeight: "Zapisz", modules: "Włącz w ustawieniach: {module}",
@@ -270,7 +271,25 @@ export const pl = {
     deleteHint: "Usuwa trwale wszystkie Twoje treningi, dziennik i ustawienia z tego serwera.", password: "Zmień hasło", currentPassword: "Obecne hasło", newPassword: "Nowe hasło",
     passwordChanged: "Hasło zmienione. Zaloguj się ponownie.", wrongPassword: "Nieprawidłowe obecne hasło.", about: "O aplikacji",
     disclaimer: "Aplikacja nie jest wyrobem medycznym i nie zastępuje porady lekarza, fizjoterapeuty ani dietetyka. Przy bólu lub problemach zdrowotnych skonsultuj się ze specjalistą.",
-    ai: "Asystent AI", aiOff: "Wyłączony. Wszystkie podstawowe funkcje działają bez AI.", used: "wykorzystane", expires: "ważne do",
+    ai: "Asystent AI", used: "wykorzystane", expires: "ważne do",
+    aiSwitch: "Włącz asystenta AI", aiHint: "Twoje pytanie i potrzebne do niego dane (plan treningowy albo dziennik z danego dnia, cel kalorii, ostatnia waga) są wysyłane do Claude (Anthropic). Zdjęć i haseł asystent nigdy nie dostaje. Zmiany w planie i dzienniku zawsze najpierw zatwierdzasz.",
+    aiNotConfigured: "Asystent nie jest jeszcze podłączony: administrator musi dodać klucz ANTHROPIC_API_KEY w ustawieniach Vercela (instrukcja w README). Wszystkie podstawowe funkcje działają bez AI.",
+  },
+  assistant: {
+    open: "Asystent", title: "Asystent", placeholder: "Napisz, co zmienić albo o co zapytać…", send: "Wyślij", thinking: "Myślę…", newChat: "Nowa rozmowa",
+    apply: "Zastosuj", reject: "Nie, dzięki", applied: "Zastosowano", rejected: "Odrzucono",
+    introTraining: "Mogę zamienić ćwiczenie, ułożyć plan od nowa według Twoich uwag albo odpowiedzieć na pytanie o trening. Każdą zmianę najpierw pokazuję do zatwierdzenia.",
+    introNutrition: "Dodam jedzenie do dziennika (wartości biorę z bazy produktów, nie zgaduję) albo odpowiem na pytanie o jedzenie. Każdy wpis najpierw pokazuję do zatwierdzenia.",
+    exTraining1: "Zamień wyciskanie na ławce na coś na maszynie", exTraining2: "Treningi są za długie, skróć je", exTraining3: "Boli mnie bark przy wyciskaniu", exTraining4: "Ile serii na plecy w tygodniu to dobrze?",
+    exNutrition1: "Dodaj 2 jajka i kromkę chleba na śniadanie", exNutrition2: "Ile białka mi dziś brakuje?", exNutrition3: "Co zjeść wieczorem, żeby dobić białko?", exNutrition4: "Dodaj 650 kcal — obiad na mieście",
+    consentTitle: "Włączyć asystenta AI?", enable: "Włącz asystenta",
+    swapTitle: "Zamiana ćwiczenia", planTitle: "Nowa wersja planu", prefTitle: "Oznaczenie ćwiczenia", foodTitle: "Dodaj do dziennika", quickTitle: "Szybki wpis",
+    refused: "Na to pytanie nie odpowiem.", empty: "Nie mam na to dobrej odpowiedzi — spróbuj zapytać inaczej.",
+    errors: {
+      not_configured: "Asystent nie jest podłączony (brak klucza API).", disabled: "Asystent jest wyłączony w Ustawieniach.", limit: "Na dziś wykorzystano limit pytań. Wróć jutro.",
+      key: "Klucz API jest nieprawidłowy — sprawdź ANTHROPIC_API_KEY w Vercelu.", busy: "Asystent jest chwilowo przeciążony. Spróbuj za chwilę.", unavailable: "Asystent jest teraz niedostępny. Spróbuj później.",
+      invalid: "Nie udało się wysłać wiadomości.", expired: "Ta propozycja jest już nieaktualna.", stale: "Plan się w międzyczasie zmienił — poproś o propozycję jeszcze raz.", generic: "Coś poszło nie tak. Spróbuj jeszcze raz.",
+    },
   },
 };
 

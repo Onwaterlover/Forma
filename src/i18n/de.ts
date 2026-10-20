@@ -8,7 +8,7 @@ export const de: Dict = {
     close: "Schließen", search: "Suchen", loading: "Lädt…", error: "Etwas ist schiefgelaufen", retry: "Erneut versuchen", yes: "Ja", no: "Nein",
     optional: "optional", min: "Min.", kg: "kg", g: "g", ml: "ml", kcal: "kcal", undo: "Rückgängig", saved: "Gespeichert", apply: "Anwenden",
     accept: "Annehmen", reject: "Ablehnen", today: "Heute", yesterday: "Gestern", none: "Keine", estimate: "Schätzung", skip: "Überspringen",
-    deleted: "Gelöscht", change: "Ändern", of: "von", show: "Anzeigen", hide: "Ausblenden", continue: "Weiter", or: "oder",
+    deleted: "Gelöscht", change: "Ändern", of: "von", show: "Anzeigen", hide: "Ausblenden", more: "Mehr", continue: "Weiter", or: "oder",
   },
   auth: {
     login: "Anmelden", logout: "Abmelden", register: "Konto erstellen", email: "E-Mail", password: "Passwort", name: "Name",
@@ -258,6 +258,7 @@ export const de: Dict = {
     uploading: "Wird hochgeladen…", tooLarge: "Das Foto ist zu groß.", invalid: "Foto konnte nicht gelesen werden.", saved: "Foto gespeichert.", choosePose: "Ansicht wählen",
   },
   today: {
+    skipTitle: "Was ist los?", optShorter: "Ich habe weniger Zeit", optShorterHint: "Kürzere Version — die wichtigsten Übungen bleiben.", optPlace: "Heute kein Studio oder keine Ausrüstung", optPlaceHint: "Ich baue dieselbe Einheit aus dem, was du hast — trotzdem vollwertig.", noEquipment: "ohne Ausrüstung", noEquipmentPlace: "Ohne Ausrüstung (Zuhause, Hotel, Park)", optPostpone: "Auf nächstes Mal verschieben", optPostponeHint: "Diese Einheit wartet — nichts geht verloren.", optSkip: "Diese Einheit überspringen", optSkipHint: "Weiter zur nächsten im Plan.", postponed: "Verschoben. Diese Einheit wartet auf das nächste Mal.", postponedToday: "Heute verschoben — wartet auf das nächste Mal.", wherePlace: "Wo trainierst du heute?", howLong: "Wie viel Zeit hast du?", fullTime: "Wie geplant",
     clock: "Jetzt", scheduledToday: "Heute", scheduledOn: "Geplant: {day}", anytime: "Wann du Zeit hast", shorter: "Kürzer", skipToday: "Überspringen", skipped: "Übersprungen. Die nächste Einheit wartet.", shorterTitle: "Wie viel Zeit hast du heute?",
     greeting: "Hallo, {name}", nextWorkout: "Nächste Einheit", noPlan: "Du hast noch keinen Trainingsplan.", restDay: "Laut Plan heute Ruhetag. Du kannst trotzdem die nächste Einheit machen.",
     food: "Essen heute", logFood: "Essen hinzufügen", weight: "Gewicht heute", quickWeight: "Speichern", modules: "In den Einstellungen einschalten: {module}",
@@ -271,6 +272,24 @@ export const de: Dict = {
     deleteHint: "Entfernt dauerhaft alle deine Einheiten, dein Tagebuch und deine Einstellungen von diesem Server.", password: "Passwort ändern", currentPassword: "Aktuelles Passwort", newPassword: "Neues Passwort",
     passwordChanged: "Passwort geändert. Bitte erneut anmelden.", wrongPassword: "Aktuelles Passwort ist falsch.", about: "Über die App",
     disclaimer: "Diese App ist kein Medizinprodukt und ersetzt keine Beratung durch Ärztinnen/Ärzte, Physiotherapie oder Ernährungsberatung. Bei Schmerzen oder gesundheitlichen Fragen wende dich an Fachleute.",
-    ai: "KI-Assistent", aiOff: "Aus. Alle Kernfunktionen funktionieren ohne KI.", used: "verwendet", expires: "gültig bis",
+    ai: "KI-Assistent", used: "verwendet", expires: "gültig bis",
+    aiSwitch: "KI-Assistent einschalten", aiHint: "Deine Frage und die dafür nötigen Daten (Trainingsplan oder Ernährungstagebuch des Tages, Kalorienziel, letztes Gewicht) werden an Claude (Anthropic) gesendet. Fotos und Passwörter nie. Änderungen an Plan oder Tagebuch bestätigst du immer zuerst.",
+    aiNotConfigured: "Der Assistent ist noch nicht verbunden: Der Admin muss ANTHROPIC_API_KEY in den Vercel-Einstellungen hinterlegen (siehe README). Alle Kernfunktionen funktionieren ohne KI.",
+  },
+  assistant: {
+    open: "Assistent", title: "Assistent", placeholder: "Was soll ich ändern oder was möchtest du wissen…", send: "Senden", thinking: "Denke nach…", newChat: "Neues Gespräch",
+    apply: "Übernehmen", reject: "Nein, danke", applied: "Übernommen", rejected: "Verworfen",
+    introTraining: "Ich kann eine Übung tauschen, deinen Plan nach deinem Feedback neu erstellen oder Trainingsfragen beantworten. Änderungen zeige ich dir immer zuerst zur Bestätigung.",
+    introNutrition: "Ich trage Essen ins Tagebuch ein (Werte aus der Produktdatenbank, nie geschätzt) oder beantworte Fragen zur Ernährung. Einträge zeige ich dir immer zuerst zur Bestätigung.",
+    exTraining1: "Tausch das Bankdrücken gegen etwas an der Maschine", exTraining2: "Meine Trainings sind zu lang, kürz sie", exTraining3: "Meine Schulter tut beim Drücken weh", exTraining4: "Wie viele Sätze für den Rücken pro Woche sind gut?",
+    exNutrition1: "Trag 2 Eier und eine Scheibe Brot zum Frühstück ein", exNutrition2: "Wie viel Eiweiß fehlt mir heute?", exNutrition3: "Was kann ich abends essen, um mein Eiweiß zu schaffen?", exNutrition4: "Trag 650 kcal fürs Essen auswärts ein",
+    consentTitle: "KI-Assistent einschalten?", enable: "Assistent einschalten",
+    swapTitle: "Übung tauschen", planTitle: "Neue Planversion", prefTitle: "Übung markieren", foodTitle: "Ins Tagebuch", quickTitle: "Schnelleintrag",
+    refused: "Dabei kann ich nicht helfen.", empty: "Darauf habe ich keine gute Antwort — frag gern anders.",
+    errors: {
+      not_configured: "Der Assistent ist nicht verbunden (kein API-Schlüssel).", disabled: "Der Assistent ist in den Einstellungen ausgeschaltet.", limit: "Das Fragenlimit für heute ist erreicht. Morgen wieder.",
+      key: "Der API-Schlüssel ist ungültig — prüfe ANTHROPIC_API_KEY in Vercel.", busy: "Der Assistent ist gerade ausgelastet. Versuch es gleich noch einmal.", unavailable: "Der Assistent ist gerade nicht erreichbar. Versuch es später.",
+      invalid: "Die Nachricht konnte nicht gesendet werden.", expired: "Dieser Vorschlag ist nicht mehr gültig.", stale: "Dein Plan hat sich inzwischen geändert — frag noch einmal nach dem Vorschlag.", generic: "Etwas ist schiefgelaufen. Bitte versuch es noch einmal.",
+    },
   },
 };

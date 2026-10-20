@@ -348,6 +348,14 @@ export const EXERCISES: Exercise[] = [
     kind: "bodyweight", mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "bodyweight",
     cuePl: "Ciało proste pod drążkiem, przyciągaj klatkę do drążka. Im bardziej poziomo, tym trudniej.", cueEn: "Body straight under the bar, pull your chest to it. More horizontal = harder.",
   }),
+  ex("table_row", {
+    grips: ["narrow", "wide"],
+    pl: "Wiosłowanie pod stołem", en: "Table row", de: "Tischrudern", aliases: ["table row"],
+    primary: ["upper_back", "lats"], secondary: ["rear_delts", "biceps"], pattern: "h_pull", equipment: [], kind: "bodyweight",
+    mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "bodyweight",
+    cuePl: "Połóż się pod stabilnym stołem, chwyć krawędź i przyciągaj klatkę do blatu, ciało proste.", cueEn: "Lie under a sturdy table, grip the edge and pull your chest to it, body straight.",
+    safetyPl: "Tylko pod ciężkim, stabilnym stołem — najpierw sprawdź, czy się nie przechyla.", safetyEn: "Only under a heavy, stable table — check first that it can't tip.",
+  }),
   ex("band_row", {
     grips: ["narrow", "wide"],
     pl: "Wiosłowanie z gumą", en: "Band row", de: "Rudern mit Band",

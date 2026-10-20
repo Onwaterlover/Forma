@@ -3,7 +3,7 @@ import { moveSession, nextSession, shortenSession, adaptToLocation } from "./ada
 import { estimateMinutes } from "./duration";
 import { isPossible, LOCATION_PRESETS } from "./equipment";
 import { EXERCISES, EXERCISE_BY_ID } from "./exercises";
-import { generatePlan } from "./generator";
+import { generatePlan, rebuildSession } from "./generator";
 import { defaultProfile, parseProfile } from "./profile";
 import { validatePlan } from "./validate";
 import type { Equipment, Exercise, ExercisePref, Location, Plan, TrainingProfile, Weekday } from "./types";
@@ -337,6 +337,29 @@ describe("workout generator", () => {
     const legacy = { ...defaultProfile(), styles: undefined, style: "mixed" } as unknown as TrainingProfile;
     delete (legacy as unknown as Record<string, unknown>).styles;
     expect(parseProfile(legacy).styles).toEqual(["machines", "free"]);
+  });
+
+  it("no gym today: rebuilding a gym session without equipment keeps its purpose", () => {
+    const p = profile({ experience: "intermediate", goal: "muscle", sessionsPerWeek: 3, sessionMinutes: 60, week: week({ 0: ["gym"], 2: ["gym"], 4: ["gym"] }), locations: [gym()] });
+    const { plan } = gen(p);
+    for (const s of plan.sessions) {
+      const r = rebuildSession(p, s, [], { prefs: {}, library: EXERCISES })!;
+      const ex = r.session.exercises.map((e) => EXERCISE_BY_ID.get(e.exerciseId)!);
+      for (const e of ex) expect(isPossible(e, [])).toBe(true);
+      expect(ex.length).toBeGreaterThanOrEqual(4);
+      // Same main movement patterns as the gym version where a bodyweight option exists.
+      const gymMain = s.exercises.filter((e) => e.priority === 1).map((e) => e.pattern).filter((pt) => pt !== "v_pull");
+      for (const pt of gymMain) expect(r.session.exercises.map((e) => e.pattern)).toContain(pt);
+      expect(r.session.estimatedMinutes).toBeLessThanOrEqual(66);
+    }
+  });
+
+  it("rebuilding for less time and another place respects both", () => {
+    const p = profile({ experience: "intermediate", sessionsPerWeek: 2, sessionMinutes: 75, week: week({ 0: ["gym"], 3: ["gym"] }), locations: [gym(), home()] });
+    const { plan } = gen(p);
+    const r = rebuildSession(p, plan.sessions[0]!, home().equipment, { prefs: {}, library: EXERCISES, minutes: 25 })!;
+    expect(r.session.estimatedMinutes).toBeLessThanOrEqual(28);
+    for (const pe of r.session.exercises) expect(isPossible(EXERCISE_BY_ID.get(pe.exerciseId)!, home().equipment)).toBe(true);
   });
 
   it("is deterministic", () => {

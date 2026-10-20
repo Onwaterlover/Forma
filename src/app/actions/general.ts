@@ -26,6 +26,7 @@ const settingsSchema = z
     showEffort: z.boolean(),
     showFiber: z.boolean(),
     weightGoal: z.enum(["maintain", "lose", "gain", "recomp"]).nullable(),
+    ai: z.boolean(),
   })
   .partial();
 

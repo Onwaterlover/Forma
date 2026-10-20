@@ -51,7 +51,7 @@ export function PlanView({
                 </p>
               </div>
               {startable && (
-                <form action={startWorkout.bind(null, planId, s.key, undefined)}>
+                <form action={startWorkout.bind(null, planId, s.key, undefined, undefined)}>
                   <button type="submit" className="h-9 rounded-xl bg-accent px-3 text-sm font-medium text-accent-contrast hover:bg-accent-hover">{t("plan.start")}</button>
                 </form>
               )}

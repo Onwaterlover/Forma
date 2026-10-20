@@ -42,7 +42,7 @@ Done and tested:
 
 ## Phase 3: optional AI and refinement
 
-1. Provider interface (`none` / Anthropic / OpenAI-compatible local server) configured server-side. Each request sends only the minimum data, after the user confirms.
-2. Grounded assistant: explain a plan, summarise trends, "I have 25 minutes", "more shoulders, less legs". Answers use deterministic tools (the generator, validator, analytics) and cite the user's data.
+1. ✅ Assistant in Training and Food (Claude, opt-in per user). It swaps exercises, rebuilds the plan from feedback, marks painful exercises and adds food from the database. Every change is a proposal the user applies.
+2. Calorie-target proposals from the adaptive estimate (through the same proposal cards), and trend summaries in Progress.
 3. PDF/image import through AI extraction feeding the same review screen.
-4. All AI changes to plans or targets are proposals (`ai_suggestions`) that the user accepts or rejects.
+4. Optional OpenAI-compatible local model for people who want no cloud AI.

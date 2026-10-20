@@ -38,7 +38,7 @@ Supabase Postgres (DATABASE_URL, via postgres.js)  ·  or  ·  DATA_DIR/pg (PGli
 - Inputs from the browser are validated with zod (`src/lib/schemas.ts`, inside actions). Nutrient data from external sources is sanitised (impossible values become `null`).
 - The admin can create invites but has no screen or query that reads other users' health or food data.
 - The service worker never caches `/api/*` and clears cached pages when the login page is shown.
-- No telemetry. The only outbound calls are Open Food Facts lookups/searches made on the user's explicit action.
+- No telemetry. The only outbound calls are Open Food Facts lookups/searches made on the user's explicit action and, if the admin configured it and the user switched it on, the Anthropic API for the assistant (see [integrations](integrations.md#optional-ai-assistant-claude)).
 
 ## Offline behaviour
 
@@ -50,4 +50,4 @@ Supabase Postgres (DATABASE_URL, via postgres.js)  ·  or  ·  DATA_DIR/pg (PGli
 
 - More users or remote hosting: swap SQLite for PostgreSQL behind `data.ts`, and add HTTPS and a reverse proxy.
 - Progress photos: resized in the browser (max 1600 px, JPEG, EXIF/GPS removed), stored in the `progress_photos` table and served only through `/api/photos/:id` after an owner check. At ~150–300 KB each, a weekly set of three for five people is roughly 150 MB a year of the 500 MB free database.
-- AI (Phase 3): a provider interface that receives only the data needed for a specific question, after the user confirms. Plan and target changes are proposed as `ai_suggestions` rows and are only applied when the user accepts.
+- AI assistant: `src/lib/assistant.ts` sends only the data a section needs. Changes are stored as `ai_suggestions` rows and applied only when the user taps Apply, through the normal server actions.

@@ -19,6 +19,12 @@
 - The camera needs a **secure context** (HTTPS or `localhost`). Over plain LAN HTTP the scanner says so and offers manual entry. See the README for Tailscale HTTPS.
 - Fallbacks: manual code entry, product search, and creating a custom product with the scanned code pre-filled when a product isn't found.
 
-## Optional AI (Phase 3, not implemented yet)
+## Optional AI assistant (Claude)
 
-Configuration placeholders: `AI_PROVIDER` (`none` by default) and `ANTHROPIC_API_KEY`, kept server-side only. Every core feature works without AI. See the roadmap for the planned design.
+- **Off unless configured and chosen.** The assistant exists only when the server has `ANTHROPIC_API_KEY`, and each user must switch it on (Settings → AI assistant, or the consent screen the first time they open it). Every core feature works without it.
+- **Where it runs:** inside the same Next.js app (`src/lib/assistant.ts`, server actions in `src/app/actions/assistant.ts`). The key stays on the server and is never sent to the browser. Model: `AI_MODEL` (default `claude-opus-5-5`; `claude-haiku-5-5` is much cheaper). Requests use low effort, prompt caching and the server-side refusal fallback (`fallbacks: "default"`).
+- **What is sent:** the user's message, the earlier messages of that chat, and only the data the section needs. In Training that is the profile summary, the active plan, exercise preferences and the last 8 workouts. In Food it is the diary for the shown date, the calorie target, the latest weight and recently used products. Photos, passwords and other users' data are never sent.
+- **Tools:** read tools run on the server (`find_substitutes` uses the same engine as the swap sheet; `search_food` uses the local database, then Open Food Facts). Write tools (`propose_swap`, `propose_plan_change`, `propose_exercise_pref`, `propose_add_food`, `propose_quick_entry`) only store a row in `ai_suggestions` and show a card. Nothing changes until the user taps **Apply**, which runs the same server actions as the normal UI (with their validation). A proposal can be applied once and expires after a day.
+- **No invented nutrition:** food is added only from database products with values per 100 g. Quick entries are proposed only with calories the user stated.
+- **Limits:** 40 questions per user per day (`DAILY_LIMIT` in `src/app/actions/assistant.ts`). Set a monthly spend limit in the Anthropic Console as well.
+- **Tests:** `src/lib/assistant.test.ts` checks the tools against an in-memory database (valid ids only, values from the database, other users can't use a proposal, a proposal applies once). It makes no API calls.

@@ -20,11 +20,13 @@ export interface Settings {
   showFiber: boolean;
   weightGoal: "maintain" | "lose" | "gain" | "recomp" | null;
   onboarded: boolean;
+  /** The user agreed to send the data a question needs to the AI provider. */
+  ai: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
   theme: "system", modules: { training: true, nutrition: true }, logMode: "detailed", restTimer: true, autoTimer: false,
-  showEffort: false, showFiber: false, weightGoal: null, onboarded: false,
+  showEffort: false, showFiber: false, weightGoal: null, onboarded: false, ai: false,
 };
 
 export async function getSettings(userId: string): Promise<Settings> {
@@ -747,4 +749,34 @@ export async function getPhoto(userId: string, id: string): Promise<{ mime: stri
 
 export async function deletePhoto(userId: string, id: string) {
   await (await db()).run("DELETE FROM progress_photos WHERE id = ? AND user_id = ?", [id, userId]);
+}
+
+/** Session keys the user postponed today ("not today, keep it for next time"). */
+export async function postponedSince(userId: string, sinceIso: string): Promise<string[]> {
+  const rows = await (await db()).all<{ session_key: string | null }>(
+    "SELECT session_key FROM workouts WHERE user_id = ? AND notes = 'postponed' AND started_at >= ?",
+    [userId, sinceIso],
+  );
+  return rows.map((r) => r.session_key ?? "").filter(Boolean);
+}
+
+// ── AI suggestions (proposals the user confirms before anything changes) ──
+export async function createSuggestion(userId: string, kind: string, payload: unknown): Promise<string> {
+  const id = newId();
+  await (await db()).run("INSERT INTO ai_suggestions (id, user_id, kind, payload, state, created_at) VALUES (?, ?, ?, ?, 'pending', ?)", [id, userId, kind, JSON.stringify(payload), nowIso()]);
+  return id;
+}
+
+/** Pending suggestions older than a day are treated as expired. */
+export async function pendingSuggestion(userId: string, id: string): Promise<{ kind: string; payload: unknown } | null> {
+  const r = await (await db()).get<{ kind: string; payload: string }>(
+    "SELECT kind, payload FROM ai_suggestions WHERE id = ? AND user_id = ? AND state = 'pending' AND created_at > ?",
+    [id, userId, new Date(Date.now() - 86_400_000).toISOString()],
+  );
+  return r ? { kind: r.kind, payload: json<unknown>(r.payload, null) } : null;
+}
+
+/** Returns false if the suggestion was not pending (already used, rejected or someone else's). */
+export async function resolveSuggestion(userId: string, id: string, state: "accepted" | "rejected"): Promise<boolean> {
+  return (await (await db()).run("UPDATE ai_suggestions SET state = ? WHERE id = ? AND user_id = ? AND state = 'pending'", [state, id, userId])) > 0;
 }

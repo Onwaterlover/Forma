@@ -24,7 +24,7 @@ Postgres (Supabase in the cloud, PGlite locally), created by `src/lib/migrations
 | `diary_days` | Optional "complete / incomplete" flag per day (used by the adaptive estimate). |
 | `calorie_targets` | Append-only history of targets with source (manual / estimate / accepted suggestion). |
 | `bodyweight` | One weigh-in per user per day (20–400 kg). |
-| `ai_suggestions` | Reserved for Phase 3: proposals with pending/accepted/rejected state. |
+| `ai_suggestions` | Assistant proposals (swap, plan change, exercise preference, food, quick entry) with pending/accepted/rejected state. Applied at most once, and expired after a day. |
 | `progress_photos` | Private photos (bytea), date, pose (front/side/back), note, size. Served only via an authenticated route. |
 | `login_attempts` | Login/registration throttle (works across serverless instances). |
 | `undo_buffer` | Deleted diary entries kept ~10 minutes so “undo” restores the server's own copy. |

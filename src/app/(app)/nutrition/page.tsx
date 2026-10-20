@@ -1,5 +1,7 @@
 import { isIsoDate, pageCtx, todayIso } from "@/lib/ctx";
 import { currentTarget, diaryDay, favoriteProducts, listRecipes, recentProducts } from "@/lib/data";
+import { Assistant } from "@/components/assistant";
+import { aiConfigured } from "@/lib/assistant";
 import { Diary } from "./diary";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +24,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
       favorites={await favoriteProducts(user.id)}
       recipes={(await listRecipes(user.id)).map((r) => ({ id: r.id, name: r.name, isMeal: r.isMeal, servings: r.servings, finalWeight: r.calc.finalWeight, perServingKcal: r.calc.perServing.kcal, totalKcal: r.calc.total.kcal }))}
       showFiber={settings.showFiber}
+      assistant={aiConfigured() ? <Assistant scope="nutrition" date={date} enabled={settings.ai} /> : null}
     />
   );
 }

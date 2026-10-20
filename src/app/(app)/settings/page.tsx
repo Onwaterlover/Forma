@@ -1,5 +1,6 @@
 import { logoutAction } from "@/app/actions/auth";
 import { PageHeader } from "@/components/ui";
+import { aiConfigured } from "@/lib/assistant";
 import { pageCtx } from "@/lib/ctx";
 import { listInvites, listUsers } from "@/lib/data";
 import { SettingsForm } from "./form";
@@ -18,7 +19,7 @@ export default async function SettingsPage() {
         isAdmin={user.is_admin === 1}
         users={user.is_admin ? (await listUsers()).map((u) => ({ name: u.name, created: u.created_at, admin: u.is_admin === 1 })) : []}
         invites={user.is_admin ? await listInvites() : []}
-        aiConfigured={!!process.env.ANTHROPIC_API_KEY && process.env.AI_PROVIDER === "anthropic"}
+        aiConfigured={aiConfigured()}
       />
     </>
   );

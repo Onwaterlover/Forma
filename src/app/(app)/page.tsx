@@ -5,7 +5,7 @@ import { Badge, Card, LinkButton, Meter, SectionTitle } from "@/components/ui";
 import { nextSession } from "@/engine/adapt";
 import { fmt } from "@/i18n";
 import { pageCtx, todayIso, weekdayOf } from "@/lib/ctx";
-import { currentTarget, diaryDay, getActivePlan, getProfile, inProgressWorkout, lastCompletedSessionKey, libraryFor, listWeights } from "@/lib/data";
+import { currentTarget, diaryDay, getActivePlan, getProfile, postponedSince, inProgressWorkout, lastCompletedSessionKey, libraryFor, listWeights } from "@/lib/data";
 import { exName } from "@/i18n";
 import { StartChoices } from "./start-choices";
 import { QuickWeight } from "./quick-weight";
@@ -29,6 +29,7 @@ export default async function TodayPage() {
   const scheduledToday = plan?.data.sessions.some((s) => s.day === weekdayOf(today));
   const showStart = !settings.onboarded && !plan && day.entries.length === 0;
   const profile = await getProfile(user.id);
+  const postponed = plan ? await postponedSince(user.id, `${today}T00:00`) : [];
   const locName = (id: string) => profile?.locations.find((l) => l.id === id)?.name ?? "";
 
   return (
@@ -62,7 +63,7 @@ export default async function TodayPage() {
                   </p>
                   {!scheduledToday && plan.data.sessions.some((s) => s.day !== null) && <p className="mt-1 text-sm text-muted">{t("today.restDay")}</p>}
                 </div>
-                <form action={startWorkout.bind(null, plan.id, next.key, undefined)}>
+                <form action={startWorkout.bind(null, plan.id, next.key, undefined, undefined)}>
                   <button type="submit" className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-hover">
                     <Play size={18} aria-hidden />{t("plan.start")}
                   </button>
@@ -76,7 +77,8 @@ export default async function TodayPage() {
                   </li>
                 ))}
               </ul>
-              <TodayWorkoutActions planId={plan.id} sessionKey={next.key} />
+              <TodayWorkoutActions planId={plan.id} sessionKey={next.key} places={profile?.locations.map((l) => ({ id: l.id, name: l.name })) ?? []} currentPlace={next.locationId} />
+              {postponed.includes(next.key) && <p className="mt-2 text-sm text-muted">{t("today.postponedToday")}</p>}
             </Card>
           ) : (
             <Card className="flex items-center justify-between gap-3">

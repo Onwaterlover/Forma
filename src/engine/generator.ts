@@ -109,6 +109,58 @@ function balanceVolume(sessions: PlannedSession[], p: TrainingProfile, lookup: (
   }
 }
 
+/** Picks, prescribes, orders and time-fits the exercises for one session's slots at one place. */
+function fillSession(
+  p: TrainingProfile,
+  slots: Slot[],
+  equipment: Equipment[],
+  o: { prefs: Record<string, ExercisePref>; library: Exercise[]; usedInWeek: Map<string, number>; minutes: number; key: string },
+): { exercises: PlannedExercise[]; notes: Message[]; tradeoffs: Message[] } {
+  const lookup = (id: string) => o.library.find((e) => e.id === id);
+  const notes: Message[] = [];
+  const tradeoffs: Message[] = [];
+  const ctx: SelectContext = { profile: p, equipment, prefs: o.prefs, library: o.library, usedInSession: new Set(), usedInWeek: o.usedInWeek };
+  let exercises: PlannedExercise[] = [];
+  for (const slot of slots) {
+    const r = pick(slot.pattern, slot.priority, ctx);
+    if (!r.exercise) {
+      if (r.reason === "pain") notes.push({ code: "pain_pattern_skipped", params: { pattern: slot.pattern, session: o.key } });
+      else if (slot.priority <= 2) tradeoffs.push({ code: "slot_unfillable", params: { pattern: slot.pattern, session: o.key } });
+      continue;
+    }
+    if (r.disliked) notes.push({ code: "disliked_kept", params: { exercise: r.exercise.id, session: o.key } });
+    ctx.usedInSession.add(r.exercise.id);
+    o.usedInWeek.set(r.exercise.id, (o.usedInWeek.get(r.exercise.id) ?? 0) + 1);
+    exercises.push(prescribe(p, r.exercise, slot.priority));
+  }
+  exercises = exercises
+    .map((pe, i) => ({ pe, i }))
+    .sort((x, y) => orderKey(x.pe, lookup) - orderKey(y.pe, lookup) || x.i - y.i)
+    .map((x) => x.pe);
+  const fitted = fitToTime(exercises, o.minutes, p, lookup);
+  for (const t of fitted.tradeoffs) tradeoffs.push({ code: t.code, params: { ...t.params, session: o.key } });
+  return { exercises: fitted.exercises, notes, tradeoffs };
+}
+
+/**
+ * Builds a fresh version of a planned session for different circumstances (another place, no equipment,
+ * less time). It keeps the session's purpose (same template = same movement patterns and priorities), so
+ * a home or bodyweight version still trains what the plan intended instead of being a random filler.
+ * Returns null for sessions without a template (imported/manual), where adaptToLocation is used instead.
+ */
+export function rebuildSession(
+  p: TrainingProfile,
+  session: PlannedSession,
+  equipment: Equipment[],
+  o: { prefs: Record<string, ExercisePref>; library: Exercise[]; minutes?: number },
+): { session: PlannedSession; notes: Message[]; tradeoffs: Message[] } | null {
+  const t = TEMPLATES[session.template];
+  if (!t) return null;
+  const r = fillSession(p, adjustedSlots(t, p), equipment, { ...o, usedInWeek: new Map(), minutes: o.minutes ?? p.sessionMinutes, key: session.key });
+  const lookup = (id: string) => o.library.find((e) => e.id === id);
+  return { session: { ...session, exercises: r.exercises, estimatedMinutes: estimateMinutes(r.exercises, lookup) }, notes: r.notes, tradeoffs: r.tradeoffs };
+}
+
 export function generatePlan(input: GenerateInput): Plan {
   const p = input.profile;
   const prefs = input.prefs ?? {};
@@ -160,27 +212,10 @@ export function generatePlan(input: GenerateInput): Plan {
   const sessions: PlannedSession[] = assignments.map((a, idx) => {
     const key = String.fromCharCode(65 + idx);
     const loc = p.locations.find((l) => l.id === a.locationId)!;
-    const ctx: SelectContext = { profile: p, equipment: loc.equipment, prefs, library, usedInSession: new Set(), usedInWeek };
-    let exercises: PlannedExercise[] = [];
-    for (const slot of slotsFor(a.template)) {
-      const r = pick(slot.pattern, slot.priority, ctx);
-      if (!r.exercise) {
-        if (r.reason === "pain") notes.push({ code: "pain_pattern_skipped", params: { pattern: slot.pattern, session: key } });
-        else if (slot.priority <= 2) tradeoffs.push({ code: "slot_unfillable", params: { pattern: slot.pattern, session: key } });
-        continue;
-      }
-      if (r.disliked) notes.push({ code: "disliked_kept", params: { exercise: r.exercise.id, session: key } });
-      ctx.usedInSession.add(r.exercise.id);
-      usedInWeek.set(r.exercise.id, (usedInWeek.get(r.exercise.id) ?? 0) + 1);
-      exercises.push(prescribe(p, r.exercise, slot.priority));
-    }
-    exercises = exercises
-      .map((pe, i) => ({ pe, i }))
-      .sort((x, y) => orderKey(x.pe, lookup) - orderKey(y.pe, lookup) || x.i - y.i)
-      .map((x) => x.pe);
-    const fitted = fitToTime(exercises, p.sessionMinutes, p, lookup);
-    for (const t of fitted.tradeoffs) tradeoffs.push({ code: t.code, params: { ...t.params, session: key } });
-    return { key, template: a.template, day: a.day, locationId: a.locationId, exercises: fitted.exercises, estimatedMinutes: 0 };
+    const r = fillSession(p, slotsFor(a.template), loc.equipment, { prefs, library, usedInWeek, minutes: p.sessionMinutes, key });
+    notes.push(...r.notes);
+    tradeoffs.push(...r.tradeoffs);
+    return { key, template: a.template, day: a.day, locationId: a.locationId, exercises: r.exercises, estimatedMinutes: 0 };
   });
 
   balanceVolume(sessions, p, lookup);

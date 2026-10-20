@@ -8,11 +8,12 @@ Prywatna aplikacja do treningu i liczenia jedzenia dla Ciebie i kilku zaufanych 
   - ulubione, wykluczone i bolesne ćwiczenia, priorytety partii mięśni i inne sporty.
 
   Jeśli plan Ci się nie podoba, zaznaczasz powody, a aplikacja układa nowy.
-- **Trening.** Tryb prosty i szczegółowy, zamiana ćwiczeń, wybór chwytu (wąski lub szeroki), okno „Jak to zrobić?” z linkiem do filmu z techniką, zmiana miejsca, „krótszy trening” i „pomiń dziś”. Zapisane serie nie giną przy chwilowym braku internetu.
+- **Trening.** Czas całego treningu leci na górze ekranu, a przerwę włączasz jednym kliknięciem. Jest tryb prosty i szczegółowy, zamiana ćwiczeń, wybór chwytu (wąski lub szeroki) i okno „Jak to zrobić?” z linkiem do filmu z techniką. Zapisane serie nie giną przy chwilowym braku internetu.
+- **„Pomiń” z głową.** Zamiast przepadać, trening można zrobić krócej (20/30/45 min, najważniejsze ćwiczenia zostają), w innym miejscu albo w wersji bez sprzętu z tym samym celem (np. wiosłowanie pod stołem zamiast wiosłowania hantlami). Można go też przełożyć na następny raz albo pominąć, a kolejność w planie przesunie się dalej.
 - **Jedzenie.** Kody kreskowe (Open Food Facts), ostatnie produkty i ulubione, posiłki, przepisy oraz szybkie wpisy samych kalorii. Brakujące wartości są oznaczane jako brak, nigdy nie są liczone jako zero.
 - **Postępy.** Trend wagi, ostrożne szacowanie zapotrzebowania, rekordy i **prywatne zdjęcia sylwetki** (przód, bok, tył, porównywanie dat).
 - **Prywatność.** Rejestracja tylko z zaproszeniem, a każdy widzi wyłącznie swoje dane. Jest eksport danych i usuwanie konta, bez telemetrii.
-- **Bez płatnych usług.** Asystent AI jest opcjonalny i żadna podstawowa funkcja go nie wymaga.
+- **Asystent AI (opcjonalny).** W Treningu i w Jedzeniu możesz napisać np. „zamień wyciskanie na coś na maszynie”, „dodaj 2 jajka na śniadanie” albo zadać pytanie. Każdą zmianę asystent pokazuje najpierw jako kartę z przyciskiem **Zastosuj**. Bez niego wszystko działa tak samo.
 
 > Aplikacja nie jest wyrobem medycznym. Przy bólu lub problemach zdrowotnych skonsultuj się ze specjalistą.
 
@@ -33,6 +34,36 @@ Baza: projekt Supabase **Forma** (region Frankfurt). Schemat jest już utworzony
 6. Zaproś bliskich w **Ustawienia → Zaproszenia**: wyślij im link do aplikacji i kod.
 
 Hasła do bazy nie wpisuj nigdzie poza ustawieniami Vercela i swoim plikiem `.env.local`.
+
+### Na telefonie (Ty i bliscy)
+
+**iPhone (Safari):**
+1. Otwórz adres aplikacji (`https://…vercel.app`) w **Safari**.
+2. Zaloguj się albo załóż konto kodem zaproszenia.
+3. Stuknij **Udostępnij** (kwadrat ze strzałką), a potem **Do ekranu początkowego** → **Dodaj**.
+
+**Android (Chrome):**
+1. Otwórz adres aplikacji w **Chrome**.
+2. Zaloguj się albo załóż konto kodem zaproszenia.
+3. Stuknij **⋮** → **Zainstaluj aplikację** (albo **Dodaj do ekranu głównego**).
+
+Ikona Formy pojawi się jak zwykła aplikacja i otworzy się na pełnym ekranie. Aktualizacje przychodzą same, nic nie trzeba instalować ponownie.
+
+**Bliskim** wyślij dwie rzeczy: link do aplikacji i kod z **Ustawienia → Zaproszenia** (każdy kod jest jednorazowy i ważny 14 dni).
+
+## Asystent AI (opcjonalnie)
+
+Asystent działa w tej samej aplikacji na Vercelu, więc nie trzeba nic osobno stawiać. Klucz jest tylko na serwerze. Korzysta z modelu Claude firmy Anthropic, płatnego za użycie.
+
+1. Wejdź na [console.anthropic.com](https://console.anthropic.com) i załóż konto.
+2. **Billing:** doładuj konto małą kwotą (np. 5 $). W **Limits** ustaw miesięczny limit wydatków, np. 10 $, żeby nic Cię nie zaskoczyło.
+3. **API Keys → Create Key**, nazwij go „Forma” i skopiuj (pokazuje się tylko raz).
+4. W Vercelu otwórz projekt, potem *Settings → Environment Variables*. Dodaj `ANTHROPIC_API_KEY` z tym kluczem. Następnie *Deployments → ⋯ → Redeploy*.
+5. W aplikacji: **Ustawienia → Asystent AI → włącz**. Każda osoba włącza go sama u siebie.
+
+**Koszt:** domyślny model (Claude Opus 5.5) to ok. 0,10–0,30 zł za pytanie. 100 pytań miesięcznie daje więc kilkanaście–kilkadziesiąt złotych. Jeśli dodasz w Vercelu `AI_MODEL` = `claude-haiku-5-5`, wyjdzie kilkadziesiąt razy taniej, ale odpowiedzi będą trochę prostsze. Każdy użytkownik ma limit 40 pytań dziennie.
+
+**Prywatność:** do Anthropic trafia tylko Twoja wiadomość i dane potrzebne w danej zakładce: w Treningu plan, preferencje i ostatnie treningi, a w Jedzeniu dziennik z danego dnia, cel kalorii, ostatnia waga i ostatnio używane produkty. Zdjęcia i hasła nie trafiają tam nigdy. Asystent niczego nie zmienia sam. Wartości jedzenia bierze z bazy produktów i ich nie zgaduje.
 
 ### Limity darmowych planów
 

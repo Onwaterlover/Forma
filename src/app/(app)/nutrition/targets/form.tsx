@@ -9,7 +9,8 @@ import { useI18n } from "@/i18n/client";
 import { initialEstimate, KCAL_PER_KG, type AdaptiveResult, type Sex, type TargetSuggestion, type WeightGoal } from "@/nutrition/energy";
 
 const GOALS: WeightGoal[] = ["maintain", "lose", "gain", "recomp"];
-const ACTIVITY = ["1.2", "1.375", "1.55", "1.725"] as const;
+const ACTIVITY = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 } as const;
+type Activity = keyof typeof ACTIVITY;
 
 export function TargetsForm({
   target, lastKg, adaptive, suggestion,
@@ -24,14 +25,14 @@ export function TargetsForm({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [mode, setMode] = useState<"track" | "estimate">(target?.kcal ? "estimate" : "track");
-  const [est, setEst] = useState<{ sex: Sex; age: number | null; height: number | null; weight: number | null; activity: (typeof ACTIVITY)[number] }>({ sex: "unspecified", age: null, height: null, weight: lastKg, activity: "1.375" });
+  const [est, setEst] = useState<{ sex: Sex | null; age: number | null; height: number | null; weight: number | null; activity: Activity | null }>({ sex: null, age: null, height: null, weight: lastKg, activity: null });
   const [goal, setGoal] = useState<WeightGoal>(target?.goal ?? "maintain");
   const [kcal, setKcal] = useState<number | null>(target?.kcal ?? null);
   const [protein, setProtein] = useState<number | null>(target?.protein ?? null);
   const [dismissed, setDismissed] = useState(false);
 
-  const result = est.age && est.height && est.weight && est.age >= 14 && est.age <= 100 && est.height > 100 && est.height < 250 && est.weight > 30 && est.weight < 300
-    ? initialEstimate({ sex: est.sex, age: est.age, heightCm: est.height, weightKg: est.weight, activity: Number(est.activity) as 1.2 })
+  const result = est.sex && est.activity && est.age && est.height && est.weight && est.age >= 14 && est.age <= 100 && est.height > 100 && est.height < 250 && est.weight > 30 && est.weight < 300
+    ? initialEstimate({ sex: est.sex, age: est.age, heightCm: est.height, weightKg: est.weight, activity: ACTIVITY[est.activity!] })
     : null;
   const suggestedFromEstimate = result
     ? Math.round((goal === "lose" ? result.tdee - Math.min(500, ((est.weight ?? 70) * 0.005 * KCAL_PER_KG) / 7) : goal === "gain" ? result.tdee + 200 : result.tdee) / 50) * 50
@@ -56,20 +57,20 @@ export function TargetsForm({
         <>
           <Card className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label={t("targets.sex")} htmlFor="sex">
-                <Select id="sex" value={est.sex} onChange={(e) => setEst({ ...est, sex: e.target.value as Sex })}>
-                  {(["female", "male", "unspecified"] as const).map((s) => <option key={s} value={s}>{t(`targets.sexOpt.${s}`)}</option>)}
-                </Select>
-              </Field>
+              <div className="space-y-1.5 sm:col-span-2">
+                <p className="text-sm font-medium">{t("targets.sex")}</p>
+                <Choices<Sex> name={t("targets.sex")} columns={2} value={est.sex} onChange={(sex) => setEst({ ...est, sex })}
+                  options={(["female", "male"] as const).map((x) => ({ value: x, label: t(`targets.sexOpt.${x}`) }))} />
+              </div>
               <Field label={t("targets.age")} htmlFor="age"><DecimalInput id="age" value={est.age} onChange={(v) => setEst({ ...est, age: v })} /></Field>
               <Field label={t("targets.height")} htmlFor="height"><DecimalInput id="height" value={est.height} onChange={(v) => setEst({ ...est, height: v })} /></Field>
               <Field label={t("targets.weight")} htmlFor="weight"><DecimalInput id="weight" value={est.weight} onChange={(v) => setEst({ ...est, weight: v })} /></Field>
             </div>
-            <Field label={t("targets.activity")} htmlFor="act">
-              <Select id="act" value={est.activity} onChange={(e) => setEst({ ...est, activity: e.target.value as (typeof ACTIVITY)[number] })}>
-                {ACTIVITY.map((a) => <option key={a} value={a}>{t(`targets.activityOpt.${a}`)}</option>)}
-              </Select>
-            </Field>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">{t("targets.activity")}</p>
+              <Choices<Activity> name={t("targets.activity")} value={est.activity} onChange={(activity) => setEst({ ...est, activity })}
+                options={(Object.keys(ACTIVITY) as Activity[]).map((k) => ({ value: k, label: t(`targets.activityOpt.${k}`), hint: t(`targets.activityHint.${k}`) }))} />
+            </div>
             <div>
               <p className="mb-2 text-sm font-medium">{t("targets.goal")}</p>
               <Choices name={t("targets.goal")} columns={2} value={goal} onChange={setGoal} options={GOALS.map((g) => ({ value: g, label: t(`targets.goalOpt.${g}`) }))} />

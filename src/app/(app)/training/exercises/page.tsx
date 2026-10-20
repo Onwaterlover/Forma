@@ -9,7 +9,7 @@ export default async function ExercisesPage() {
   const { user, t } = await pageCtx();
   return (
     <>
-      <PageHeader title={t("library.title")} subtitle={t("library.prefHint")} />
+      <PageHeader back={{ href: "/training", label: t("nav.training") }} title={t("library.title")} subtitle={t("library.prefHint")} />
       <Library prefs={await getPrefs(user.id)} custom={await getCustomExercises(user.id)} />
     </>
   );

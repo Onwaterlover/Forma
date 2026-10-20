@@ -1,6 +1,6 @@
 # Architecture
 
-A single Next.js 16 application (App Router, TypeScript strict) with an embedded SQLite database. One process and one data file, with no external services required.
+A single Next.js 16 application (App Router, TypeScript strict) on Postgres: **Supabase** in the cloud (deployed on Vercel), or the embedded **PGlite** (Postgres compiled to WebAssembly, stored in a local folder) when no `DATABASE_URL` is set. Same schema and queries in both.
 
 ```
 Browser / installed PWA
@@ -15,15 +15,15 @@ Next.js server (Node ≥ 22.13)
   ├─ src/nutrition/**      nutrition maths, barcode helpers, OFF mapping, energy/trend models — pure
   └─ src/import/**         deterministic plan import parser — pure
   ▼
-data/forma.db (SQLite via node:sqlite, WAL mode)
+Supabase Postgres (DATABASE_URL, via postgres.js)  ·  or  ·  DATA_DIR/pg (PGlite, local)
 ```
 
 ## Key decisions
 
 | Decision | Why |
 |---|---|
-| **SQLite via built-in `node:sqlite`** | No native module compilation (Windows-friendly), no DB server, single-file backup with `VACUUM INTO`. WAL + `busy_timeout` is plenty for a handful of users. Moving to PostgreSQL later only requires replacing `src/lib/data.ts`. |
-| **Raw SQL + typed functions instead of an ORM** | Small schema, explicit queries, and no extra dependency or codegen. Migrations are append-only (`src/lib/migrations.ts`) and run automatically at start-up. |
+| **Postgres (Supabase) + PGlite locally** | Vercel has no persistent disk, so the cloud uses Supabase Postgres (free tier, EU region). Locally and in tests the same SQL runs on PGlite, so no database server is needed. `src/lib/db.ts` is a tiny async adapter (`?` placeholders → `$n`). Row Level Security is enabled on every table with no policies: Supabase's public API keys can read nothing; the server connects as the owner and scopes every query by user. |
+| **Raw SQL + typed functions instead of an ORM** | Small schema, explicit queries, and no extra dependency or codegen. Migrations are append-only (`src/lib/migrations.ts`) and run automatically at start-up under an advisory lock (safe with concurrent serverless instances). |
 | **Pure engine modules** | The generator, validator, progression and nutrition maths are deterministic and unit-tested. The same code runs in the browser for live validation, swaps, location changes and "shorten my workout" without a round-trip. |
 | **Server actions for mutations, JSON routes only where needed** | Workout autosave/offline sync (`PUT /api/workouts/:id`), food search, barcode lookup and data export. |
 | **Session cookies** | Opaque random token in an httpOnly, SameSite=Lax cookie. Only its SHA-256 is stored, and sessions expire after 30 days. Passwords use scrypt. |
@@ -49,5 +49,5 @@ data/forma.db (SQLite via node:sqlite, WAL mode)
 ## Expansion path
 
 - More users or remote hosting: swap SQLite for PostgreSQL behind `data.ts`, and add HTTPS and a reverse proxy.
-- Progress photos (Phase 2): private files under `DATA_DIR/uploads/<userId>/<random>`, served only through an authenticated route, never from `public/`.
+- Progress photos: resized in the browser (max 1600 px, JPEG, EXIF/GPS removed), stored in the `progress_photos` table and served only through `/api/photos/:id` after an owner check. At ~150–300 KB each, a weekly set of three for five people is roughly 150 MB a year of the 500 MB free database.
 - AI (Phase 3): a provider interface that receives only the data needed for a specific question, after the user confirms. Plan and target changes are proposed as `ai_suggestions` rows and are only applied when the user accepts.

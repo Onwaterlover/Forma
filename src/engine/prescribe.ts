@@ -61,5 +61,5 @@ export function prescribe(p: TrainingProfile, ex: Exercise, priority: 1 | 2 | 3)
     return { ...base, sets: 2, repMin: 0, repMax: 0, seconds: p.experience === "beginner" ? 20 : 40, restSec: 60 };
   }
   const [repMin, repMax] = repRange(p, ex, priority);
-  return { ...base, sets: baseSets(p, ex, priority), repMin, repMax, restSec: restFor(p, ex) };
+  return { ...base, sets: baseSets(p, ex, priority), repMin, repMax, restSec: restFor(p, ex), ...(ex.grips?.[0] ? { grip: ex.grips[0] } : {}) };
 }

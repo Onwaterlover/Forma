@@ -7,7 +7,7 @@ npm test
 npm run typecheck
 ```
 
-Vitest runs 96 tests in about 2 seconds.
+Vitest runs 105 tests in about 10 seconds (the data-layer tests use an in-memory Postgres, PGlite).
 
 | Suite | File | Covers |
 |---|---|---|

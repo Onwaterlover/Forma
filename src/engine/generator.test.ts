@@ -93,7 +93,7 @@ describe("workout generator", () => {
   });
 
   it("bodyweight calisthenics in a park", () => {
-    const p = profile({ style: "bodyweight", sessionsPerWeek: 3, sessionMinutes: 45, week: week({ 1: ["park"], 3: ["park"], 5: ["park"] }), locations: [park()] });
+    const p = profile({ styles: ["bodyweight"], sessionsPerWeek: 3, sessionMinutes: 45, week: week({ 1: ["park"], 3: ["park"], 5: ["park"] }), locations: [park()] });
     const { plan } = gen(p);
     for (const e of allExercises(plan)) expect(["bodyweight", "cardio"]).toContain(e.kind);
     expect(allExercises(plan).some((e) => e.pattern === "v_pull")).toBe(true);
@@ -110,13 +110,13 @@ describe("workout generator", () => {
     ["machines", (e: Exercise) => ["machine", "cable", "smith"].includes(e.kind)],
     ["free", (e: Exercise) => ["barbell", "dumbbell", "kettlebell"].includes(e.kind)],
   ] as const)("style preference %s dominates exercise choice", (style, pred) => {
-    const p = profile({ style, experience: "intermediate", goal: "muscle", sessionsPerWeek: 4, sessionMinutes: 60, week: week({ 0: ["gym"], 1: ["gym"], 3: ["gym"], 4: ["gym"] }), locations: [gym()] });
+    const p = profile({ styles: [style], experience: "intermediate", goal: "muscle", sessionsPerWeek: 4, sessionMinutes: 60, week: week({ 0: ["gym"], 1: ["gym"], 3: ["gym"], 4: ["gym"] }), locations: [gym()] });
     const { plan } = gen(p);
     expect(share(plan, pred)).toBeGreaterThanOrEqual(0.6);
   });
 
-  it.each(["mixed", "none"] as const)("style %s produces a valid varied plan", (style) => {
-    const p = profile({ style, experience: "intermediate", goal: "muscle", sessionsPerWeek: 3, sessionMinutes: 60, week: week({ 0: ["gym"], 2: ["gym"], 4: ["gym"] }), locations: [gym()] });
+  it.each([[["machines", "free"]], [[]]] as const)("styles %j produce a valid varied plan", (styles) => {
+    const p = profile({ styles: [...styles], experience: "intermediate", goal: "muscle", sessionsPerWeek: 3, sessionMinutes: 60, week: week({ 0: ["gym"], 2: ["gym"], 4: ["gym"] }), locations: [gym()] });
     const { plan } = gen(p);
     const kinds = new Set(allExercises(plan).map((e) => e.kind));
     expect(kinds.size).toBeGreaterThanOrEqual(2);
@@ -228,7 +228,7 @@ describe("workout generator", () => {
   it("unavailable gym equipment is never used", () => {
     const missing: Equipment[] = ["leg_press", "smith", "chest_press", "pec_deck", "leg_extension"];
     const loc = { ...gym(), equipment: gym().equipment.filter((e) => !missing.includes(e)) };
-    const p = profile({ style: "machines", sessionsPerWeek: 4, sessionMinutes: 60, locations: [loc], week: week({ 0: ["gym"], 1: ["gym"], 3: ["gym"], 4: ["gym"] }) });
+    const p = profile({ styles: ["machines"], sessionsPerWeek: 4, sessionMinutes: 60, locations: [loc], week: week({ 0: ["gym"], 1: ["gym"], 3: ["gym"], 4: ["gym"] }) });
     const { plan } = gen(p);
     for (const e of allExercises(plan)) for (const req of e.equipment) expect(missing).not.toContain(req);
   });
@@ -305,6 +305,40 @@ describe("workout generator", () => {
     expect(keptMain.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("prefers a two-sided row (chest-supported) over a one-arm row to save time", () => {
+    const p = profile({ experience: "intermediate", sessionsPerWeek: 2, sessionMinutes: 45, week: week({ 0: ["home"], 3: ["home"] }), locations: [home()] });
+    const { plan } = gen(p);
+    const rows = allExercises(plan).filter((e) => e.pattern === "h_pull").map((e) => e.id);
+    expect(rows).toContain("chest_supported_db_row");
+    expect(rows).not.toContain("one_arm_db_row");
+  });
+
+  it("counts one-side-at-a-time exercises as slower", () => {
+    const lk = lookup(EXERCISES);
+    const pe = (id: string) => ({ exerciseId: id, sets: 3, repMin: 8, repMax: 12, restSec: 90, effort: "leave_0_2" as const, progression: "double" as const, pattern: "h_pull" as const, priority: 1 as const });
+    expect(estimateMinutes([pe("one_arm_db_row")], lk)).toBeGreaterThan(estimateMinutes([pe("chest_supported_db_row")], lk));
+  });
+
+  it("rows and pulldowns carry a default grip the user can change", () => {
+    const p = profile({ experience: "intermediate", sessionsPerWeek: 3, sessionMinutes: 60, week: week({ 0: ["gym"], 2: ["gym"], 4: ["gym"] }), locations: [gym()] });
+    const { plan } = gen(p);
+    const pulls = plan.sessions.flatMap((s) => s.exercises).filter((e) => EXERCISE_BY_ID.get(e.exerciseId)!.grips);
+    expect(pulls.length).toBeGreaterThan(0);
+    for (const e of pulls) expect(EXERCISE_BY_ID.get(e.exerciseId)!.grips).toContain(e.grip);
+  });
+
+  it("sports given only as times per week (no fixed days) are supported", () => {
+    const p = profile({ sessionsPerWeek: 3, sessionMinutes: 45, locations: [gym()], week: week({ 0: ["gym"], 2: ["gym"], 4: ["gym"] }), sports: [{ id: "c", type: "climbing", days: [], perWeek: 2 }] });
+    const { plan } = gen(p);
+    expect(plan.notes.some((n) => n.code === "sport_pull_overlap")).toBe(true);
+  });
+
+  it("reads profiles saved with the old single style field", () => {
+    const legacy = { ...defaultProfile(), styles: undefined, style: "mixed" } as unknown as TrainingProfile;
+    delete (legacy as unknown as Record<string, unknown>).styles;
+    expect(parseProfile(legacy).styles).toEqual(["machines", "free"]);
+  });
+
   it("is deterministic", () => {
     const p = profile({ experience: "intermediate", sessionsPerWeek: 4, week: week({ 0: ["gym"], 1: ["gym"], 3: ["gym"], 4: ["gym"] }), locations: [gym()] });
     expect(JSON.stringify(generatePlan({ profile: p }))).toBe(JSON.stringify(generatePlan({ profile: p })));
@@ -331,7 +365,7 @@ describe("workout generator", () => {
         experience: pickOne(["beginner", "intermediate", "advanced"] as const),
         sessionsPerWeek: 1 + Math.floor(rnd() * 7),
         sessionMinutes: pickOne([20, 30, 45, 60, 75, 90]),
-        style: pickOne(["machines", "free", "mixed", "none", "bodyweight"] as const),
+        styles: (["machines", "free", "bodyweight"] as const).filter(() => rnd() < 0.4),
         excludedKinds: rnd() < 0.2 ? [pickOne(["barbell", "machine", "dumbbell"] as const)] : [],
         supersets: rnd() < 0.5 ? "allow" : "avoid",
         priorities: rnd() < 0.5 ? { [pickOne(["chest", "quads", "lats", "side_delts", "biceps"] as const)]: pickOne(["high", "low", "maintain"] as const) } : {},

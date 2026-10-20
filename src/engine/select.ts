@@ -43,21 +43,15 @@ export function score(ex: Exercise, priority: 1 | 2 | 3, ctx: SelectContext): nu
   let s = 0;
   s += { favorite: 4, like: 2, neutral: 0, dislike: -6, exclude: -99, pain: -99 }[ctx.prefs[ex.id] ?? "neutral"];
 
-  switch (p.style) {
-    case "machines":
-      s += MACHINE_KINDS.includes(ex.kind) ? 2 : ex.kind === "barbell" ? -1 : ex.kind === "bodyweight" ? -0.5 : 0;
-      break;
-    case "free":
-      s += FREE_KINDS.includes(ex.kind) ? 2 : ex.kind === "machine" || ex.kind === "smith" ? -1 : 0;
-      break;
-    case "bodyweight":
-      s += ex.kind === "bodyweight" ? 2.5 : ex.kind === "band" ? 1 : 0;
-      break;
-    case "mixed":
-      s += ex.mechanics === "compound" && FREE_KINDS.includes(ex.kind) ? 0.5 : 0;
-      s += ex.mechanics === "isolation" && MACHINE_KINDS.includes(ex.kind) ? 0.5 : 0;
-      break;
+  // Preferred styles (multi-select). Matching exercises get a clear bonus; others a small penalty.
+  if (p.styles.length) {
+    const matches = p.styles.some((st) =>
+      st === "machines" ? MACHINE_KINDS.includes(ex.kind) : st === "free" ? FREE_KINDS.includes(ex.kind) : ex.kind === "bodyweight" || ex.kind === "band",
+    );
+    s += matches ? 2 : -0.75;
   }
+  // One side at a time doubles the time per set; prefer a two-sided equivalent when one exists.
+  if (ex.unilateral) s -= 0.75;
 
   if (p.goal === "strength" && priority === 1 && ex.mechanics === "compound") s += ex.kind === "barbell" ? 2 : ex.kind === "machine" ? 0.5 : 0;
   if (p.goal === "health" || p.goal === "start" || p.goal === "unsure") s += (ex.skill === 1 ? 1 : 0) - (ex.fatigue === "high" ? 1 : 0);
@@ -67,7 +61,7 @@ export function score(ex: Exercise, priority: 1 | 2 | 3, ctx: SelectContext): nu
   if (p.goal === "muscle" || p.goal === "strength") {
     // Controlled, loadable exercises make progressive overload easier to apply and track.
     if (ex.stable) s += 0.5;
-    if (p.style !== "bodyweight" && ex.kind === "bodyweight" && LOWER_BODY.has(ex.pattern)) s -= 0.75;
+    if (!p.styles.includes("bodyweight") && ex.kind === "bodyweight" && LOWER_BODY.has(ex.pattern)) s -= 0.75;
     // Main slots should hold a substantial lift, not a low-demand accessory.
     if (p.experience !== "beginner" && priority === 1 && ex.mechanics === "compound" && ex.fatigue !== "low") s += 0.75;
     // Held weights cap leg loading quickly once someone is past the beginner stage.

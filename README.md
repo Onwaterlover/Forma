@@ -1,22 +1,53 @@
 # Forma
 
-Prywatna aplikacja do treningu i liczenia jedzenia dla Ciebie i kilku zaufanych osób. Działa na Twoim komputerze, a korzystać z niej można z iPhone'a, Androida, MacBooka i komputera z Windows w przeglądarce albo jako aplikację zainstalowaną na ekranie głównym (PWA).
+Prywatna aplikacja do treningu i liczenia jedzenia dla Ciebie i kilku zaufanych osób. Działa w przeglądarce na iPhonie, Androidzie i komputerze i można ją dodać do ekranu głównego jak zwykłą aplikację (PWA). W chmurze (Vercel + Supabase) działa bez włączonego komputera.
 
-- **Generator planów treningowych.** Plan jest deterministyczny i sprawdzany przez osobny walidator. Uwzględnia dni, w których masz dostęp do siłowni, kilka miejsc treningu z różnym sprzętem, preferencje (maszyny, wolne ciężary, masa ciała), ulubione, wykluczone i bolesne ćwiczenia, priorytety partii mięśni oraz inne sporty.
-- **Rejestrator treningu.** Ma tryb prosty (odhaczasz ćwiczenia) i szczegółowy (zapisujesz serie). Pozwala zamienić ćwiczenie, zmienić miejsce, skrócić trening do 15–45 minut i włączyć opcjonalny minutnik przerw. Działa przy chwilowym braku internetu.
-- **Dziennik jedzenia.** Obsługuje kody kreskowe EAN i UPC (Open Food Facts), ulubione, ostatnie produkty, posiłki, przepisy i szybkie wpisy samych kalorii. Brakujące wartości odżywcze zostają oznaczone jako brakujące, nigdy nie są traktowane jak zero.
-- **Postępy.** Pokazuje trend masy ciała, ostrożne szacowanie zapotrzebowania z Twoich danych (bez wyniku, gdy danych jest za mało) i rekordy, przy których szacunki są wyraźnie oznaczone.
-- **Prywatność.** Każdy użytkownik widzi tylko swoje dane, a rejestracja odbywa się wyłącznie przez zaproszenie. Możesz wyeksportować i usunąć konto. Aplikacja nie wysyła żadnej telemetrii.
-- **Asystent AI jest opcjonalny.** Wszystkie podstawowe funkcje działają bez niego i bez żadnych płatnych usług.
+- **Generator planów treningowych.** Plan jest deterministyczny i sprawdzany przez osobny walidator. Uwzględnia:
+  - dni i miejsca treningu (albo „dowolne dni, aplikacja dobierze”) oraz sprzęt w każdym miejscu;
+  - preferencje: maszyny, wolne ciężary, masa ciała (można wybrać kilka);
+  - ulubione, wykluczone i bolesne ćwiczenia, priorytety partii mięśni i inne sporty.
+
+  Jeśli plan Ci się nie podoba, zaznaczasz powody, a aplikacja układa nowy.
+- **Trening.** Tryb prosty i szczegółowy, zamiana ćwiczeń, wybór chwytu (wąski lub szeroki), okno „Jak to zrobić?” z linkiem do filmu z techniką, zmiana miejsca, „krótszy trening” i „pomiń dziś”. Zapisane serie nie giną przy chwilowym braku internetu.
+- **Jedzenie.** Kody kreskowe (Open Food Facts), ostatnie produkty i ulubione, posiłki, przepisy oraz szybkie wpisy samych kalorii. Brakujące wartości są oznaczane jako brak, nigdy nie są liczone jako zero.
+- **Postępy.** Trend wagi, ostrożne szacowanie zapotrzebowania, rekordy i **prywatne zdjęcia sylwetki** (przód, bok, tył, porównywanie dat).
+- **Prywatność.** Rejestracja tylko z zaproszeniem, a każdy widzi wyłącznie swoje dane. Jest eksport danych i usuwanie konta, bez telemetrii.
+- **Bez płatnych usług.** Asystent AI jest opcjonalny i żadna podstawowa funkcja go nie wymaga.
 
 > Aplikacja nie jest wyrobem medycznym. Przy bólu lub problemach zdrowotnych skonsultuj się ze specjalistą.
 
-## Wymagania
+## Wdrożenie w chmurze (Vercel + Supabase) — zalecane
 
-- **Node.js 22.13 lub nowszy** (zalecany 24). Aplikacja korzysta z wbudowanego w Node SQLite, więc nie trzeba instalować bazy danych ani kompilować modułów.
-- Około 300 MB miejsca na `node_modules`.
+Baza: projekt Supabase **Forma** (region Frankfurt). Schemat jest już utworzony.
 
-## Pierwsze uruchomienie
+1. **GitHub:** utwórz prywatne repozytorium i wypchnij kod (`git push`).
+2. **Hasło do bazy:** w Supabase wejdź w projekt Forma, potem *Project Settings → Database → Reset database password*. Ustaw nowe hasło i je zapisz.
+3. **Adres połączenia:** w Supabase kliknij *Connect → Transaction pooler* i skopiuj adres (port **6543**). Wpisz w nim swoje hasło w miejsce `[YOUR-PASSWORD]`.
+4. **Vercel:** wybierz *Add New → Project → Import* przy swoim repozytorium. W *Environment Variables* dodaj:
+   | Nazwa | Wartość |
+   |---|---|
+   | `DATABASE_URL` | adres z kroku 3 |
+   | `COOKIE_SECURE` | `true` |
+   | `OFF_CONTACT` | Twój e-mail (wymagane przez Open Food Facts) |
+5. Kliknij **Deploy**. Pierwsze konto założone na nowym adresie `…vercel.app` zostaje administratorem.
+6. Zaproś bliskich w **Ustawienia → Zaproszenia**: wyślij im link do aplikacji i kod.
+
+Hasła do bazy nie wpisuj nigdzie poza ustawieniami Vercela i swoim plikiem `.env.local`.
+
+### Limity darmowych planów
+
+| | Limit | Co to znaczy w praktyce |
+|---|---|---|
+| Supabase: baza | 500 MB | Dane treningowe i jedzenie to drobiazg. Zdjęcia zajmują ok. 150–300 KB, więc 3 zdjęcia tygodniowo dla 5 osób to ok. 150 MB rocznie |
+| Supabase: bezczynność | Projekt usypia po 7 dniach bez użycia | Przy codziennym logowaniu się to nie zdarzy. Uśpiony projekt wybudzasz jednym kliknięciem w panelu Supabase |
+| Supabase: kopie | Brak automatycznych kopii w darmowym planie | Rób kopie co jakiś czas poleceniem `npm run backup` (opis niżej) |
+| Vercel Hobby | Użytek prywatny i niekomercyjny, 100 GB transferu/mies. | Dla rodziny wystarczy z dużym zapasem |
+| Open Food Facts | Limit zapytań liczony per adres IP | Serwery Vercela dzielą adresy, więc czasem pojawi się komunikat „baza przeciążona”. Zapisane produkty i ręczne dodawanie działają zawsze |
+| Prywatność | Dane leżą w chmurze UE (Supabase Frankfurt, Vercel Frankfurt) | Dostęp tylko z kontem. Publiczne klucze Supabase nie odczytają żadnej tabeli (RLS) |
+
+## Uruchomienie lokalne (bez chmury)
+
+Wymagany jest Node.js 22.13 lub nowszy. Bez ustawionego `DATABASE_URL` aplikacja używa wbudowanej bazy Postgres (PGlite) w folderze `data/`.
 
 ```bash
 npm install
@@ -28,102 +59,29 @@ npm run build
 npm start
 ```
 
-Otwórz `http://localhost:3000`. **Pierwsze utworzone konto zostaje administratorem.** Kolejne osoby rejestrują się kodem zaproszenia (Ustawienia → Zaproszenia).
-
-Tryb deweloperski z automatycznym przeładowaniem:
-
-```bash
-npm run dev
-```
-
-Ustawienia opcjonalne skopiuj z `.env.example` do `.env.local`. Żadne z nich nie jest wymagane.
-
-Alternatywnie w Dockerze (dane w `./data`):
-
-```bash
-docker compose up -d --build
-```
-
-## Dostęp z telefonu i innych komputerów
-
-To ważne rozróżnienie:
-
-| Sposób | Adres | Działa z telefonu? | Aparat (skanowanie kodów) |
-|---|---|---|---|
-| Tylko ten komputer | `http://localhost:3000` | ❌ „localhost” na iPhonie oznacza sam iPhone | ✅ |
-| Sieć domowa (Wi-Fi) | `http://192.168.x.x:3000` | ✅ w tej samej sieci | ❌ przeglądarki wymagają HTTPS |
-| Prywatny VPN (Tailscale), zalecane | `https://twoj-komputer.twoja-siec.ts.net` | ✅ w domu i poza domem | ✅ |
-
-**Sieć domowa:** serwer nasłuchuje na wszystkich interfejsach (`-H 0.0.0.0`). Adres komputera sprawdzisz poleceniem `ipconfig` (Windows) lub `ipconfig getifaddr en0` (Mac). Na Windowsie przy pierwszym uruchomieniu zezwól Node.js na dostęp w **sieci prywatnej** w zaporze.
-
-**Tailscale (HTTPS, aparat, dostęp spoza domu, bez wystawiania aplikacji do internetu):**
-
-1. Zainstaluj Tailscale na komputerze z aplikacją i na telefonach (darmowy plan osobisty). Zaloguj wszystkie urządzenia do tej samej sieci.
-2. W panelu Tailscale włącz *MagicDNS* i *HTTPS Certificates*.
-3. Na komputerze z aplikacją uruchom:
-   ```bash
-   tailscale serve --bg 3000
-   ```
-4. W `.env.local` ustaw `COOKIE_SECURE=true` oraz `ALLOWED_ORIGINS=` z adresem komputera w Tailscale (np. `moj-pc.tail1234.ts.net`). Następnie zbuduj i uruchom aplikację ponownie.
-5. Na telefonie otwórz adres `https://…ts.net` wyświetlony przez Tailscale. Na iPhonie w Safari wybierz *Udostępnij → Do ekranu początkowego*, na Androidzie w Chrome *Zainstaluj aplikację*.
-
-Aplikacja pozostaje dostępna wyłącznie dla urządzeń w Twojej prywatnej sieci Tailscale. Nie używaj `tailscale funnel`, bo to wystawiłoby ją publicznie.
-
-Do szybkiego testu aparatu w sieci lokalnej możesz też użyć `npm run dev:https` (certyfikat samopodpisany). Telefon pokaże ostrzeżenie o certyfikacie, dlatego do codziennego użytku polecam Tailscale.
-
-## Zapraszanie osób
-
-- W aplikacji: **Ustawienia → Zaproszenia → Utwórz kod zaproszenia**. Kod działa jednorazowo przez 14 dni i jest widoczny tylko raz.
-- Z wiersza poleceń (gdy nikt nie może się zalogować):
-  ```bash
-  npm run invite -- "dla Ani"
-  ```
-
-Administrator może zapraszać osoby, ale **nie widzi** cudzych treningów, jedzenia ani wag.
+Otwórz `http://localhost:3000`. Tryb deweloperski uruchomisz poleceniem `npm run dev`. Z telefonu w tej samej sieci Wi-Fi wejdziesz pod `http://<adres-komputera>:3000`. Skanowanie kodów wymaga HTTPS, więc działa w chmurze albo przez Tailscale.
 
 ## Kopie zapasowe
-
-Kopię można zrobić w trakcie działania aplikacji:
 
 ```bash
 npm run backup
 ```
 
-Plik trafia do `backups/forma-RRRR-MM-DD-GGMM.db`. Domyślnie zostaje 30 najnowszych kopii (`BACKUP_KEEP`). Na Windowsie możesz zaplanować to polecenie w Harmonogramie zadań, na Macu w `cron` lub `launchd`.
+Polecenie zapisuje wszystkie dane do `backups/forma-RRRR-MM-DD-GGMM.json` i zostawia 30 najnowszych kopii. Dla bazy w chmurze ustaw najpierw `DATABASE_URL` w `.env.local` (albo jako zmienną w terminalu).
 
-Przywracanie: **najpierw zatrzymaj aplikację**, potem uruchom:
+Przywracanie **zastępuje wszystkie obecne dane**:
 
 ```bash
-npm run restore -- backups/forma-2026-10-20-1830.db
+npm run restore -- backups/forma-2026-10-20-1830.json
 ```
-
-Skrypt sprawdza integralność kopii i zachowuje obecną bazę jako `data/forma.db.before-restore-…`.
 
 Każdy użytkownik może też pobrać swoje dane w formacie JSON (Ustawienia → Twoje dane).
 
+Kod zaproszenia z wiersza poleceń (gdy nikt nie może się zalogować): `npm run invite -- "dla Ani"`.
+
 ## Aktualizacja
 
-```bash
-git pull
-```
-```bash
-npm install
-```
-```bash
-npm run build
-```
-
-Następnie uruchom aplikację ponownie. Migracje bazy wykonują się automatycznie przy starcie. Przed aktualizacją zrób kopię zapasową.
-
-## Opcjonalny asystent AI
-
-Asystent nie jest potrzebny do żadnej podstawowej funkcji. Interfejs dostawcy jest przygotowany (`AI_PROVIDER`, `ANTHROPIC_API_KEY` w `.env.local`), a funkcje AI są zaplanowane na fazę 3 ([docs/roadmap.md](docs/roadmap.md)). Klucz pozostaje na serwerze. Dane użytkownika nie są nigdzie wysyłane bez Twojej zgody.
-
-## Koszty i usługi zewnętrzne
-
-- **0 zł.** Brak płatnych usług, subskrypcji i reklam.
-- **Open Food Facts** to darmowa, otwarta baza produktów (licencja ODbL). Aplikacja przestrzega limitów zapytań, zapisuje wyniki w pamięci podręcznej i nie wyszukuje przy każdym naciśnięciu klawisza. Wpisz swój e-mail w `OFF_CONTACT`, o co proszą twórcy bazy.
-- **Tailscale** jest opcjonalny. Plan osobisty jest darmowy.
+Po `git push` Vercel sam buduje i publikuje nową wersję. Migracje bazy uruchamiają się automatycznie. Przed większą aktualizacją zrób `npm run backup`.
 
 ## Testy
 

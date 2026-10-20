@@ -9,6 +9,8 @@ import { currentTarget, diaryDay, getActivePlan, getProfile, inProgressWorkout, 
 import { exName } from "@/i18n";
 import { StartChoices } from "./start-choices";
 import { QuickWeight } from "./quick-weight";
+import { LiveClock, TodayWorkoutActions } from "./today-widgets";
+import { DICTS } from "@/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,8 @@ export default async function TodayPage() {
 
   return (
     <>
-      <h1 className="mb-5 text-2xl font-semibold tracking-tight">{t("today.greeting", { name: user.name })}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("today.greeting", { name: user.name })}</h1>
+      <div className="mb-5"><LiveClock /></div>
       {showStart && <StartChoices t={t} />}
 
       {settings.modules.training && (
@@ -49,6 +52,9 @@ export default async function TodayPage() {
             <Card>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+                    {next.day === weekdayOf(today) ? t("today.scheduledToday") : next.day !== null ? t("today.scheduledOn", { day: DICTS[locale].days.long[next.day]! }) : t("today.anytime")}
+                  </p>
                   <p className="text-lg font-medium">{next.name ?? t(`template.${next.template}`)}</p>
                   <p className="text-sm text-muted">
                     {t("plan.estimated", { n: next.estimatedMinutes })}
@@ -56,7 +62,7 @@ export default async function TodayPage() {
                   </p>
                   {!scheduledToday && plan.data.sessions.some((s) => s.day !== null) && <p className="mt-1 text-sm text-muted">{t("today.restDay")}</p>}
                 </div>
-                <form action={startWorkout.bind(null, plan.id, next.key)}>
+                <form action={startWorkout.bind(null, plan.id, next.key, undefined)}>
                   <button type="submit" className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-hover">
                     <Play size={18} aria-hidden />{t("plan.start")}
                   </button>
@@ -70,6 +76,7 @@ export default async function TodayPage() {
                   </li>
                 ))}
               </ul>
+              <TodayWorkoutActions planId={plan.id} sessionKey={next.key} />
             </Card>
           ) : (
             <Card className="flex items-center justify-between gap-3">

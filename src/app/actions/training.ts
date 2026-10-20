@@ -15,7 +15,7 @@ import { weeklySets } from "@/engine/volume";
 import { translator, exName } from "@/i18n";
 import { requireUser } from "@/lib/auth";
 import {
-  addCustomExercise, createPlan, exerciseHistory, getActivePlan, getPlan, getPlanVersion, getPrefs, getProfile, getSettings, getWorkout, libraryFor,
+  addCustomExercise, createPlan, deletePlan, exerciseHistory, getActivePlan, getPlan, getPlanVersion, getPrefs, getProfile, getSettings, getWorkout, libraryFor,
   renamePlan, saveProfile, savePlanVersion, saveSettings, setPlanStatus, setPref, upsertWorkout, type WorkoutPayload,
 } from "@/lib/data";
 import { nowIso } from "@/lib/db";
@@ -225,18 +225,23 @@ export async function analyzePlan(planId: string) {
 }
 
 // ── Workouts ─────────────────────────────────────────────────────────────
-export async function startWorkout(planId: string | null, sessionKey: string | null) {
+export async function startWorkout(planId: string | null, sessionKey: string | null, minutes?: number) {
   const user = await requireUser();
   const library = await libraryFor(user.id);
   const plan = planId ? await getPlan(user.id, planId) : null;
   const session = plan?.data.sessions.find((s) => s.key === sessionKey) ?? null;
-  const exercises = session?.exercises ?? [];
+  let exercises = session?.exercises ?? [];
+  // "Shorter workout": keep the most important work for the time available (the plan itself is unchanged).
+  const profile = minutes ? await getProfile(user.id) : null;
+  if (session && profile && minutes && minutes >= 10 && minutes <= 120) {
+    exercises = shortenSession(session, minutes, { profile, prefs: await getPrefs(user.id), library }).session.exercises;
+  }
   const t = translator(user.locale);
   const id = crypto.randomUUID();
   const histories = await Promise.all(exercises.map((pe) => exerciseHistory(user.id, pe.exerciseId, 3)));
   const payload: WorkoutPayload = {
     id, planId: plan?.id ?? null, planVersion: plan?.current_version ?? null, sessionKey: session?.key ?? null,
-    name: session ? session.name ?? t(`template.${session.template}`) : t("workout.emptyWorkout"),
+    name: session ? `${session.name ?? t(`template.${session.template}`)}${minutes ? ` (${t("workout.shortened")}, ${minutes} ${t("common.min")})` : ""}` : t("workout.emptyWorkout"),
     locationId: session?.locationId ?? null, mode: (await getSettings(user.id)).logMode, status: "in_progress",
     startedAt: nowIso(), endedAt: null, notes: null, clientUpdatedAt: nowIso(),
     exercises: exercises.map((pe, i) => {
@@ -247,7 +252,7 @@ export async function startWorkout(planId: string | null, sessionKey: string | n
       const w = sug.kind === "increase_load" || sug.kind === "add_reps" ? sug.weightKg : sug.kind === "consider_reduce" ? null : lastSets[0]?.weightKg ?? null;
       return {
         id: `${id}:${i}`, exerciseId: pe.exerciseId, name: exName(ex, user.locale, pe.exerciseId), loading: ex?.loading ?? "total",
-        target: { sets: pe.sets, repMin: pe.repMin, repMax: pe.repMax, seconds: pe.seconds, restSec: pe.restSec, effort: pe.effort, priority: pe.priority },
+        target: { sets: pe.sets, repMin: pe.repMin, repMax: pe.repMax, seconds: pe.seconds, restSec: pe.restSec, effort: pe.effort, priority: pe.priority, grip: pe.grip },
         completed: false, skipped: false, notes: null,
         sets: Array.from({ length: pe.sets }, (_, j) => ({
           id: `${id}:${i}:${j}`, type: "working" as const, reps: null, weightKg: w ?? lastSets[j]?.weightKg ?? null, rir: null, rpe: null, durationS: null, completed: false,
@@ -297,4 +302,68 @@ export async function createManualPlan() {
   };
   const id = await createPlan(user.id, t("plan.newName"), "manual", plan, null, false);
   redirect(`/training/plan/${id}`);
+}
+
+export async function deletePlanAction(planId: string) {
+  const user = await requireUser();
+  await deletePlan(user.id, planId);
+  revalidatePath("/", "layout");
+  redirect("/training");
+}
+
+const feedbackSchema = z.object({
+  reasons: z.array(z.enum(["too_long", "too_short", "fewer_days", "more_days", "more_upper", "more_lower", "too_hard", "more_machines", "more_free", "more_bodyweight"])).max(10),
+  dislike: z.array(z.string().regex(/^[a-z0-9_-]{1,80}$/)).max(30),
+});
+export type PlanFeedback = z.infer<typeof feedbackSchema>;
+
+/** "I don't like this plan": turn the reasons into concrete profile/preference changes and regenerate. */
+export async function regenerateWithFeedback(raw: unknown): Promise<{ error?: string }> {
+  const user = await requireUser();
+  const fb = feedbackSchema.safeParse(raw);
+  if (!fb.success || (!fb.data.reasons.length && !fb.data.dislike.length)) return { error: "empty" };
+  const profile = await getProfile(user.id);
+  if (!profile) redirect("/training/setup");
+  const r = new Set(fb.data.reasons);
+  const p = { ...profile, priorities: { ...profile.priorities } };
+  const days = p.week.filter((d) => !d.rest && d.locations.length).length;
+  if (r.has("too_long")) p.sessionMinutes = Math.max(20, Math.round((p.sessionMinutes * 0.75) / 5) * 5);
+  if (r.has("too_short")) p.sessionMinutes = Math.min(120, p.sessionMinutes + 15);
+  if (r.has("fewer_days")) p.sessionsPerWeek = Math.max(1, Math.min(p.sessionsPerWeek, days) - 1);
+  if (r.has("more_days")) p.sessionsPerWeek = Math.min(6, Math.max(1, days), p.sessionsPerWeek + 1);
+  if (r.has("more_upper")) {
+    for (const m of ["chest", "lats", "upper_back", "side_delts"] as const) p.priorities[m] = "high";
+    for (const m of ["quads", "hamstrings", "glutes"] as const) if (p.priorities[m] === "high") delete p.priorities[m];
+  }
+  if (r.has("more_lower")) {
+    for (const m of ["quads", "hamstrings", "glutes"] as const) p.priorities[m] = "high";
+    for (const m of ["chest", "lats", "upper_back", "side_delts"] as const) if (p.priorities[m] === "high") delete p.priorities[m];
+  }
+  if (r.has("too_hard")) p.experience = p.experience === "advanced" ? "intermediate" : "beginner";
+  const styles = (["machines", "free", "bodyweight"] as const).filter((s) => r.has(`more_${s}` as "more_machines"));
+  if (styles.length) p.styles = [...styles];
+  for (const id of fb.data.dislike) await setPref(user.id, id, "dislike");
+
+  const saved = await saveProfile(user.id, p);
+  const plan = generatePlan({ profile: saved, prefs: await getPrefs(user.id), library: await libraryFor(user.id) });
+  const active = await getActivePlan(user.id);
+  if (active && active.source === "generated") await savePlanVersion(user.id, active.id, plan, `feedback: ${[...r, ...fb.data.dislike.map((d) => `-${d}`)].join(", ")}`.slice(0, 120));
+  else await createPlan(user.id, generatedName(user.locale, plan.split), "generated", plan, "feedback", true);
+  revalidatePath("/", "layout");
+  return {};
+}
+
+/** "Not today": record the session as skipped so the rotation moves on to the next one. */
+export async function skipSession(planId: string, sessionKey: string) {
+  const user = await requireUser();
+  const plan = await getPlan(user.id, planId);
+  const session = plan?.data.sessions.find((s) => s.key === sessionKey);
+  if (!plan || !session) return;
+  const t = translator(user.locale);
+  const now = nowIso();
+  await upsertWorkout(user.id, {
+    id: crypto.randomUUID(), planId, planVersion: plan.current_version, sessionKey, name: session.name ?? t(`template.${session.template}`),
+    locationId: session.locationId, mode: "simple", status: "abandoned", startedAt: now, endedAt: now, notes: "skipped", clientUpdatedAt: now, exercises: [],
+  });
+  revalidatePath("/");
 }

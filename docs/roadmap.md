@@ -22,7 +22,7 @@ Done and tested:
 ## Known limitations
 
 - **PDF and image import** need the optional AI assistant (Phase 3). Today the app says so and asks for pasted text or manual entry.
-- **Body measurements and progress photos** are not built yet (Phase 2). The tables and a private-file design are planned (see architecture).
+- **Body measurements** are not built yet (Phase 2). Progress photos are done (private, resized in the browser, stored in the database).
 - **Exercise demonstrations** are text cues only. There is no licensed media yet; the data model has room for a media field.
 - **Session time model** uses fixed constants. Calibrating it against logged workout durations is planned.
 - **Deload / plateau detection** is limited to the per-exercise "sustained decline" suggestion. Week-level fatigue patterns are Phase 2.
@@ -34,7 +34,7 @@ Done and tested:
 
 ## Phase 2: progress and adaptation
 
-1. Body measurements and private progress photos (front/side/back, side-by-side comparison), stored outside `public/` and served only to their owner.
+1. Body measurements (waist, hips, etc.) next to the existing progress photos.
 2. Calibrating session duration from logged workouts. Week-level fatigue and plateau patterns with conservative deload *suggestions*.
 3. Richer analytics: per-exercise trend charts, muscle-group distribution from logged sets (direct vs indirect clearly separated).
 4. Advanced scheduling: automatic re-planning when availability changes mid-week.

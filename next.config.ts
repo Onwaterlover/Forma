@@ -5,6 +5,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map((s) => s.trim
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Database drivers load native/WASM assets at runtime; keep them out of the bundle.
+  serverExternalPackages: ["@electric-sql/pglite", "postgres"],
   experimental: { serverActions: { allowedOrigins } },
   // Allow phones/laptops on the LAN or tailnet to load dev assets.
   allowedDevOrigins: ["*.local", "*.ts.net", "192.168.*.*", "10.*.*.*"],

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
+import { BackButton } from "./back-button";
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
@@ -31,10 +32,11 @@ export function Card({ className, ...rest }: ComponentProps<"div">) {
   return <div {...rest} className={cx("rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-[var(--shadow)] sm:p-5", className)} />;
 }
 
-export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
+export function PageHeader({ title, subtitle, action, back }: { title: string; subtitle?: ReactNode; action?: ReactNode; back?: { href: string; label: string } }) {
   return (
     <header className="mb-5 flex items-start justify-between gap-3">
       <div className="min-w-0">
+        {back && <BackButton href={back.href} label={back.label} />}
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>

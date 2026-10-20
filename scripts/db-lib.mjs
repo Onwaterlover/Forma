@@ -1,6 +1,12 @@
 // Shared helpers for backup/restore/invite scripts. Uses DATABASE_URL (Supabase/Postgres) if set,
 // otherwise the local embedded database in DATA_DIR/pg (start the app once so the schema exists).
+import fs from "node:fs";
 import path from "node:path";
+
+// Same settings as the app: pick up DATABASE_URL / DATA_DIR from .env.local if present.
+try {
+  process.loadEnvFile(".env.local");
+} catch {}
 
 // Insert order respects foreign keys; delete in reverse.
 export const TABLES = [
@@ -22,6 +28,7 @@ export async function connect() {
   }
   const { PGlite } = await import("@electric-sql/pglite");
   const dir = path.join(path.resolve(process.env.DATA_DIR ?? "./data"), "pg");
+  fs.mkdirSync(dir, { recursive: true });
   const pg = new PGlite(dir);
   await pg.waitReady;
   return {

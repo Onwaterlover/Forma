@@ -40,6 +40,7 @@ export type Loading =
   | "time";          // holds / conditioning, logged in seconds
 
 export type Mechanics = "compound" | "isolation";
+export type Grip = "narrow" | "wide" | "neutral";
 export type Lang = "pl" | "en" | "de";
 
 export interface Exercise {
@@ -65,6 +66,10 @@ export interface Exercise {
   loading: Loading;
   /** Small isolation lifts that usually suit higher reps. */
   smallMuscle?: boolean;
+  /** One side at a time: each set takes roughly twice as long. */
+  unilateral?: boolean;
+  /** Grip / elbow-position variants the user can choose between (first = default). */
+  grips?: Grip[];
   cue: Partial<Record<Lang, string>>;
   safety?: Partial<Record<Lang, string>>;
   custom?: boolean;
@@ -72,7 +77,8 @@ export interface Exercise {
 
 export type Goal = "muscle" | "strength" | "health" | "conditioning" | "sport" | "start" | "unsure";
 export type Experience = "beginner" | "intermediate" | "advanced";
-export type StylePref = "machines" | "free" | "mixed" | "none" | "bodyweight";
+/** Preferred equipment styles; several may be chosen, none = no preference. */
+export type StylePref = "machines" | "free" | "bodyweight";
 export type MusclePriority = "high" | "normal" | "low" | "maintain";
 export type ExercisePref = "favorite" | "like" | "neutral" | "dislike" | "exclude" | "pain";
 
@@ -96,6 +102,7 @@ export interface Sport {
   id: string;
   type: "climbing" | "bouldering" | "cycling" | "running" | "football" | "swimming" | "martial_arts" | "tennis" | "other";
   name?: string;
+  /** Fixed days, or empty when the user only knows how many times per week (perWeek). */
   days: Weekday[];
   perWeek: number;
   minutes?: number;
@@ -114,7 +121,7 @@ export interface TrainingProfile {
   /** Index 0 = Monday. */
   week: DayAvailability[];
   locations: Location[];
-  style: StylePref;
+  styles: StylePref[];
   excludedKinds: Kind[];
   priorities: Partial<Record<Muscle, MusclePriority>>;
   sports: Sport[];
@@ -144,6 +151,7 @@ export interface PlannedExercise {
   priority: 1 | 2 | 3;
   /** Exercises sharing a group number are done as a superset. */
   superset?: number;
+  grip?: Grip;
   note?: string;
 }
 

@@ -23,7 +23,7 @@ export const profileSchema = z.object({
     )
     .min(1)
     .max(10),
-  style: z.enum(["machines", "free", "mixed", "none", "bodyweight"]),
+  styles: z.array(z.enum(["machines", "free", "bodyweight"])).max(3),
   excludedKinds: z.array(z.enum(KINDS)).max(KINDS.length),
   priorities: z.partialRecord(z.enum(MUSCLES), z.enum(["high", "normal", "low", "maintain"])),
   sports: z
@@ -44,8 +44,16 @@ export const profileSchema = z.object({
   conditioning: z.boolean().optional(),
 });
 
+const LEGACY_STYLE: Record<string, TrainingProfile["styles"]> = { machines: ["machines"], free: ["free"], bodyweight: ["bodyweight"], mixed: ["machines", "free"], none: [] };
+
 export function parseProfile(data: unknown): TrainingProfile {
+  // Profiles saved before multi-select styles stored a single "style" value.
+  if (data && typeof data === "object" && !("styles" in data) && "style" in data) {
+    const { style, ...rest } = data as Record<string, unknown>;
+    data = { ...rest, styles: LEGACY_STYLE[String(style)] ?? [] };
+  }
   const p = profileSchema.parse(data) as TrainingProfile;
+  p.styles = [...new Set(p.styles)];
   const ids = new Set(p.locations.map((l) => l.id));
   // Drop references to locations that no longer exist instead of failing later.
   p.week = p.week.map((d) => ({ ...d, locations: d.locations.filter((l) => ids.has(l)) }));
@@ -64,7 +72,7 @@ export function defaultProfile(): TrainingProfile {
       { locations: ["gym"] }, { locations: [] }, { locations: [], rest: true },
     ],
     locations: [{ id: "gym", name: "Siłownia", kind: "gym", equipment: [...LOCATION_PRESETS.commercial_gym!.equipment] }],
-    style: "none",
+    styles: [],
     excludedKinds: [],
     priorities: {},
     sports: [],

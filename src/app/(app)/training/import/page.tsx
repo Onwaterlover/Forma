@@ -10,8 +10,7 @@ export default async function ImportPage() {
   const { user, t } = await pageCtx();
   return (
     <>
-      <PageHeader
-        title={t("import.title")}
+      <PageHeader back={{ href: "/training", label: t("nav.training") }}         title={t("import.title")}
         subtitle={t("import.hint")}
         action={<form action={createManualPlan}><button className="h-9 rounded-xl bg-surface-2 px-3 text-sm font-medium hover:bg-border">{t("plan.manual")}</button></form>}
       />

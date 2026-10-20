@@ -3,6 +3,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { createCustomExercise, setExercisePref } from "@/app/actions/training";
 import { Sheet, useToast } from "@/components/client";
+import { HowTo } from "@/components/how-to";
 import { Badge, Button, Card, cx, Field, Input, Notice, Select } from "@/components/ui";
 import { EXERCISES } from "@/engine/exercises";
 import { PATTERN_MUSCLES } from "@/engine/templates";
@@ -176,6 +177,7 @@ export function Library({ prefs: initialPrefs, custom }: { prefs: Record<string,
                               })}
                             </div>
                             {pref === "pain" && <p className="text-xs text-muted">{t("plan.painCaution")}</p>}
+                            <HowTo exercise={e} compact />
                           </div>
                         )}
                       </li>

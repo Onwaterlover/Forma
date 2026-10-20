@@ -1,7 +1,7 @@
 import "server-only";
 import { EXERCISES } from "@/engine/exercises";
 import { parseProfile } from "@/engine/profile";
-import type { Exercise, ExercisePref, Plan, TrainingProfile } from "@/engine/types";
+import type { Exercise, ExercisePref, Grip, Plan, TrainingProfile } from "@/engine/types";
 import { emptyNutrients, recipe as recipeCalc, scale, sum, type Ingredient, type Nutrients } from "@/nutrition/calc";
 import type { ProductDraft } from "@/nutrition/off";
 import { db, json, newId, nowIso, type Q } from "./db";
@@ -187,7 +187,7 @@ export interface WorkoutExercise {
   exerciseId: string;
   name: string;
   loading: string;
-  target: { sets: number; repMin: number; repMax: number; seconds?: number; restSec: number; effort: string; priority?: number } | null;
+  target: { sets: number; repMin: number; repMax: number; seconds?: number; restSec: number; effort: string; priority?: number; grip?: Grip } | null;
   completed: boolean;
   skipped: boolean;
   notes: string | null;
@@ -266,8 +266,8 @@ export async function getWorkout(userId: string, id: string): Promise<WorkoutPay
 }
 
 export async function listWorkouts(userId: string, limit = 50) {
-  return (await db()).all<{ id: string; name: string; status: string; mode: string; started_at: string; ended_at: string | null; session_key: string | null; done_exercises: number; logged_sets: number }>(
-    `SELECT w.id, w.name, w.status, w.mode, w.started_at, w.ended_at, w.session_key,
+  return (await db()).all<{ id: string; name: string; status: string; mode: string; started_at: string; ended_at: string | null; session_key: string | null; notes: string | null; done_exercises: number; logged_sets: number }>(
+    `SELECT w.id, w.name, w.status, w.mode, w.started_at, w.ended_at, w.session_key, w.notes,
       (SELECT COUNT(*) FROM workout_exercises e WHERE e.workout_id = w.id AND (e.completed = 1 OR EXISTS (SELECT 1 FROM workout_sets s WHERE s.workout_exercise_id = e.id AND s.completed = 1)))::int AS done_exercises,
       (SELECT COUNT(*) FROM workout_sets s JOIN workout_exercises e ON e.id = s.workout_exercise_id WHERE e.workout_id = w.id AND s.completed = 1 AND s.reps IS NOT NULL)::int AS logged_sets
      FROM workouts w WHERE w.user_id = ? ORDER BY w.started_at DESC LIMIT ?`,
@@ -281,7 +281,7 @@ export async function inProgressWorkout(userId: string) {
 
 export async function lastCompletedSessionKey(userId: string, planId: string): Promise<string | null> {
   const r = await (await db()).get<{ session_key: string | null }>(
-    "SELECT session_key FROM workouts WHERE user_id = ? AND plan_id = ? AND status = 'completed' ORDER BY started_at DESC LIMIT 1",
+    "SELECT session_key FROM workouts WHERE user_id = ? AND plan_id = ? AND (status = 'completed' OR notes = 'skipped') ORDER BY started_at DESC LIMIT 1",
     [userId, planId],
   );
   return r?.session_key ?? null;
@@ -711,4 +711,40 @@ export async function changePassword(userId: string, hash: string) {
 
 export async function passwordHash(userId: string): Promise<string | null> {
   return (await (await db()).get<{ password_hash: string }>("SELECT password_hash FROM users WHERE id = ?", [userId]))?.password_hash ?? null;
+}
+
+export async function deletePlan(userId: string, planId: string) {
+  // Versions cascade; logged workouts keep their data (plan_id is set to NULL).
+  await (await db()).run("DELETE FROM plans WHERE id = ? AND user_id = ?", [planId, userId]);
+}
+
+// ── Progress photos (private; stored in the database, served only to their owner) ──
+export interface PhotoMeta {
+  id: string;
+  date: string;
+  pose: "front" | "side" | "back" | "other";
+  note: string | null;
+  width: number | null;
+  height: number | null;
+}
+
+export async function addPhoto(userId: string, p: Omit<PhotoMeta, "id"> & { mime: string; data: Uint8Array }): Promise<string> {
+  const id = newId();
+  await (await db()).run(
+    "INSERT INTO progress_photos (id, user_id, date, pose, note, mime, data, width, height, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+    [id, userId, p.date, p.pose, p.note, p.mime, Buffer.from(p.data), p.width, p.height, nowIso()],
+  );
+  return id;
+}
+
+export async function listPhotos(userId: string): Promise<PhotoMeta[]> {
+  return (await db()).all<PhotoMeta>("SELECT id, date, pose, note, width, height FROM progress_photos WHERE user_id = ? ORDER BY date DESC, created_at DESC", [userId]);
+}
+
+export async function getPhoto(userId: string, id: string): Promise<{ mime: string; data: Uint8Array } | null> {
+  return (await (await db()).get<{ mime: string; data: Uint8Array }>("SELECT mime, data FROM progress_photos WHERE id = ? AND user_id = ?", [id, userId])) ?? null;
+}
+
+export async function deletePhoto(userId: string, id: string) {
+  await (await db()).run("DELETE FROM progress_photos WHERE id = ? AND user_id = ?", [id, userId]);
 }

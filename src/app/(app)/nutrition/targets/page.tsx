@@ -18,7 +18,7 @@ export default async function TargetsPage() {
   const suggestion = goal && lastKg ? suggestTarget(adaptive, goal, target?.kcal ?? null, lastKg) : null;
   return (
     <>
-      <PageHeader title={t("targets.title")} subtitle={t("targets.noAuto")} />
+      <PageHeader back={{ href: "/nutrition", label: t("nav.nutrition") }} title={t("targets.title")} subtitle={t("targets.noAuto")} />
       <TargetsForm target={target ? { kcal: target.kcal, protein: target.protein_g, goal } : null} lastKg={lastKg} adaptive={adaptive} suggestion={suggestion} />
     </>
   );

@@ -225,6 +225,25 @@ CREATE TABLE undo_buffer (
 ${TABLES.map((t) => `ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY`).join(";\n")}
 `,
   },
+  {
+    version: 2,
+    sql: `
+CREATE TABLE progress_photos (
+  id text PRIMARY KEY,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  date text NOT NULL,
+  pose text NOT NULL CHECK (pose IN ('front','side','back','other')),
+  note text,
+  mime text NOT NULL,
+  data bytea NOT NULL,
+  width integer,
+  height integer,
+  created_at text NOT NULL
+);
+CREATE INDEX progress_photos_user ON progress_photos(user_id, date);
+ALTER TABLE progress_photos ENABLE ROW LEVEL SECURITY
+`,
+  },
 ];
 // Row Level Security is enabled with no policies: Supabase's public API keys can read nothing.
 // The app connects as the database owner on the server and enforces per-user access in src/lib/data.ts.

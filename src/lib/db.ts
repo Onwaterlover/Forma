@@ -1,4 +1,5 @@
 import "server-only";
+import fs from "node:fs";
 import path from "node:path";
 import { MIGRATIONS } from "./migrations";
 
@@ -53,6 +54,7 @@ async function openPostgres(url: string): Promise<Db> {
 
 export async function openPglite(dir: string | null): Promise<Db> {
   const { PGlite } = await import("@electric-sql/pglite");
+  if (dir) fs.mkdirSync(dir, { recursive: true });
   const pg = dir ? new PGlite(dir) : new PGlite();
   await pg.waitReady;
   const execWith = (s: { query: typeof pg.query }): Exec => async (text, params) => {

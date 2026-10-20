@@ -9,7 +9,7 @@ export default async function RecipesPage() {
   const { user, t } = await pageCtx();
   return (
     <>
-      <PageHeader title={t("nutrition.recipes")} subtitle={t("nutrition.help")} />
+      <PageHeader back={{ href: "/nutrition", label: t("nav.nutrition") }} title={t("nutrition.recipes")} subtitle={t("nutrition.help")} />
       <Recipes recipes={await listRecipes(user.id)} />
     </>
   );

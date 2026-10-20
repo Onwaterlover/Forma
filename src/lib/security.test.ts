@@ -197,3 +197,15 @@ describe("backup and restore", () => {
     await check.close();
   }, 120_000);
 });
+
+describe("progress photos", () => {
+  it("are private to their owner", async () => {
+    const id = await data.addPhoto(A, { date: "2026-10-10", pose: "front", note: null, mime: "image/jpeg", data: new Uint8Array([0xff, 0xd8, 0xff, 1, 2, 3]), width: 10, height: 10 });
+    expect(await data.getPhoto(B, id)).toBeNull();
+    expect(await data.listPhotos(B)).toEqual([]);
+    await data.deletePhoto(B, id);
+    const mine = await data.getPhoto(A, id);
+    expect(mine?.mime).toBe("image/jpeg");
+    expect([...mine!.data].slice(0, 3)).toEqual([0xff, 0xd8, 0xff]);
+  });
+});

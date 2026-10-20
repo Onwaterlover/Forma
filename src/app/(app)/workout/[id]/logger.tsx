@@ -3,6 +3,8 @@ import { ArrowDown, ArrowUp, Check, CloudOff, MapPin, Minus, NotebookPen, Plus, 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyWorkoutToPlan } from "@/app/actions/training";
+import { BackButton } from "@/components/back-button";
+import { HowTo } from "@/components/how-to";
 import { Choices, DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, Card, cx, Notice } from "@/components/ui";
 import { shortenSession } from "@/engine/adapt";
@@ -222,6 +224,7 @@ export function WorkoutLogger({
     <div className="space-y-4 pb-24">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
+          <BackButton href="/training" label={t("workout.backToTraining")} />
           <h1 className="text-2xl font-semibold tracking-tight">{w.name}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
             <span className="inline-flex items-center gap-1 tabular-nums"><Timer size={14} aria-hidden />{mmss(elapsed)}</span>
@@ -286,7 +289,10 @@ export function WorkoutLogger({
                 </p>
                 {sug && sug.kind !== "insufficient_data" && <p className="font-medium text-accent">{suggestionText(sug)}</p>}
                 {tg && <p className="text-xs text-muted">{t(`effort.${tg.effort}`)}</p>}
-                {ex?.cue[locale] && <p className="text-xs text-muted">{ex.cue[locale]}</p>}
+                <div className="flex flex-wrap items-center gap-x-3">
+                  {tg?.grip && <span className="text-xs text-muted">{t("plan.grip")}: {t(`plan.grips.${tg.grip}`)}</span>}
+                  {ex && <HowTo exercise={ex} compact grip={tg?.grip} onGripChange={tg ? (grip) => editEx(i, (x) => ({ ...x, target: x.target && { ...x.target, grip } })) : undefined} />}
+                </div>
               </div>
             )}
 

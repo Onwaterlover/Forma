@@ -11,7 +11,7 @@ export default async function HistoryPage() {
   const workouts = await listWorkouts(user.id, 100);
   return (
     <>
-      <PageHeader title={t("workout.history")} />
+      <PageHeader back={{ href: "/training", label: t("nav.training") }} title={t("workout.history")} />
       {workouts.length === 0 ? (
         <Empty>{t("workout.noHistory")}</Empty>
       ) : (
@@ -31,7 +31,7 @@ export default async function HistoryPage() {
                         {w.logged_sets > 0 ? t("workout.loggedSets", { n: w.logged_sets }) : t("workout.notLogged")}
                       </span>
                     </span>
-                    {w.status !== "completed" && <Badge tone={w.status === "in_progress" ? "accent" : "neutral"}>{w.status === "in_progress" ? t("workout.inProgress") : t("workout.abandon")}</Badge>}
+                    {w.status !== "completed" && <Badge tone={w.status === "in_progress" ? "accent" : "neutral"}>{w.status === "in_progress" ? t("workout.inProgress") : w.notes === "skipped" ? t("workout.skipped") : t("workout.abandon")}</Badge>}
                   </Link>
                 </li>
               );

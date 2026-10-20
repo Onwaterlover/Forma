@@ -4,7 +4,9 @@ import { Badge, Card, Empty, LinkButton, PageHeader, SectionTitle } from "@/comp
 import { validatePlan } from "@/engine/validate";
 import { pageCtx } from "@/lib/ctx";
 import { getActivePlan, getPrefs, getProfile, inProgressWorkout, libraryFor, listPlans } from "@/lib/data";
+import { PlanActions } from "./plan-actions";
 import { PlanView } from "./plan-view";
+import { exName } from "@/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,16 @@ export default async function TrainingPage() {
           <p className="font-medium">{running.name} <Badge tone="accent">{t("workout.inProgress")}</Badge></p>
           <LinkButton href={`/workout/${running.id}`} size="sm">{t("workout.resume")}</LinkButton>
         </Card>
+      )}
+
+      {plan && (
+        <div className="mb-4">
+          <PlanActions
+            planId={plan.id}
+            feedback={!!profile}
+            exercises={[...new Set(plan.data.sessions.flatMap((s) => s.exercises.map((e) => e.exerciseId)))].map((id) => ({ id, name: exName(library.find((x) => x.id === id), locale, id) }))}
+          />
+        </div>
       )}
 
       {plan ? (

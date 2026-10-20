@@ -1,6 +1,6 @@
 # Database schema
 
-SQLite, created by `src/lib/migrations.ts` (append-only; never edit a shipped migration). Foreign keys are enforced and `ON DELETE CASCADE` removes everything a user owns when the account is deleted.
+Postgres (Supabase in the cloud, PGlite locally), created by `src/lib/migrations.ts` (append-only; never edit a shipped migration). Foreign keys are enforced and `ON DELETE CASCADE` removes everything a user owns when the account is deleted. RLS is enabled on every table (no policies), so Supabase's REST API exposes nothing.
 
 | Table | Purpose / notes |
 |---|---|
@@ -25,6 +25,9 @@ SQLite, created by `src/lib/migrations.ts` (append-only; never edit a shipped mi
 | `calorie_targets` | Append-only history of targets with source (manual / estimate / accepted suggestion). |
 | `bodyweight` | One weigh-in per user per day (20–400 kg). |
 | `ai_suggestions` | Reserved for Phase 3: proposals with pending/accepted/rejected state. |
+| `progress_photos` | Private photos (bytea), date, pose (front/side/back), note, size. Served only via an authenticated route. |
+| `login_attempts` | Login/registration throttle (works across serverless instances). |
+| `undo_buffer` | Deleted diary entries kept ~10 minutes so “undo” restores the server's own copy. |
 
 ## Loading models
 

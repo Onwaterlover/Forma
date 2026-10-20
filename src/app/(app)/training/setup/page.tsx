@@ -9,7 +9,7 @@ export default async function SetupPage() {
   const { user, t } = await pageCtx();
   return (
     <>
-      <PageHeader title={t("onb.title")} />
+      <PageHeader back={{ href: "/training", label: t("nav.training") }} title={t("onb.title")} />
       <SetupWizard initial={await getProfile(user.id)} />
     </>
   );

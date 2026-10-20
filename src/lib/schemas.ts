@@ -15,6 +15,7 @@ const plannedExercise = z.object({
   pattern: z.enum(PATTERNS),
   priority: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   superset: z.number().int().min(0).max(99).optional(),
+  grip: z.enum(["narrow", "wide", "neutral"]).optional(),
   note: z.string().max(300).optional(),
 });
 
@@ -73,7 +74,7 @@ export const workoutSchema = z.object({
         name: z.string().min(1).max(120),
         loading: z.string().max(30),
         target: z
-          .object({ sets: z.number(), repMin: z.number(), repMax: z.number(), seconds: z.number().optional(), restSec: z.number(), effort: z.string().max(40), priority: z.number().int().min(1).max(3).optional() })
+          .object({ sets: z.number(), repMin: z.number(), repMax: z.number(), seconds: z.number().optional(), restSec: z.number(), effort: z.string().max(40), priority: z.number().int().min(1).max(3).optional(), grip: z.enum(["narrow", "wide", "neutral"]).optional() })
           .nullable(),
         completed: z.boolean(),
         skipped: z.boolean(),

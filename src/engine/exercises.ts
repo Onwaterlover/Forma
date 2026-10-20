@@ -59,30 +59,35 @@ export const EXERCISES: Exercise[] = [
 
   // ── Single-leg ────────────────────────────────────────────────────────
   ex("bulgarian_split_squat_db", {
+    unilateral: true,
     pl: "Bułgarski przysiad z hantlami", en: "Dumbbell Bulgarian split squat", de: "Bulgarische Kniebeuge mit Kurzhanteln", aliases: ["bulgarian", "bss"],
     primary: ["quads", "glutes"], secondary: [], pattern: "single_leg", equipment: [...DB, "bench"], kind: "dumbbell", mechanics: "compound",
     skill: 2, fatigue: "moderate", stable: true, loading: "per_dumbbell",
     cuePl: "Tylna stopa na ławce, schodź pionowo, przednia stopa cała na podłodze.", cueEn: "Rear foot on the bench, drop straight down, front foot flat.",
   }),
   ex("bulgarian_split_squat_bw", {
+    unilateral: true,
     pl: "Bułgarski przysiad bez obciążenia", en: "Bodyweight Bulgarian split squat", de: "Bulgarische Kniebeuge ohne Gewicht",
     primary: ["quads", "glutes"], secondary: [], pattern: "single_leg", equipment: [], kind: "bodyweight", mechanics: "compound", skill: 2,
     fatigue: "low", stable: true, loading: "bodyweight_plus",
     cuePl: "Tylna stopa na krześle lub kanapie, kontrolowane zejście.", cueEn: "Rear foot on a chair or sofa, controlled descent.",
   }),
   ex("walking_lunge_db", {
+    unilateral: true,
     pl: "Wykroki chodzone z hantlami", en: "Dumbbell walking lunge", de: "Ausfallschritte mit Kurzhanteln", aliases: ["lunges", "wykroki"],
     primary: ["quads", "glutes"], secondary: [], pattern: "single_leg", equipment: [...DB], kind: "dumbbell", mechanics: "compound", skill: 2,
     fatigue: "moderate", stable: true, loading: "per_dumbbell",
     cuePl: "Długi krok, tylne kolano prawie dotyka podłogi.", cueEn: "Long step, back knee nearly touches the floor.",
   }),
   ex("reverse_lunge_bw", {
+    unilateral: true,
     pl: "Wykroki w tył", en: "Reverse lunge", de: "Ausfallschritt rückwärts",
     primary: ["quads", "glutes"], secondary: [], pattern: "single_leg", equipment: [], kind: "bodyweight", mechanics: "compound", skill: 1,
     fatigue: "low", stable: true, loading: "bodyweight_plus",
     cuePl: "Krok w tył, tułów prosto, odepchnij się przednią nogą.", cueEn: "Step back, torso tall, drive up through the front leg.",
   }),
   ex("step_up_db", {
+    unilateral: true,
     pl: "Wejścia na ławkę z hantlami", en: "Dumbbell step-up", de: "Step-ups mit Kurzhanteln",
     primary: ["quads", "glutes"], secondary: [], pattern: "single_leg", equipment: [...DB, "bench"], kind: "dumbbell", mechanics: "compound",
     skill: 1, fatigue: "low", stable: true, loading: "per_dumbbell",
@@ -129,6 +134,7 @@ export const EXERCISES: Exercise[] = [
     cuePl: "Tyłem do wyciągu, biodra w tył, wyprost bioder pośladkami.", cueEn: "Back to the cable, hips back, stand up by squeezing the glutes.",
   }),
   ex("single_leg_rdl_bw", {
+    unilateral: true,
     pl: "Martwy ciąg na jednej nodze", en: "Single-leg Romanian deadlift", de: "Einbeiniges Kreuzheben",
     primary: ["hamstrings", "glutes"], secondary: [], pattern: "hinge", equipment: [], kind: "bodyweight", mechanics: "compound", skill: 2,
     fatigue: "low", stable: true, loading: "bodyweight_plus",
@@ -174,6 +180,7 @@ export const EXERCISES: Exercise[] = [
     cuePl: "Leżąc, unieś biodra napinając pośladki; wersja jednonóż jest trudniejsza.", cueEn: "Lying down, lift the hips by squeezing the glutes; single-leg is harder.",
   }),
   ex("cable_kickback", {
+    unilateral: true,
     pl: "Odwodzenie nogi w tył na wyciągu", en: "Cable glute kickback", de: "Kickback am Kabelzug",
     primary: ["glutes"], secondary: [], pattern: "hip_ext", equipment: ["cable"], kind: "cable", mechanics: "isolation", skill: 1,
     fatigue: "low", stable: true, loading: "total",
@@ -192,6 +199,7 @@ export const EXERCISES: Exercise[] = [
     cuePl: "Palce na krawędzi platformy, kolana proste, pełen zakres.", cueEn: "Balls of the feet on the platform edge, knees straight, full range.",
   }),
   ex("calf_raise_db", {
+    unilateral: true,
     pl: "Wspięcia na palce z hantlą", en: "Dumbbell calf raise", de: "Wadenheben mit Kurzhantel",
     primary: ["calves"], secondary: [], pattern: "calf", equipment: [...DB], kind: "dumbbell", mechanics: "isolation", skill: 1,
     fatigue: "low", stable: true, loading: "per_dumbbell", smallMuscle: true,
@@ -298,42 +306,50 @@ export const EXERCISES: Exercise[] = [
 
   // ── Horizontal pull ───────────────────────────────────────────────────
   ex("barbell_row", {
+    grips: ["narrow", "wide"],
     pl: "Wiosłowanie sztangą w opadzie", en: "Barbell row", de: "Langhantelrudern", aliases: ["bent over row"],
     primary: ["upper_back", "lats"], secondary: ["rear_delts", "biceps", "lower_back"], pattern: "h_pull", equipment: ["barbell"], kind: "barbell",
     mechanics: "compound", skill: 2, fatigue: "high", stable: false, loading: "total",
     cuePl: "Tułów pochylony, plecy neutralne, przyciągaj do brzucha.", cueEn: "Torso hinged, neutral back, pull to the stomach.",
   }),
   ex("one_arm_db_row", {
+    unilateral: true,
+    grips: ["narrow", "wide"],
     pl: "Wiosłowanie hantlą jednorącz", en: "One-arm dumbbell row", de: "Einarmiges Kurzhantelrudern", aliases: ["db row"],
     primary: ["lats", "upper_back"], secondary: ["rear_delts", "biceps"], pattern: "h_pull", equipment: [], equipmentAnyOf: [...DB, "kettlebell"],
     kind: "dumbbell", mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "per_dumbbell",
     cuePl: "Ręka i kolano na ławce lub krześle, łokieć prowadź w kierunku biodra.", cueEn: "Hand and knee on a bench or chair; drive the elbow toward the hip.",
   }),
   ex("chest_supported_db_row", {
+    grips: ["narrow", "wide"],
     pl: "Wiosłowanie hantlami w podporze klatką", en: "Chest-supported dumbbell row", de: "Brustgestütztes Kurzhantelrudern",
     primary: ["upper_back", "lats"], secondary: ["rear_delts", "biceps"], pattern: "h_pull", equipment: [...DB, "incline_bench"], kind: "dumbbell",
     mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "per_dumbbell",
     cuePl: "Klatka na skośnej ławce, ściągaj łopatki.", cueEn: "Chest on an incline bench, squeeze the shoulder blades.",
   }),
   ex("seated_cable_row", {
+    grips: ["narrow", "wide"],
     pl: "Przyciąganie linki siedząc", en: "Seated cable row", de: "Rudern am Kabelzug sitzend", aliases: ["cable row"],
     primary: ["upper_back", "lats"], secondary: ["rear_delts", "biceps"], pattern: "h_pull", equipment: ["cable"], kind: "cable",
     mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "total",
     cuePl: "Tułów stabilny, przyciągaj do brzucha, pełne wyprostowanie ramion.", cueEn: "Torso steady, pull to the stomach, full reach forward.",
   }),
   ex("machine_row", {
+    grips: ["narrow", "wide"],
     pl: "Wiosłowanie na maszynie", en: "Machine row", de: "Rudermaschine",
     primary: ["upper_back", "lats"], secondary: ["rear_delts", "biceps"], pattern: "h_pull", equipment: ["row_machine"], kind: "machine",
     machineType: "plate_loaded", mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "total",
     cuePl: "Klatka na podporze, łokcie w tył.", cueEn: "Chest on the pad, elbows back.",
   }),
   ex("inverted_row", {
+    grips: ["narrow", "wide"],
     pl: "Podciąganie australijskie", en: "Inverted row", de: "Australian Pull-up", aliases: ["australian pull up"],
     primary: ["upper_back", "lats"], secondary: ["rear_delts", "biceps"], pattern: "h_pull", equipment: [], equipmentAnyOf: ["rings", "rack", "low_bar"],
     kind: "bodyweight", mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "bodyweight",
     cuePl: "Ciało proste pod drążkiem, przyciągaj klatkę do drążka. Im bardziej poziomo, tym trudniej.", cueEn: "Body straight under the bar, pull your chest to it. More horizontal = harder.",
   }),
   ex("band_row", {
+    grips: ["narrow", "wide"],
     pl: "Wiosłowanie z gumą", en: "Band row", de: "Rudern mit Band",
     primary: ["upper_back", "lats"], secondary: ["rear_delts", "biceps"], pattern: "h_pull", equipment: ["bands"], kind: "band",
     mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "bodyweight",
@@ -342,6 +358,7 @@ export const EXERCISES: Exercise[] = [
 
   // ── Vertical pull ─────────────────────────────────────────────────────
   ex("pull_up", {
+    grips: ["wide", "narrow"],
     pl: "Podciąganie nachwytem", en: "Pull-up", de: "Klimmzug", aliases: ["pullup", "podciąganie", "klimmzüge"],
     primary: ["lats"], secondary: ["biceps", "upper_back", "forearms"], pattern: "v_pull", equipment: ["pullup_bar"], kind: "bodyweight",
     mechanics: "compound", skill: 3, fatigue: "moderate", stable: true, loading: "bodyweight_plus",
@@ -366,12 +383,14 @@ export const EXERCISES: Exercise[] = [
     cuePl: "Guma pod kolanem lub stopą pomaga na dole ruchu.", cueEn: "A band under the knee or foot helps at the bottom.",
   }),
   ex("lat_pulldown", {
+    grips: ["wide", "narrow", "neutral"],
     pl: "Ściąganie drążka wyciągu górnego", en: "Lat pulldown", de: "Latzug", aliases: ["pulldown", "ściąganie drążka"],
     primary: ["lats"], secondary: ["biceps", "upper_back"], pattern: "v_pull", equipment: ["cable"], kind: "cable", mechanics: "compound",
     skill: 1, fatigue: "low", stable: true, loading: "total",
     cuePl: "Drążek do górnej części klatki, łokcie w dół i lekko w tył.", cueEn: "Bar to the upper chest, elbows down and slightly back.",
   }),
   ex("assisted_pull_up_machine", {
+    grips: ["wide", "narrow", "neutral"],
     pl: "Podciąganie na maszynie z odciążeniem", en: "Assisted pull-up machine", de: "Klimmzugmaschine mit Unterstützung",
     primary: ["lats"], secondary: ["biceps", "upper_back"], pattern: "v_pull", equipment: ["assisted_pullup"], kind: "machine",
     mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "assisted",
@@ -392,6 +411,7 @@ export const EXERCISES: Exercise[] = [
     cuePl: "Unoś bokiem do wysokości barków, bez bujania.", cueEn: "Raise out to the side to shoulder height, no swinging.",
   }),
   ex("cable_lateral_raise", {
+    unilateral: true,
     pl: "Unoszenie ramienia bokiem na wyciągu", en: "Cable lateral raise", de: "Seitheben am Kabelzug",
     primary: ["side_delts"], secondary: [], pattern: "lateral_raise", equipment: ["cable"], kind: "cable", mechanics: "isolation", skill: 1,
     fatigue: "low", stable: true, loading: "total", smallMuscle: true,

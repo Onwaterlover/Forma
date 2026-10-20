@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { analyzePlan, optimizePlan, planAction, savePlanEdit } from "@/app/actions/training";
 import { Sheet, useToast } from "@/components/client";
+import { HowTo } from "@/components/how-to";
 import { Button, Card, cx, Input, Notice, Select } from "@/components/ui";
 import { moveSession } from "@/engine/adapt";
 import { estimateMinutes } from "@/engine/duration";
@@ -12,7 +13,7 @@ import { EXERCISES } from "@/engine/exercises";
 import { prescribe } from "@/engine/prescribe";
 import { defaultProfile } from "@/engine/profile";
 import { substitutes } from "@/engine/select";
-import type { Exercise, ExercisePref, Plan, PlannedExercise, PlannedSession, TrainingProfile, Weekday } from "@/engine/types";
+import type { Exercise, ExercisePref, Grip, Plan, PlannedExercise, PlannedSession, TrainingProfile, Weekday } from "@/engine/types";
 import { validatePlan } from "@/engine/validate";
 import { DICTS, exName, fmtRest, renderMessage } from "@/i18n";
 import { useI18n } from "@/i18n/client";
@@ -205,6 +206,12 @@ export function PlanEditor({
                         {t("plan.reps")}
                       </span>
                     )}
+                    {ex?.grips && (
+                      <Select aria-label={t("plan.grip")} className="h-9 w-32" value={e.grip ?? ex.grips[0]} onChange={(ev) => editEx(s.key, i, { grip: ev.target.value as Grip })}>
+                        {ex.grips.map((g) => <option key={g} value={g}>{t("plan.grip")}: {t(`plan.grips.${g}`)}</option>)}
+                      </Select>
+                    )}
+                    {ex && <HowTo exercise={ex} grip={e.grip} compact onGripChange={ex.grips ? (grip) => editEx(s.key, i, { grip }) : undefined} />}
                     <Select aria-label={t("plan.rest")} className="h-9 w-28" value={e.restSec} onChange={(ev) => editEx(s.key, i, { restSec: Number(ev.target.value) })}>
                       {[...new Set([...REST_OPTIONS, e.restSec])].sort((a, b) => a - b).map((r) => <option key={r} value={r}>{t("plan.rest")} {fmtRest(r)}</option>)}
                     </Select>

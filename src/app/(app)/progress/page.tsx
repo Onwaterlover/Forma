@@ -1,5 +1,6 @@
 import { Bars, TrendChart } from "@/components/charts";
-import { Card, Empty, Notice, PageHeader, SectionTitle } from "@/components/ui";
+import { Camera } from "lucide-react";
+import { Card, Empty, LinkButton, Notice, PageHeader, SectionTitle } from "@/components/ui";
 import { personalRecords } from "@/engine/progression";
 import { exName, fmt, fmtDate } from "@/i18n";
 import { pageCtx, shiftDate, todayIso } from "@/lib/ctx";
@@ -63,7 +64,7 @@ export default async function ProgressPage() {
 
   return (
     <>
-      <PageHeader title={t("progress.title")} />
+      <PageHeader title={t("progress.title")} action={<LinkButton href="/progress/photos" variant="secondary" size="sm"><Camera size={16} aria-hidden />{t("progress.photos")}</LinkButton>} />
 
       {review && (
         <Card className="mb-4">

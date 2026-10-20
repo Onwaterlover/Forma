@@ -1,5 +1,6 @@
 import { Clock, Link2, MapPin } from "lucide-react";
 import { startWorkout } from "@/app/actions/training";
+import { HowTo } from "@/components/how-to";
 import { Badge, Card, Notice } from "@/components/ui";
 import { BALANCED } from "@/engine/volume";
 import type { Exercise, Issue, Plan, TrainingProfile } from "@/engine/types";
@@ -50,7 +51,7 @@ export function PlanView({
                 </p>
               </div>
               {startable && (
-                <form action={startWorkout.bind(null, planId, s.key)}>
+                <form action={startWorkout.bind(null, planId, s.key, undefined)}>
                   <button type="submit" className="h-9 rounded-xl bg-accent px-3 text-sm font-medium text-accent-contrast hover:bg-accent-hover">{t("plan.start")}</button>
                 </form>
               )}
@@ -66,10 +67,12 @@ export function PlanView({
                       <p className="text-[15px] font-medium leading-snug">{exName(ex, locale, e.exerciseId)}</p>
                       <p className="text-sm text-muted">
                         <span className="tabular-nums">{e.sets} × {e.seconds ? `${e.seconds} s` : `${e.repMin}–${e.repMax}`}</span>
-                        {e.restSec > 0 && <> · {t("plan.rest")} {e.restSec >= 60 ?`${fmt(locale, e.restSec / 60, 1)} ${t("common.min")}` : `${e.restSec} s`}</>}
+                        {e.restSec > 0 && <> · {t("plan.rest")} {fmtRest(e.restSec)}</>}
+                        {e.grip && <> · {t("plan.grip")} {t(`plan.grips.${e.grip}`)}</>}
                         {e.superset !== undefined && !prevSame && <> · <Badge tone="accent">{t("plan.superset")}</Badge></>}
                       </p>
                       <p className="mt-0.5 text-xs text-muted">{t(`effort.${e.effort}`)}</p>
+                      {ex && <HowTo exercise={ex} grip={e.grip} compact />}
                     </div>
                   </li>
                 );

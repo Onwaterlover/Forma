@@ -1,15 +1,8 @@
-import type { Capability, Equipment, Exercise, Kind, Location } from "./types";
+import { EQUIPMENT, type Capability, type Equipment, type Exercise, type Kind, type Location } from "./types";
 
 export const LOCATION_PRESETS: Record<string, { kind: Location["kind"]; equipment: Equipment[] }> = {
-  commercial_gym: {
-    kind: "gym",
-    equipment: [
-      "barbell", "plates", "fixed_dumbbells", "kettlebell", "bench", "incline_bench", "rack", "pullup_bar",
-      "dip_bars", "bands", "cable", "smith", "leg_press", "leg_curl", "leg_extension", "chest_press",
-      "shoulder_press_machine", "row_machine", "pec_deck", "calf_machine", "assisted_pullup", "back_extension",
-      "cardio_machine",
-    ],
-  },
+  // A typical gym: everything ticked; the user unticks what their gym lacks.
+  commercial_gym: { kind: "gym", equipment: [...EQUIPMENT] },
   home_dumbbells: { kind: "home", equipment: ["adjustable_dumbbells", "bench", "incline_bench"] },
   home_gym: {
     kind: "home",
@@ -36,4 +29,11 @@ export function equipmentOf(locations: Location[], ids: string[]): Equipment[] {
   const set = new Set<Equipment>();
   for (const l of locations) if (ids.includes(l.id)) l.equipment.forEach((e) => set.add(e));
   return [...set];
+}
+
+/** Equipment categories the user can actually use somewhere (for showing only relevant choices). */
+export function availableKinds(locations: Location[], library: Exercise[]): Set<Kind> {
+  const all = new Set<Equipment>(locations.flatMap((l) => l.equipment));
+  const eq = [...all];
+  return new Set(library.filter((e) => isPossible(e, eq)).map((e) => e.kind));
 }

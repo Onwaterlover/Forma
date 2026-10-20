@@ -1,13 +1,14 @@
 "use client";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { saveProfileAndGenerate, saveProfileOnly } from "@/app/actions/training";
 import { Chips, Choices, Switch, useToast } from "@/components/client";
 import { Button, Card, cx, Input, Notice, Select } from "@/components/ui";
-import { LOCATION_PRESETS } from "@/engine/equipment";
+import { availableKinds, LOCATION_PRESETS } from "@/engine/equipment";
+import { EXERCISES } from "@/engine/exercises";
 import { BALANCED } from "@/engine/volume";
 import {
-  EQUIPMENT, KINDS, type Equipment, type Goal, type Kind, type Location, type Muscle, type MusclePriority, type Sport, type TrainingProfile, type Weekday,
+  EQUIPMENT, KINDS, type Equipment, type Goal, type Kind, type Location, type Muscle, type MusclePriority, type Sport, type StylePref, type TrainingProfile, type Weekday,
 } from "@/engine/types";
 import { DICTS } from "@/i18n";
 import { useI18n } from "@/i18n/client";
@@ -31,7 +32,7 @@ function blank(name: string): TrainingProfile {
     goal: "unsure", experience: "beginner", sessionsPerWeek: 3, sessionMinutes: 45, scheduleMode: "fixed",
     week: Array.from({ length: 7 }, () => ({ locations: [] })),
     locations: [{ id: "gym", name, kind: "gym", equipment: [...LOCATION_PRESETS.commercial_gym!.equipment] }],
-    style: "none", excludedKinds: [], priorities: {}, sports: [], supersets: "allow",
+    styles: [], excludedKinds: [], priorities: {}, sports: [], supersets: "allow",
   };
 }
 
@@ -57,6 +58,25 @@ export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
   const steps = ["goal", "experience", "time", "places", "schedule", "more"] as const;
   const total = steps.length;
   const availableDays = p.week.filter((d) => !d.rest && d.locations.length > 0).length;
+  // Only offer choices the user's equipment actually supports (no "machines" without machines, etc.).
+  const kinds = useMemo(() => availableKinds(p.locations, EXERCISES), [p.locations]);
+  const styleOptions = (["machines", "free", "bodyweight"] as const).filter((st) =>
+    st === "machines" ? ["machine", "cable", "smith"].some((k) => kinds.has(k as Kind)) : st === "free" ? ["barbell", "dumbbell", "kettlebell"].some((k) => kinds.has(k as Kind)) : true,
+  );
+  const kindOptions = KINDS.filter((k) => k !== "cardio" && k !== "bodyweight" && kinds.has(k));
+  const anyDay = p.locations.length > 0 && p.week.every((d) => !d.rest && p.locations.every((l) => d.locations.includes(l.id)));
+  const setAnyDay = (on: boolean) =>
+    up({
+      week: on
+        ? p.week.map(() => ({ locations: p.locations.map((l) => l.id) }))
+        : p.week.map((_, i) => ({ locations: [0, 2, 4].includes(i) && p.locations[0] ? [p.locations[0].id] : [] })),
+    });
+  // Keep stored choices consistent with what is available.
+  const clean = (x: TrainingProfile): TrainingProfile => ({
+    ...x,
+    styles: x.styles.filter((st) => styleOptions.includes(st)),
+    excludedKinds: x.excludedKinds.filter((k) => kindOptions.includes(k)),
+  });
   const canNext = step !== 3 || p.locations.length > 0;
 
   const addPreset = (key: keyof typeof LOCATION_PRESETS) => {
@@ -74,7 +94,7 @@ export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
 
   const submit = (generate: boolean) =>
     start(async () => {
-      const r = generate ? await saveProfileAndGenerate(p) : await saveProfileOnly(p);
+      const r = generate ? await saveProfileAndGenerate(clean(p)) : await saveProfileOnly(clean(p));
       if (r?.error) toast({ text: t("common.error") });
       else if (!generate) toast({ text: t("common.saved") });
     });
@@ -175,7 +195,8 @@ export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
             <h2 className="mb-1 text-lg font-semibold">{t("onb.scheduleQ")}</h2>
             <p className="text-sm text-muted">{t("onb.scheduleHint")}</p>
           </div>
-          <ul className="divide-y divide-border">
+          <Switch checked={anyDay} onChange={setAnyDay} label={t("onb.anyDay")} hint={t("onb.anyDayHint")} />
+          <ul className={cx("divide-y divide-border", anyDay && "hidden")}>
             {p.week.map((w, d) => (
               <li key={d} className="flex flex-wrap items-center gap-2 py-2.5">
                 <span className="w-24 shrink-0 text-sm font-medium">{days.long[d]}</span>
@@ -211,7 +232,8 @@ export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
         <>
           <Card className="space-y-4">
             <h2 className="text-lg font-semibold">{t("onb.styleQ")}</h2>
-            <Choices name={t("onb.styleQ")} columns={2} value={p.style} onChange={(style) => up({ style })} options={(["none", "machines", "free", "mixed", "bodyweight"] as const).map((s) => ({ value: s, label: t(`onb.style.${s}`) }))} />
+            <p className="text-sm text-muted">{t("onb.styleHint")}</p>
+            <Chips<StylePref> label={t("onb.styleQ")} values={p.styles.filter((st) => styleOptions.includes(st))} onChange={(styles) => up({ styles })} options={styleOptions.map((st) => ({ value: st, label: t(`onb.style.${st}`) }))} />
           </Card>
 
           <button type="button" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced} className="flex w-full items-center justify-between rounded-xl px-1 py-2 text-sm font-medium text-accent">
@@ -258,7 +280,7 @@ export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
               <Card className="space-y-3">
                 <h2 className="text-lg font-semibold">{t("onb.excludeQ")}</h2>
                 <p className="text-sm text-muted">{t("onb.excludeHint")}</p>
-                <Chips<Kind> label={t("onb.excludeQ")} values={p.excludedKinds} onChange={(excludedKinds) => up({ excludedKinds })} options={KINDS.filter((k) => k !== "cardio").map((k) => ({ value: k, label: t(`kinds.${k}`) }))} />
+                <Chips<Kind> label={t("onb.excludeQ")} values={p.excludedKinds.filter((k) => kindOptions.includes(k))} onChange={(excludedKinds) => up({ excludedKinds })} options={kindOptions.map((k) => ({ value: k, label: t(`kinds.${k}`) }))} />
               </Card>
 
               <Card className="space-y-4">
@@ -279,9 +301,16 @@ export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
                       {s.type === "other" && (
                         <Chips label="demands" values={s.demands ?? []} onChange={(demands) => setSport({ demands })} options={(["legs", "pull", "push", "grip", "full"] as const).map((r) => ({ value: r, label: t(`regions.${r}`) }))} />
                       )}
-                      <div>
-                        <p className="mb-1.5 text-sm">{t("onb.sportDays")}</p>
-                        <Chips<number> label={t("onb.sportDays")} values={s.days} onChange={(d) => setSport({ days: d as Weekday[], perWeek: d.length || s.perWeek })} options={days.short.map((n, d) => ({ value: d, label: n }))} />
+                      <div className="space-y-2">
+                        <p className="text-sm">{t("onb.sportHow")}</p>
+                        <Choices<"times" | "days"> name={`sport-mode-${s.id}`} columns={2} value={s.days.length ? "days" : "times"}
+                          onChange={(m) => setSport(m === "times" ? { days: [] } : { days: [5] as Weekday[], perWeek: 1 })}
+                          options={[{ value: "times", label: t("onb.sportTimesMode") }, { value: "days", label: t("onb.sportDaysMode") }]} />
+                        {s.days.length ? (
+                          <Chips<number> label={t("onb.sportDays")} values={s.days} onChange={(d) => setSport({ days: d as Weekday[], perWeek: Math.max(1, d.length) })} options={days.short.map((n, d) => ({ value: d, label: n }))} />
+                        ) : (
+                          <Chips<number> label={t("onb.sportHow")} values={[s.perWeek]} onChange={(v) => setSport({ perWeek: v.filter((x) => x !== s.perWeek)[0] ?? s.perWeek })} options={[1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: n, label: t("onb.timesPerWeek", { n }) }))} />
+                        )}
                       </div>
                       <Choices name={`intensity-${s.id}`} columns={3} value={s.intensity ?? "moderate"} onChange={(intensity) => setSport({ intensity })} options={(["easy", "moderate", "hard"] as const).map((k) => ({ value: k, label: t(`onb.intensity.${k}`) }))} />
                     </div>

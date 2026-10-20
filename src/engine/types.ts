@@ -127,6 +127,8 @@ export interface TrainingProfile {
   sports: Sport[];
   supersets: "allow" | "avoid";
   conditioning?: boolean;
+  /** Free-text notes for the assistant (injuries, dislikes); the generator does not read them. */
+  notes?: string;
 }
 
 export type Effort =

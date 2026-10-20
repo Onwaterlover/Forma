@@ -42,6 +42,7 @@ export const profileSchema = z.object({
     .max(10),
   supersets: z.enum(["allow", "avoid"]),
   conditioning: z.boolean().optional(),
+  notes: z.string().max(500).optional(),
 });
 
 const LEGACY_STYLE: Record<string, TrainingProfile["styles"]> = { machines: ["machines"], free: ["free"], bodyweight: ["bodyweight"], mixed: ["machines", "free"], none: [] };

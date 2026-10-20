@@ -87,6 +87,7 @@ async function trainingContext(userId: string, locale: Locale): Promise<string> 
   const out = [`Today: ${today} (${DICTS[locale].days.long[weekdayOf(today)]})`];
   if (profile) {
     out.push(`Profile: goal ${profile.goal}, experience ${profile.experience}, ${profile.sessionsPerWeek} sessions/week, ~${profile.sessionMinutes} min, styles ${profile.styles.join("/") || "any"}, sports ${JSON.stringify(profile.sports)}`);
+    if (profile.notes) out.push(`User notes about training (written by the user): ${profile.notes}`);
     for (const l of profile.locations) out.push(`Location "${l.name}" (${l.id}): ${l.equipment.join(", ") || "no equipment"}`);
   } else out.push("No training profile yet (the user can create one in Training → Set up).");
   const marked = Object.entries(prefs).filter(([, p]) => p !== "like").map(([id, p]) => `${name(id)} (${id}): ${p}`);

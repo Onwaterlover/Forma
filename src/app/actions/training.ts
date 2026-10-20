@@ -26,7 +26,18 @@ function generatedName(locale: "pl" | "en" | "de", split: string) {
   return t("plan.generatedName", { split: t(`split.${split}`) });
 }
 
-export async function saveProfileAndGenerate(raw: unknown): Promise<{ error?: string }> {
+/** The wizard's "exercises I don't want" list is stored as "exclude" preferences. */
+async function syncExcluded(userId: string, exclude: unknown) {
+  const ids = z.array(z.string().regex(/^[a-z0-9_-]{1,80}$/)).max(60).safeParse(exclude);
+  if (!ids.success) return;
+  const library = await libraryFor(userId);
+  const want = new Set(ids.data.filter((id) => library.some((e) => e.id === id)));
+  const prefs = await getPrefs(userId);
+  for (const id of want) if (prefs[id] !== "exclude") await setPref(userId, id, "exclude");
+  for (const [id, pref] of Object.entries(prefs)) if (pref === "exclude" && !want.has(id)) await setPref(userId, id, "neutral");
+}
+
+export async function saveProfileAndGenerate(raw: unknown, exclude?: string[]): Promise<{ error?: string }> {
   const user = await requireUser();
   let profile;
   try {
@@ -34,6 +45,7 @@ export async function saveProfileAndGenerate(raw: unknown): Promise<{ error?: st
   } catch {
     return { error: "invalid_profile" };
   }
+  if (exclude) await syncExcluded(user.id, exclude);
   const library = await libraryFor(user.id);
   const plan = generatePlan({ profile, prefs: await getPrefs(user.id), library });
   const active = await getActivePlan(user.id);
@@ -45,13 +57,14 @@ export async function saveProfileAndGenerate(raw: unknown): Promise<{ error?: st
   redirect("/training");
 }
 
-export async function saveProfileOnly(raw: unknown): Promise<{ error?: string }> {
+export async function saveProfileOnly(raw: unknown, exclude?: string[]): Promise<{ error?: string }> {
   const user = await requireUser();
   try {
     await saveProfile(user.id, parseProfile(raw));
   } catch {
     return { error: "invalid_profile" };
   }
+  if (exclude) await syncExcluded(user.id, exclude);
   revalidatePath("/training");
   return {};
 }

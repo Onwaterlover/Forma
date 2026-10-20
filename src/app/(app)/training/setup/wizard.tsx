@@ -1,16 +1,16 @@
 "use client";
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2, X } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { saveProfileAndGenerate, saveProfileOnly } from "@/app/actions/training";
 import { Chips, Choices, Switch, useToast } from "@/components/client";
-import { Button, Card, cx, Input, Notice, Select } from "@/components/ui";
+import { Button, Card, cx, Input, Notice, Select, Textarea } from "@/components/ui";
 import { availableKinds, LOCATION_PRESETS } from "@/engine/equipment";
 import { EXERCISES } from "@/engine/exercises";
 import { BALANCED } from "@/engine/volume";
 import {
   EQUIPMENT, KINDS, type Equipment, type Goal, type Kind, type Location, type Muscle, type MusclePriority, type Sport, type StylePref, type TrainingProfile, type Weekday,
 } from "@/engine/types";
-import { DICTS } from "@/i18n";
+import { DICTS, exName } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 
 const GOALS: Goal[] = ["muscle", "strength", "health", "conditioning", "sport", "start", "unsure"];
@@ -38,7 +38,7 @@ function blank(name: string): TrainingProfile {
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
-export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
+export function SetupWizard({ initial, initialExclude = [] }: { initial: TrainingProfile | null; initialExclude?: string[] }) {
   const { t, locale } = useI18n();
   const toast = useToast();
   const days = DICTS[locale].days;
@@ -53,6 +53,8 @@ export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
   const [preset, setPreset] = useState<PriorityPreset>(presetOf(p.priorities));
   const [openLoc, setOpenLoc] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [exclude, setExclude] = useState<string[]>(initialExclude);
+  const [exQuery, setExQuery] = useState("");
   const up = (patch: Partial<TrainingProfile>) => setP((x) => ({ ...x, ...patch }));
 
   const steps = ["goal", "experience", "time", "places", "schedule", "more"] as const;
@@ -94,12 +96,14 @@ export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
 
   const submit = (generate: boolean) =>
     start(async () => {
-      const r = generate ? await saveProfileAndGenerate(clean(p)) : await saveProfileOnly(clean(p));
+      const r = generate ? await saveProfileAndGenerate(clean(p), exclude) : await saveProfileOnly(clean(p), exclude);
       if (r?.error) toast({ text: t("common.error") });
       else if (!generate) toast({ text: t("common.saved") });
     });
 
   const sportNames = DICTS[locale].sports;
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l");
+  const exMatches = exQuery.trim().length < 2 ? [] : EXERCISES.filter((e) => !exclude.includes(e.id) && [e.name[locale], e.name.en, ...(e.aliases ?? [])].some((n) => n && norm(n).includes(norm(exQuery.trim())))).slice(0, 6);
 
   return (
     <div className="space-y-5">
@@ -280,7 +284,36 @@ export function SetupWizard({ initial }: { initial: TrainingProfile | null }) {
               <Card className="space-y-3">
                 <h2 className="text-lg font-semibold">{t("onb.excludeQ")}</h2>
                 <p className="text-sm text-muted">{t("onb.excludeHint")}</p>
-                <Chips<Kind> label={t("onb.excludeQ")} values={p.excludedKinds.filter((k) => kindOptions.includes(k))} onChange={(excludedKinds) => up({ excludedKinds })} options={kindOptions.map((k) => ({ value: k, label: t(`kinds.${k}`) }))} />
+                <p className="text-sm font-medium">{t("onb.excludeKinds")}</p>
+                <Chips<Kind> label={t("onb.excludeKinds")} values={p.excludedKinds.filter((k) => kindOptions.includes(k))} onChange={(excludedKinds) => up({ excludedKinds })} options={kindOptions.map((k) => ({ value: k, label: t(`kinds.${k}`) }))} />
+                <p className="pt-2 text-sm font-medium">{t("onb.excludeExercises")}</p>
+                {exclude.length > 0 && (
+                  <ul className="flex flex-wrap gap-2">
+                    {exclude.map((id) => (
+                      <li key={id}>
+                        <button type="button" onClick={() => setExclude(exclude.filter((x) => x !== id))} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-sm">
+                          {exName(EXERCISES.find((e) => e.id === id), locale, id)}<X size={14} aria-label={t("common.delete")} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Input value={exQuery} onChange={(e) => setExQuery(e.target.value)} placeholder={t("onb.excludeSearch")} aria-label={t("onb.excludeExercises")} />
+                {exQuery.trim().length >= 2 && (
+                  <ul className="divide-y divide-border rounded-xl border border-border">
+                    {exMatches.length === 0 && <li className="px-3 py-2.5 text-sm text-muted">{t("onb.excludeNone")}</li>}
+                    {exMatches.map((e) => (
+                      <li key={e.id}>
+                        <button type="button" className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm hover:bg-surface-2" onClick={() => { setExclude([...exclude, e.id]); setExQuery(""); }}>
+                          {exName(e, locale, e.id)}<Plus size={16} aria-hidden />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="pt-2 text-sm font-medium">{t("onb.notesQ")}</p>
+                <Textarea rows={3} maxLength={500} value={p.notes ?? ""} onChange={(e) => up({ notes: e.target.value || undefined })} placeholder={t("onb.notesPlaceholder")} aria-label={t("onb.notesQ")} />
+                <p className="text-xs text-muted">{t("onb.notesHint")}</p>
               </Card>
 
               <Card className="space-y-4">

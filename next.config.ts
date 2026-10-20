@@ -7,7 +7,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Database drivers load native/WASM assets at runtime; keep them out of the bundle.
   serverExternalPackages: ["@electric-sql/pglite", "postgres"],
-  experimental: { serverActions: { allowedOrigins } },
+  // 2 MB: room for a downscaled meal photo sent to the assistant.
+  experimental: { serverActions: { allowedOrigins, bodySizeLimit: "2mb" } },
   // Allow phones/laptops on the LAN or tailnet to load dev assets.
   allowedDevOrigins: ["*.local", "*.ts.net", "192.168.*.*", "10.*.*.*"],
   async headers() {

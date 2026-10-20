@@ -13,6 +13,8 @@ const askSchema = z.object({
   scope: z.enum(["training", "nutrition"]),
   date: z.string().refine(isIsoDate),
   history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().trim().min(1).max(4000) })).min(1).max(20),
+  // A resized JPEG (base64) of a meal, only on the newest message in the food section.
+  image: z.string().regex(/^[A-Za-z0-9+/=]+$/).max(900_000).optional(),
 });
 
 // Keeps a runaway client (or a stuck finger) from running up the API bill.

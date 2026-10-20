@@ -72,7 +72,8 @@ Food
 - If nothing suitable is found, say so and suggest scanning the barcode or adding the product manually.
 - propose_quick_entry only when the user states the calories themselves.
 - Meal: from the user's words or the time of day; leave it empty if unclear.
-- For "what should I eat" questions, use what's left of today's target and suggest 2-3 simple, real foods.`}`;
+- For "what should I eat" questions, use what's left of today's target and suggest 2-3 simple, real foods.
+- Food photo: name what you see and estimate portions from plate size and cutlery. Photos are approximate: if something important is unclear (what a dish or sauce is, how much oil or dressing, hidden ingredients, the portion size), ask 1-2 short, specific questions first (e.g. "Is that chicken or tofu? Roughly how many spoons of rice?"). Propose the entry once you are reasonably sure, listing your assumptions. Values still come only from search_food.`}`;
 }
 
 // ── Context ──────────────────────────────────────────────────────────────
@@ -308,18 +309,23 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
 }
 
 // ── Conversation ─────────────────────────────────────────────────────────
-export async function runAssistant(o: { userId: string; locale: Locale; scope: Scope; history: ChatTurn[]; date: string }): Promise<{ reply: string; proposals: Proposal[] } | { error: string }> {
+export async function runAssistant(o: { userId: string; locale: Locale; scope: Scope; history: ChatTurn[]; date: string; image?: string }): Promise<{ reply: string; proposals: Proposal[] } | { error: string }> {
   const t = translator(o.locale);
   const last = o.history.at(-1);
   if (!last || last.role !== "user") return { error: "invalid" };
   const context = o.scope === "training" ? await trainingContext(o.userId, o.locale) : await nutritionContext(o.userId, o.locale, o.date);
   // Earlier turns go as plain text; the fresh app data rides only on the newest message.
   const messages: BetaMessageParam[] = o.history.slice(0, -1).map((h) => ({ role: h.role, content: h.text }));
-  messages.push({ role: "user", content: [{ type: "text", text: `<app_data>\n${context}\n</app_data>` }, { type: "text", text: last.text }] });
+  const image = o.scope === "nutrition" ? o.image : undefined;
+  messages.push({ role: "user", content: [
+    ...(image ? [{ type: "image" as const, source: { type: "base64" as const, media_type: "image/jpeg" as const, data: image } }] : []),
+    { type: "text", text: `<app_data>\n${context}\n</app_data>` },
+    { type: "text", text: last.text },
+  ] });
   const c: Ctx = { userId: o.userId, locale: o.locale, date: o.date, proposals: [] };
   if (aiProvider() === "gemini") return runGemini(o, `<app_data>
 ${context}
-</app_data>`, last.text, c);
+</app_data>`, last.text, c, image);
 
   try {
     for (let i = 0; i < 6; i++) {
@@ -359,13 +365,13 @@ ${context}
 }
 
 // ── Gemini (REST, function calling) ──────────────────────────────────────
-type GPart = { text?: string; thought?: boolean; functionCall?: { id?: string; name: string; args?: unknown }; functionResponse?: unknown };
+type GPart = { text?: string; thought?: boolean; inlineData?: { mimeType: string; data: string }; functionCall?: { id?: string; name: string; args?: unknown }; functionResponse?: unknown };
 type GContent = { role: "user" | "model"; parts: GPart[] };
 
-async function runGemini(o: { locale: Locale; scope: Scope; history: ChatTurn[] }, appData: string, question: string, c: Ctx): Promise<{ reply: string; proposals: Proposal[] } | { error: string }> {
+async function runGemini(o: { locale: Locale; scope: Scope; history: ChatTurn[] }, appData: string, question: string, c: Ctx, image?: string): Promise<{ reply: string; proposals: Proposal[] } | { error: string }> {
   const t = translator(o.locale);
   const contents: GContent[] = o.history.slice(0, -1).map((h) => ({ role: h.role === "assistant" ? "model" : "user", parts: [{ text: h.text }] }));
-  contents.push({ role: "user", parts: [{ text: appData }, { text: question }] });
+  contents.push({ role: "user", parts: [...(image ? [{ inlineData: { mimeType: "image/jpeg", data: image } }] : []), { text: appData }, { text: question }] });
   const tools = [{ functionDeclarations: (o.scope === "training" ? TRAINING_TOOLS : NUTRITION_TOOLS).map((x) => ({ name: x.name, description: x.description, parametersJsonSchema: x.input_schema })) }];
 
   for (let i = 0; i < 6; i++) {

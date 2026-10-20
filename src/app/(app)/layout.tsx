@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Logo className="mb-8 px-2" />
             <Nav items={items} variant="side" />
           </aside>
-          <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-5 sm:px-6 md:pb-12 md:pt-8">{children}</main>
+          <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-28 pt-5 sm:px-6 md:pb-12 md:pt-8">{children}</main>
         </div>
         <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur md:hidden" aria-label="Main">
           <Nav items={items} variant="bottom" />

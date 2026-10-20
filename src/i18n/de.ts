@@ -162,6 +162,15 @@ export const de: Dict = {
     notLogged: "ohne Sätze", inProgress: "läuft",
   },
   library: {
+    equip: { machines: "Maschinen", cables: "Kabelzug", free: "Freie Gewichte", bodyweight: "Körpergewicht", bands: "Bänder", cardio: "Kondition" },
+    region: { chest: "Brust", back: "Rücken", shoulders: "Schultern", arms: "Arme", legs: "Beine", glutes: "Gesäß", core: "Rumpf", conditioning: "Kondition" },
+    group: {
+      h_push: "Horizontales Drücken", chest_fly: "Fliegende", v_push: "Überkopfdrücken", lateral_raise: "Seitheben", rear_delt: "Hintere Schulter",
+      h_pull: "Horizontales Ziehen", v_pull: "Vertikales Ziehen", elbow_flex: "Armbeugen", elbow_ext: "Armstrecken", squat: "Kniebeuge",
+      single_leg: "Einbeinig", knee_ext: "Kniestreckung", hinge: "Hüftbeugung", knee_flex: "Kniebeugung", hip_ext: "Hüftstreckung", calf: "Waden",
+      core: "Rumpf", conditioning: "Kondition",
+    },
+    equipFilter: "Ausrüstung", regionFilter: "Körperbereich", count: "{n} Üb.", expandAll: "Alle aufklappen", collapseAll: "Alle zuklappen",
     title: "Übungen", search: "Übung suchen", all: "Alle", pref: { favorite: "Favorit", like: "Mag ich", neutral: "Neutral", dislike: "Mag ich nicht", exclude: "Ausschließen", pain: "Verursacht Schmerzen" },
     prefHint: "Vorlieben beeinflussen künftige Pläne und ändern deinen aktuellen nie heimlich.", equipment: "Ausrüstung", primary: "Hauptmuskeln", secondary: "Hilfsmuskeln",
     difficulty: "Schwierigkeit", difficultyLevel: ["", "leicht", "mittel", "anspruchsvoll"], safety: "Sicherheit", custom: "Eigene Übung", createCustom: "Eigene Übung hinzufügen",

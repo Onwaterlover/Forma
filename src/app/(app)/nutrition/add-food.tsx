@@ -75,7 +75,7 @@ export function AddFood({
           })} />
       ) : (
         <div className="space-y-4">
-          <div className="-mx-1 flex gap-1 overflow-x-auto pb-1" role="tablist">
+          <div className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto" role="tablist">
             {tabs.map((x) => (
               <button key={x.k} role="tab" type="button" aria-selected={tab === x.k} onClick={() => setTab(x.k)}
                 className={cx("h-9 shrink-0 rounded-full px-3.5 text-sm", tab === x.k ? "bg-accent text-accent-contrast" : "bg-surface-2 hover:bg-border")}>{x.l}</button>

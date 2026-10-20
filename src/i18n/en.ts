@@ -162,6 +162,15 @@ export const en: Dict = {
     notLogged: "no sets logged", inProgress: "in progress",
   },
   library: {
+    equip: { machines: "Machines", cables: "Cables", free: "Free weights", bodyweight: "Bodyweight", bands: "Bands", cardio: "Conditioning" },
+    region: { chest: "Chest", back: "Back", shoulders: "Shoulders", arms: "Arms", legs: "Legs", glutes: "Glutes", core: "Core", conditioning: "Conditioning" },
+    group: {
+      h_push: "Horizontal push", chest_fly: "Chest fly", v_push: "Overhead press", lateral_raise: "Lateral raise", rear_delt: "Rear delts",
+      h_pull: "Horizontal pull", v_pull: "Vertical pull", elbow_flex: "Elbow flexion", elbow_ext: "Elbow extension", squat: "Squat",
+      single_leg: "Single leg", knee_ext: "Knee extension", hinge: "Hip hinge", knee_flex: "Knee flexion", hip_ext: "Hip extension", calf: "Calves",
+      core: "Core", conditioning: "Conditioning",
+    },
+    equipFilter: "Equipment", regionFilter: "Body part", count: "{n} ex.", expandAll: "Expand all", collapseAll: "Collapse all",
     title: "Exercises", search: "Search exercises", all: "All", pref: { favorite: "Favourite", like: "Like", neutral: "Neutral", dislike: "Dislike", exclude: "Exclude", pain: "Causes pain" },
     prefHint: "Preferences shape future plans; they never silently change your current one.", equipment: "Equipment", primary: "Main muscles", secondary: "Helpers",
     difficulty: "Difficulty", difficultyLevel: ["", "easy", "moderate", "demanding"], safety: "Safety", custom: "Custom exercise", createCustom: "Add a custom exercise",

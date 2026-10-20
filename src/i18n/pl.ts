@@ -161,6 +161,15 @@ export const pl = {
     notLogged: "bez zapisu serii", inProgress: "w trakcie",
   },
   library: {
+    equip: { machines: "Maszyny", cables: "Wyciągi", free: "Wolne ciężary", bodyweight: "Masa ciała", bands: "Gumy", cardio: "Kondycja" },
+    region: { chest: "Klatka", back: "Plecy", shoulders: "Barki", arms: "Ręce", legs: "Nogi", glutes: "Pośladki", core: "Brzuch", conditioning: "Kondycja" },
+    group: {
+      h_push: "Pchanie poziome", chest_fly: "Rozpiętki", v_push: "Wyciskanie nad głowę", lateral_raise: "Unoszenie bokiem", rear_delt: "Tylne barki",
+      h_pull: "Przyciąganie poziome", v_pull: "Przyciąganie pionowe", elbow_flex: "Uginanie ramion", elbow_ext: "Prostowanie ramion", squat: "Przysiad",
+      single_leg: "Jednonóż", knee_ext: "Prostowanie kolan", hinge: "Zawias biodrowy", knee_flex: "Uginanie kolan", hip_ext: "Wyprost bioder", calf: "Łydki",
+      core: "Core", conditioning: "Kondycja",
+    },
+    equipFilter: "Sprzęt", regionFilter: "Partia", count: "{n} ćw.", expandAll: "Rozwiń wszystko", collapseAll: "Zwiń wszystko",
     title: "Ćwiczenia", search: "Szukaj ćwiczenia", all: "Wszystkie", pref: { favorite: "Ulubione", like: "Lubię", neutral: "Neutralnie", dislike: "Nie lubię", exclude: "Wyklucz", pain: "Powoduje ból" },
     prefHint: "Preferencje wpływają na przyszłe plany, nie zmieniają po cichu obecnego.", equipment: "Sprzęt", primary: "Główne mięśnie", secondary: "Pomocnicze",
     difficulty: "Trudność", difficultyLevel: ["", "łatwe", "średnie", "wymagające"], safety: "Bezpieczeństwo", custom: "Własne ćwiczenie", createCustom: "Dodaj własne ćwiczenie",

@@ -13,13 +13,13 @@ export async function guestLocale(): Promise<Locale> {
 export async function pageCtx() {
   const user = await requireUser();
   const locale: Locale = isLocale(user.locale) ? user.locale : "pl";
-  return { user, locale, t: translator(locale), settings: getSettings(user.id) };
+  return { user, locale, t: translator(locale), settings: await getSettings(user.id) };
 }
 
 export async function maybeUserLocale(): Promise<{ locale: Locale; theme: string }> {
   const u = await currentUser();
   if (!u) return { locale: await guestLocale(), theme: "system" };
-  return { locale: isLocale(u.locale) ? u.locale : "pl", theme: getSettings(u.id).theme };
+  return { locale: isLocale(u.locale) ? u.locale : "pl", theme: (await getSettings(u.id)).theme };
 }
 
 export const todayIso = () => {

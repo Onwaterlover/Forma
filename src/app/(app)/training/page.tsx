@@ -10,12 +10,12 @@ export const dynamic = "force-dynamic";
 
 export default async function TrainingPage() {
   const { user, locale, t } = await pageCtx();
-  const plan = getActivePlan(user.id);
-  const profile = getProfile(user.id);
-  const library = libraryFor(user.id);
-  const plans = listPlans(user.id).filter((p) => p.id !== plan?.id && p.status !== "archived");
-  const running = inProgressWorkout(user.id);
-  const issues = plan && profile && plan.source !== "imported" ? validatePlan({ plan: plan.data, profile, prefs: getPrefs(user.id), library }) : [];
+  const plan = await getActivePlan(user.id);
+  const profile = await getProfile(user.id);
+  const library = await libraryFor(user.id);
+  const plans = (await listPlans(user.id)).filter((p) => p.id !== plan?.id && p.status !== "archived");
+  const running = await inProgressWorkout(user.id);
+  const issues = plan && profile && plan.source !== "imported" ? validatePlan({ plan: plan.data, profile, prefs: await getPrefs(user.id), library }) : [];
 
   const links = [
     { href: "/training/setup", icon: SlidersHorizontal, label: profile ? t("plan.profile") : t("plan.create") },

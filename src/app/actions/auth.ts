@@ -3,9 +3,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { isLocale, translator } from "@/i18n";
-import { consumeInvite, createSession, createUser, destroySession, inviteValid, throttle, userCount, verifyPassword } from "@/lib/auth";
+import { createSession, destroySession, hashPassword, sha256, throttle, verifyPassword } from "@/lib/auth";
 import { guestLocale } from "@/lib/ctx";
-import { db, transaction } from "@/lib/db";
+import { db, newId, nowIso } from "@/lib/db";
 
 export type FormState = { error?: string } | undefined;
 
@@ -18,8 +18,8 @@ export async function loginAction(_: FormState, form: FormData): Promise<FormSta
   const t = translator(await guestLocale());
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
-  if (!throttle(`login:${await clientKey()}:${email}`)) return { error: t("auth.throttled") };
-  const row = db().prepare("SELECT id, password_hash FROM users WHERE email = ?").get(email) as { id: string; password_hash: string } | undefined;
+  if (!await throttle(`login:${await clientKey()}:${email}`)) return { error: t("auth.throttled") };
+  const row = await (await db()).get<{ id: string; password_hash: string }>("SELECT id, password_hash FROM users WHERE lower(email) = ?", [email]);
   // Verify even when the user doesn't exist so timing doesn't reveal which emails are registered.
   const ok = verifyPassword(password, row?.password_hash ?? "scrypt$16384$8$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAA");
   if (!row || !ok) return { error: t("auth.invalid") };
@@ -37,7 +37,7 @@ const registerSchema = z.object({
 
 export async function registerAction(_: FormState, form: FormData): Promise<FormState> {
   const t = translator(await guestLocale());
-  if (!throttle(`register:${await clientKey()}`, 10)) return { error: t("auth.throttled") };
+  if (!await throttle(`register:${await clientKey()}`, 10)) return { error: t("auth.throttled") };
   const parsed = registerSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) {
     const pw = parsed.error.issues.some((i) => i.path[0] === "password");
@@ -48,17 +48,24 @@ export async function registerAction(_: FormState, form: FormData): Promise<Form
 
   let userId: string;
   try {
-    userId = transaction(() => {
-      const first = userCount() === 0;
-      if (!first && (!invite || !inviteValid(invite))) throw new Error("invite");
-      const id = createUser(email, name, password, first, locale);
-      if (!first && !consumeInvite(invite!, id)) throw new Error("invite");
+    // One transaction: the first account becomes admin; everyone else must consume a valid invite.
+    userId = await (await db()).tx(async (q) => {
+      await q.run("SELECT pg_advisory_xact_lock(4243)");
+      const first = (await q.get<{ n: number }>("SELECT COUNT(*)::int AS n FROM users"))!.n === 0;
+      const id = newId();
+      await q.run("INSERT INTO users (id, email, name, password_hash, is_admin, locale, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [id, email.trim().toLowerCase(), name.trim(), hashPassword(password), first ? 1 : 0, locale, nowIso()]);
+      if (!first) {
+        const used = await q.run("UPDATE invites SET used_by = ?, used_at = ? WHERE code_hash = ? AND used_by IS NULL AND expires_at > ?",
+          [id, nowIso(), sha256((invite ?? "").trim().toUpperCase()), nowIso()]);
+        if (used !== 1) throw new Error("invite");
+      }
       return id;
     });
   } catch (e) {
     const msg = (e as Error).message;
     if (msg === "invite") return { error: t("auth.inviteInvalid") };
-    if (/UNIQUE/.test(msg)) return { error: t("auth.emailTaken") };
+    if (/duplicate key|unique/i.test(msg)) return { error: t("auth.emailTaken") };
     throw e;
   }
   await createSession(userId);

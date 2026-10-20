@@ -10,10 +10,10 @@ export default async function TargetsPage() {
   const { user, t, settings } = await pageCtx();
   const today = todayIso();
   const from = shiftDate(today, -27);
-  const weights = listWeights(user.id, from);
-  const adaptive = adaptiveTdee(intakeHistory(user.id, from), weights, { today });
-  const target = currentTarget(user.id);
-  const lastKg = listWeights(user.id).at(-1)?.kg ?? null;
+  const weights = await listWeights(user.id, from);
+  const adaptive = adaptiveTdee(await intakeHistory(user.id, from), weights, { today });
+  const target = await currentTarget(user.id);
+  const lastKg = (await listWeights(user.id)).at(-1)?.kg ?? null;
   const goal = (target?.goal as "maintain" | "lose" | "gain" | "recomp" | null) ?? settings.weightGoal;
   const suggestion = goal && lastKg ? suggestTarget(adaptive, goal, target?.kcal ?? null, lastKg) : null;
   return (

@@ -10,8 +10,8 @@ import { parseDecimal } from "@/nutrition/calc";
 
 export async function chooseStart(path: "plan" | "have" | "food") {
   const user = await requireUser();
-  if (path === "food") saveSettings(user.id, { onboarded: true, modules: { training: false, nutrition: true } });
-  else saveSettings(user.id, { modules: { training: true, nutrition: true } });
+  if (path === "food") await saveSettings(user.id, { onboarded: true, modules: { training: false, nutrition: true } });
+  else await saveSettings(user.id, { modules: { training: true, nutrition: true } });
   revalidatePath("/", "layout");
   redirect(path === "plan" ? "/training/setup" : path === "have" ? "/training/import" : "/nutrition");
 }
@@ -33,13 +33,13 @@ export async function updateSettings(patch: Partial<Settings>) {
   const user = await requireUser();
   const p = settingsSchema.safeParse(patch);
   if (!p.success) return;
-  saveSettings(user.id, p.data);
+  await saveSettings(user.id, p.data);
   revalidatePath("/", "layout");
 }
 
 export async function updateLocale(locale: string) {
   const user = await requireUser();
-  if (isLocale(locale)) setLocale(user.id, locale);
+  if (isLocale(locale)) await setLocale(user.id, locale);
   revalidatePath("/", "layout");
 }
 
@@ -47,7 +47,7 @@ export async function logWeight(date: string, kgRaw: string | number) {
   const user = await requireUser();
   const kg = parseDecimal(kgRaw);
   if (!isIsoDate(date) || kg === null || kg <= 20 || kg >= 400) return { error: "invalid" };
-  addWeight(user.id, date, Math.round(kg * 10) / 10);
+  await addWeight(user.id, date, Math.round(kg * 10) / 10);
   revalidatePath("/progress");
   revalidatePath("/");
   return {};
@@ -55,24 +55,24 @@ export async function logWeight(date: string, kgRaw: string | number) {
 
 export async function removeWeight(date: string) {
   const user = await requireUser();
-  if (isIsoDate(date)) deleteWeight(user.id, date);
+  if (isIsoDate(date)) await deleteWeight(user.id, date);
   revalidatePath("/progress");
 }
 
 export async function makeInvite(note: string): Promise<{ code?: string }> {
   const user = await requireUser();
   if (!user.is_admin) return {};
-  const code = createInvite(user.id, note.trim().slice(0, 60) || null);
+  const code = await createInvite(user.id, note.trim().slice(0, 60) || null);
   revalidatePath("/settings");
   return { code };
 }
 
 export async function updatePassword(current: string, next: string): Promise<{ error?: string }> {
   const user = await requireUser();
-  const hash = passwordHash(user.id);
+  const hash = await passwordHash(user.id);
   if (!hash || !verifyPassword(current, hash)) return { error: "wrong" };
   if (next.length < 10 || next.length > 200) return { error: "short" };
-  changePassword(user.id, hashPassword(next));
+  await changePassword(user.id, hashPassword(next));
   await destroySession();
   redirect("/login");
 }
@@ -80,7 +80,7 @@ export async function updatePassword(current: string, next: string): Promise<{ e
 export async function deleteAccount(confirmWord: string, expected: string) {
   const user = await requireUser();
   if (confirmWord.trim() !== expected) return { error: "confirm" };
-  deleteUser(user.id);
+  await deleteUser(user.id);
   await destroySession();
   redirect("/register");
 }

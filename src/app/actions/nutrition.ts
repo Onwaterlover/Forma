@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { isIsoDate, shiftDate } from "@/lib/ctx";
 import {
-  addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, restoreEntry, saveCustomProduct, saveRecipe, setDayComplete,
+  addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, saveCustomProduct, undoDelete, saveRecipe, setDayComplete,
   setFavorite, setTarget, updateEntry, type Recipe,
 } from "@/lib/data";
 import { NUTRIENT_KEYS, sanitize, type Nutrients } from "@/nutrition/calc";
@@ -21,7 +21,7 @@ export async function addProductEntry(input: { productId: string; amount: number
   const user = await requireUser();
   const p = z.object({ productId: z.string().max(64), amount, date, meal }).safeParse(input);
   if (!p.success) return { error: "invalid" };
-  const id = addEntry(user.id, { productId: p.data.productId, amount: p.data.amount, date: p.data.date, meal: p.data.meal });
+  const id = await addEntry(user.id, { productId: p.data.productId, amount: p.data.amount, date: p.data.date, meal: p.data.meal });
   done();
   return id ? { id } : { error: "not_found" };
 }
@@ -30,7 +30,7 @@ export async function addRecipeEntry(input: { recipeId: string; amount: number; 
   const user = await requireUser();
   const p = z.object({ recipeId: z.string().max(64), amount, mode: z.enum(["grams", "servings"]), date, meal }).safeParse(input);
   if (!p.success) return { error: "invalid" };
-  const id = addEntry(user.id, { recipeId: p.data.recipeId, mode: p.data.mode, amount: p.data.amount, date: p.data.date, meal: p.data.meal });
+  const id = await addEntry(user.id, { recipeId: p.data.recipeId, mode: p.data.mode, amount: p.data.amount, date: p.data.date, meal: p.data.meal });
   done();
   return id ? { id } : { error: "not_found" };
 }
@@ -40,7 +40,7 @@ export async function addQuickEntry(input: { name: string; kcal: number; protein
   const n = z.number().min(0).max(5000).nullable().optional();
   const p = z.object({ name: z.string().trim().min(1).max(80), kcal: z.number().min(0).max(10000), protein: n, carbs: n, fat: n, date, meal }).safeParse(input);
   if (!p.success) return { error: "invalid" };
-  addEntry(user.id, { date: p.data.date, meal: p.data.meal, amount: 100, quick: { name: p.data.name, kcal: p.data.kcal, protein: p.data.protein, carbs: p.data.carbs, fat: p.data.fat } });
+  await addEntry(user.id, { date: p.data.date, meal: p.data.meal, amount: 100, quick: { name: p.data.name, kcal: p.data.kcal, protein: p.data.protein, carbs: p.data.carbs, fat: p.data.fat } });
   done();
   return {};
 }
@@ -49,35 +49,27 @@ export async function editEntry(id: string, patch: { amount?: number; meal?: str
   const user = await requireUser();
   const p = z.object({ amount: amount.optional(), meal: meal.optional() }).safeParse(patch);
   if (!p.success) return;
-  updateEntry(user.id, id, p.data);
+  await updateEntry(user.id, id, p.data);
   done();
 }
-
-// Recently deleted rows kept briefly on the server so "undo" never trusts client-supplied data.
-const g = globalThis as unknown as { __formaUndo?: Map<string, { userId: string; row: NonNullable<ReturnType<typeof deleteEntry>>; at: number }> };
-const undo = (g.__formaUndo ??= new Map());
 
 export async function removeEntry(id: string) {
   const user = await requireUser();
-  const row = deleteEntry(user.id, id);
-  if (row) undo.set(id, { userId: user.id, row, at: Date.now() });
-  for (const [k, v] of undo) if (Date.now() - v.at > 10 * 60_000) undo.delete(k);
+  await deleteEntry(user.id, id);
   done();
 }
 
+/** Undo uses the server-side copy kept by deleteEntry, never data sent by the browser. */
 export async function undoRemove(id: string) {
   const user = await requireUser();
-  const u = undo.get(id);
-  if (!u || u.userId !== user.id) return;
-  restoreEntry(user.id, u.row);
-  undo.delete(id);
+  await undoDelete(user.id, id);
   done();
 }
 
 export async function copyFromYesterday(day: string) {
   const user = await requireUser();
   if (!isIsoDate(day)) return { n: 0 };
-  const n = copyDay(user.id, shiftDate(day, -1), day);
+  const n = await copyDay(user.id, shiftDate(day, -1), day);
   done();
   return { n };
 }
@@ -85,13 +77,13 @@ export async function copyFromYesterday(day: string) {
 export async function markDay(day: string, complete: boolean | null) {
   const user = await requireUser();
   if (!isIsoDate(day)) return;
-  setDayComplete(user.id, day, complete);
+  await setDayComplete(user.id, day, complete);
   done();
 }
 
 export async function toggleFavorite(productId: string, on: boolean) {
   const user = await requireUser();
-  setFavorite(user.id, productId, on);
+  await setFavorite(user.id, productId, on);
   done();
 }
 
@@ -115,14 +107,14 @@ export async function saveFood(input: unknown): Promise<{ id?: string; error?: s
   const nutrients = sanitize(p.data.nutrients);
   if (nutrients.kcal === null) return { error: "kcal_required" };
   const barcode = p.data.barcode ? normalizeBarcode(p.data.barcode) : null;
-  const id = saveCustomProduct(user.id, { ...p.data, barcode, nutrients });
+  const id = await saveCustomProduct(user.id, { ...p.data, barcode, nutrients });
   done();
   return { id };
 }
 
 export async function productFor(id: string) {
   const user = await requireUser();
-  return getProduct(user.id, id);
+  return await getProduct(user.id, id);
 }
 
 const ingredient = z.object({ productId: z.string().max(64).nullable(), name: z.string().max(120), grams: amount });
@@ -142,9 +134,9 @@ export async function saveRecipeAction(input: unknown): Promise<{ id?: string; e
     .safeParse(input);
   if (!p.success) return { error: "invalid" };
   const ingredients: Recipe["ingredients"] = [];
-  const existing = p.data.id ? getRecipe(user.id, p.data.id) : null;
+  const existing = p.data.id ? await getRecipe(user.id, p.data.id) : null;
   for (const i of p.data.ingredients) {
-    const prod = i.productId ? getProduct(user.id, i.productId) : null;
+    const prod = i.productId ? await getProduct(user.id, i.productId) : null;
     if (prod) {
       ingredients.push({ productId: prod.id, name: prod.name, grams: i.grams, nutrients: prod.nutrients });
       continue;
@@ -154,7 +146,7 @@ export async function saveRecipeAction(input: unknown): Promise<{ id?: string; e
     if (!kept) return { error: "not_found" };
     ingredients.push({ ...kept, grams: i.grams });
   }
-  const id = saveRecipe(user.id, { ...p.data, ingredients });
+  const id = await saveRecipe(user.id, { ...p.data, ingredients });
   revalidatePath("/nutrition", "layout");
   return { id };
 }
@@ -163,17 +155,17 @@ export async function saveRecipeAction(input: unknown): Promise<{ id?: string; e
 export async function saveMealFromEntries(day: string, entryIds: string[], name: string) {
   const user = await requireUser();
   if (!isIsoDate(day) || !name.trim()) return { error: "invalid" };
-  const entries = diaryDay(user.id, day).entries.filter((e) => entryIds.includes(e.id) && e.basis !== "portion");
+  const entries = (await diaryDay(user.id, day)).entries.filter((e) => entryIds.includes(e.id) && e.basis !== "portion");
   if (!entries.length) return { error: "invalid" };
   const ingredients = entries.map((e) => ({ productId: e.productId, name: e.name, grams: e.amount, nutrients: e.nutrients as Nutrients }));
-  saveRecipe(user.id, { name: name.trim().slice(0, 80), ingredients, cookedYieldG: null, servings: 1, isMeal: true });
+  await saveRecipe(user.id, { name: name.trim().slice(0, 80), ingredients, cookedYieldG: null, servings: 1, isMeal: true });
   revalidatePath("/nutrition", "layout");
   return {};
 }
 
 export async function removeRecipe(id: string) {
   const user = await requireUser();
-  deleteRecipe(user.id, id);
+  await deleteRecipe(user.id, id);
   revalidatePath("/nutrition", "layout");
 }
 
@@ -188,7 +180,7 @@ export async function saveTarget(input: { kcal: number | null; protein: number |
     })
     .safeParse(input);
   if (!p.success) return { error: "invalid" };
-  setTarget(user.id, p.data);
+  await setTarget(user.id, p.data);
   revalidatePath("/", "layout");
   return {};
 }

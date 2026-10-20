@@ -21,31 +21,37 @@ export default async function ProgressPage() {
   const { user, locale, t, settings } = await pageCtx();
   const today = todayIso();
 
-  const weights = listWeights(user.id, shiftDate(today, -120));
+  const weights = await listWeights(user.id, shiftDate(today, -120));
   const trend = weightTrend(weights);
   const last = trend.at(-1);
   const weekAgo = [...trend].reverse().find((p) => p.date <= shiftDate(today, -7));
   const weeklyChange = last && weekAgo && last.date !== weekAgo.date ? ((last.trend - weekAgo.trend) / ((Date.parse(last.date) - Date.parse(weekAgo.date)) / 86_400_000)) * 7 : null;
 
-  const intake = settings.modules.nutrition ? intakeHistory(user.id, shiftDate(today, -13)) : [];
-  const target = currentTarget(user.id);
+  const intake = settings.modules.nutrition ? await intakeHistory(user.id, shiftDate(today, -13)) : [];
+  const target = await currentTarget(user.id);
   const calDays = Array.from({ length: 14 }, (_, i) => shiftDate(today, i - 13));
   const calData = calDays.map((d) => ({ label: d.slice(8), value: intake.find((x) => x.date === d)?.kcal ?? 0 }));
   const logged = intake.filter((x) => x.kcal > 0);
   const avg = logged.length ? logged.reduce((a, x) => a + x.kcal, 0) / logged.length : null;
 
   const since = mondayOf(shiftDate(today, -7 * 7));
-  const dates = settings.modules.training ? workoutDatesSince(user.id, since) : [];
+  const dates = settings.modules.training ? await workoutDatesSince(user.id, since) : [];
   const weeks = Array.from({ length: 8 }, (_, i) => mondayOf(shiftDate(today, (i - 7) * 7)));
   const perWeek = weeks.map((w) => ({ label: fmtDate(locale, w, { day: "numeric", month: "numeric" }), value: dates.filter((d) => mondayOf(d) === w).length }));
-  const plan = settings.modules.training ? getActivePlan(user.id) : null;
+  const plan = settings.modules.training ? await getActivePlan(user.id) : null;
   const planned = plan?.data.sessions.length ?? 0;
   const thisWeek = perWeek.at(-1)!.value;
 
-  const library = libraryFor(user.id);
+  const library = await libraryFor(user.id);
   const records = settings.modules.training
-    ? loggedExerciseIds(user.id)
-        .map((id) => ({ ex: library.find((e) => e.id === id), r: personalRecords(library.find((e) => e.id === id)!, exerciseHistory(user.id, id, 50)) }))
+    ? (
+        await Promise.all(
+          (await loggedExerciseIds(user.id)).map(async (id) => {
+            const ex = library.find((e) => e.id === id);
+            return { ex, r: ex ? personalRecords(ex, await exerciseHistory(user.id, id, 50)) : { repsAtLoad: {} } };
+          }),
+        )
+      )
         .filter((x) => x.ex && (x.r.maxLoad || x.r.bestE1rm))
         .slice(0, 12)
     : [];

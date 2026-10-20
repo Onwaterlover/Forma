@@ -15,7 +15,7 @@ export default async function ImportPage() {
         subtitle={t("import.hint")}
         action={<form action={createManualPlan}><button className="h-9 rounded-xl bg-surface-2 px-3 text-sm font-medium hover:bg-border">{t("plan.manual")}</button></form>}
       />
-      <Importer custom={getCustomExercises(user.id)} />
+      <Importer custom={await getCustomExercises(user.id)} />
     </>
   );
 }

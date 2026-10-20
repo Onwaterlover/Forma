@@ -16,8 +16,8 @@ export default async function SettingsPage() {
         settings={settings}
         locale={locale}
         isAdmin={user.is_admin === 1}
-        users={user.is_admin ? listUsers().map((u) => ({ name: u.name, created: u.created_at, admin: u.is_admin === 1 })) : []}
-        invites={user.is_admin ? listInvites() : []}
+        users={user.is_admin ? (await listUsers()).map((u) => ({ name: u.name, created: u.created_at, admin: u.is_admin === 1 })) : []}
+        invites={user.is_admin ? await listInvites() : []}
         aiConfigured={!!process.env.ANTHROPIC_API_KEY && process.env.AI_PROVIDER === "anthropic"}
       />
     </>

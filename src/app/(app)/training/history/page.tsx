@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HistoryPage() {
   const { user, locale, t } = await pageCtx();
-  const workouts = listWorkouts(user.id, 100);
+  const workouts = await listWorkouts(user.id, 100);
   return (
     <>
       <PageHeader title={t("workout.history")} />

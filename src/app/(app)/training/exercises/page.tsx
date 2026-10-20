@@ -10,7 +10,7 @@ export default async function ExercisesPage() {
   return (
     <>
       <PageHeader title={t("library.title")} subtitle={t("library.prefHint")} />
-      <Library prefs={getPrefs(user.id)} custom={getCustomExercises(user.id)} />
+      <Library prefs={await getPrefs(user.id)} custom={await getCustomExercises(user.id)} />
     </>
   );
 }

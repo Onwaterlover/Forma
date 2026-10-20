@@ -2,27 +2,29 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { beforeAll, describe, expect, it } from "vitest";
 import { emptyNutrients } from "@/nutrition/calc";
 
-// Runs the real data layer against a throwaway database.
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "forma-test-"));
-process.env.DATA_DIR = dir;
+// Runs the real data layer against a throwaway in-memory Postgres (PGlite).
+process.env.DATA_DIR = ":memory:";
+delete process.env.DATABASE_URL;
 
 type Data = typeof import("./data");
 type Auth = typeof import("./auth");
+type DbMod = typeof import("./db");
 let data: Data;
 let auth: Auth;
+let dbm: DbMod;
 let A: string;
 let B: string;
 
 beforeAll(async () => {
+  dbm = await import("./db");
   data = await import("./data");
   auth = await import("./auth");
-  A = auth.createUser("a@test.test", "A", "password-aaaa-1", true);
-  B = auth.createUser("b@test.test", "B", "password-bbbb-1", false);
-});
+  A = await auth.createUser("a@test.test", "A", "password-aaaa-1", true);
+  B = await auth.createUser("b@test.test", "B", "password-bbbb-1", false);
+}, 60_000);
 
 const plan = { engineVersion: "1", split: "full_body", sessions: [], weeklySets: {}, tradeoffs: [], notes: [] };
 const workout = (id: string, updated: string, reps = 8) => ({
@@ -41,66 +43,72 @@ describe("passwords and invites", () => {
     expect(auth.verifyPassword("x", "garbage")).toBe(false);
   });
 
-  it("invites are single-use and stored only as hashes", () => {
-    const code = auth.createInvite(A, "test");
-    expect(auth.inviteValid(code)).toBe(true);
-    const raw = new DatabaseSync(path.join(dir, "forma.db")).prepare("SELECT code_hash FROM invites").all() as { code_hash: string }[];
+  it("invites are single-use and stored only as hashes", async () => {
+    const code = await auth.createInvite(A, "test");
+    expect(await auth.inviteValid(code)).toBe(true);
+    const raw = await (await dbm.db()).all<{ code_hash: string }>("SELECT code_hash FROM invites");
     expect(raw.some((r) => r.code_hash === code)).toBe(false);
-    const C = auth.createUser("c@test.test", "C", "password-cccc-1", false);
-    expect(auth.consumeInvite(code, C)).toBe(true);
-    expect(auth.consumeInvite(code, C)).toBe(false);
-    expect(auth.inviteValid(code)).toBe(false);
+    const C = await auth.createUser("c@test.test", "C", "password-cccc-1", false);
+    expect(await auth.consumeInvite(code, C)).toBe(true);
+    expect(await auth.consumeInvite(code, C)).toBe(false);
+    expect(await auth.inviteValid(code)).toBe(false);
   });
 
-  it("expired invites are rejected", () => {
-    const code = auth.createInvite(A, null, -1);
-    expect(auth.inviteValid(code)).toBe(false);
+  it("expired invites are rejected", async () => {
+    const code = await auth.createInvite(A, null, -1);
+    expect(await auth.inviteValid(code)).toBe(false);
   });
 
-  it("throttles repeated login attempts", () => {
+  it("throttles repeated login attempts (stored in the database)", async () => {
     const key = `t-${Math.random()}`;
-    for (let i = 0; i < 8; i++) expect(auth.throttle(key)).toBe(true);
-    expect(auth.throttle(key)).toBe(false);
+    for (let i = 0; i < 8; i++) expect(await auth.throttle(key)).toBe(true);
+    expect(await auth.throttle(key)).toBe(false);
+  });
+
+  it("emails are unique regardless of case", async () => {
+    await expect(auth.createUser("A@TEST.TEST", "dup", "password-xxxx-1", false)).rejects.toThrow();
   });
 });
 
 describe("account separation", () => {
-  it("plans of one user are invisible and immutable to another", () => {
-    const id = data.createPlan(A, "A plan", "manual", plan as never, null);
-    expect(data.getPlan(B, id)).toBeNull();
-    expect(data.savePlanVersion(B, id, plan as never, "hack")).toBeNull();
-    data.setPlanStatus(B, id, "archived");
-    expect(data.getPlan(A, id)!.status).toBe("active");
-    expect(data.listPlans(B)).toEqual([]);
+  it("plans of one user are invisible and immutable to another", async () => {
+    const id = await data.createPlan(A, "A plan", "manual", plan as never, null);
+    expect(await data.getPlan(B, id)).toBeNull();
+    expect(await data.savePlanVersion(B, id, plan as never, "hack")).toBeNull();
+    await data.setPlanStatus(B, id, "archived");
+    expect((await data.getPlan(A, id))!.status).toBe("active");
+    expect(await data.listPlans(B)).toEqual([]);
   });
 
-  it("workouts can't be read or overwritten across accounts", () => {
+  it("workouts can't be read or overwritten across accounts", async () => {
     const id = crypto.randomUUID();
-    expect(data.upsertWorkout(A, workout(id, "2026-10-01T11:00:00.000Z"))).toBe("saved");
-    expect(data.getWorkout(B, id)).toBeNull();
-    expect(data.upsertWorkout(B, workout(id, "2026-10-02T11:00:00.000Z"))).toBe("forbidden");
-    data.deleteWorkout(B, id);
-    expect(data.getWorkout(A, id)).not.toBeNull();
+    expect(await data.upsertWorkout(A, workout(id, "2026-10-01T11:00:00.000Z"))).toBe("saved");
+    expect(await data.getWorkout(B, id)).toBeNull();
+    expect(await data.upsertWorkout(B, workout(id, "2026-10-02T11:00:00.000Z"))).toBe("forbidden");
+    await data.deleteWorkout(B, id);
+    expect(await data.getWorkout(A, id)).not.toBeNull();
   });
 
-  it("diary entries, custom foods and recipes are private", () => {
-    const food = data.saveCustomProduct(A, { name: "Secret porridge", brand: null, barcode: null, basis: "g", state: "cooked", nutrients: { ...emptyNutrients(), kcal: 100 }, servings: [] });
-    expect(data.getProduct(B, food)).toBeNull();
-    expect(data.searchProducts(B, "secret")).toEqual([]);
-    expect(data.addEntry(B, { productId: food, amount: 100, date: "2026-10-01", meal: null })).toBeNull();
-    const entry = data.addEntry(A, { productId: food, amount: 100, date: "2026-10-01", meal: null })!;
-    expect(data.diaryDay(B, "2026-10-01").entries).toEqual([]);
-    data.updateEntry(B, entry, { amount: 999 });
-    expect(data.deleteEntry(B, entry)).toBeNull();
-    expect(data.diaryDay(A, "2026-10-01").entries[0]!.amount).toBe(100);
-    const r = data.saveRecipe(A, { name: "R", ingredients: [], cookedYieldG: null, servings: 1, isMeal: false });
-    expect(data.getRecipe(B, r)).toBeNull();
-    data.deleteRecipe(B, r);
-    expect(data.getRecipe(A, r)).not.toBeNull();
+  it("diary entries, custom foods and recipes are private", async () => {
+    const food = await data.saveCustomProduct(A, { name: "Secret porridge", brand: null, barcode: null, basis: "g", state: "cooked", nutrients: { ...emptyNutrients(), kcal: 100 }, servings: [] });
+    expect(await data.getProduct(B, food)).toBeNull();
+    expect(await data.searchProducts(B, "secret")).toEqual([]);
+    expect(await data.searchProducts(A, "secret")).toHaveLength(1);
+    expect(await data.addEntry(B, { productId: food, amount: 100, date: "2026-10-01", meal: null })).toBeNull();
+    const entry = (await data.addEntry(A, { productId: food, amount: 100, date: "2026-10-01", meal: null }))!;
+    expect((await data.diaryDay(B, "2026-10-01")).entries).toEqual([]);
+    await data.updateEntry(B, entry, { amount: 999 });
+    expect(await data.deleteEntry(B, entry)).toBe(false);
+    expect(await data.undoDelete(B, entry)).toBe(false);
+    expect((await data.diaryDay(A, "2026-10-01")).entries[0]!.amount).toBe(100);
+    const r = await data.saveRecipe(A, { name: "R", ingredients: [], cookedYieldG: null, servings: 1, isMeal: false });
+    expect(await data.getRecipe(B, r)).toBeNull();
+    await data.deleteRecipe(B, r);
+    expect(await data.getRecipe(A, r)).not.toBeNull();
   });
 
-  it("export contains only the requesting user's rows", () => {
-    const e = data.exportUser(B) as Record<string, unknown[]>;
+  it("export contains only the requesting user's rows", async () => {
+    const e = (await data.exportUser(B)) as Record<string, unknown[]>;
     expect(JSON.stringify(e)).not.toContain("Secret porridge");
     expect(JSON.stringify(e)).not.toContain("a@test.test");
     expect(e.plans).toEqual([]);
@@ -108,51 +116,84 @@ describe("account separation", () => {
 });
 
 describe("data integrity", () => {
-  it("an older offline copy never overwrites newer data", () => {
+  it("an older offline copy never overwrites newer data", async () => {
     const id = crypto.randomUUID();
-    data.upsertWorkout(A, workout(id, "2026-10-01T12:00:00.000Z", 10));
-    expect(data.upsertWorkout(A, workout(id, "2026-10-01T11:00:00.000Z", 3))).toBe("stale");
-    expect(data.getWorkout(A, id)!.exercises[0]!.sets[0]!.reps).toBe(10);
-    // Re-sending the same payload is harmless (idempotent).
-    expect(data.upsertWorkout(A, workout(id, "2026-10-01T12:00:00.000Z", 10))).toBe("saved");
-    expect(data.getWorkout(A, id)!.exercises).toHaveLength(1);
+    await data.upsertWorkout(A, workout(id, "2026-10-01T12:00:00.000Z", 10));
+    expect(await data.upsertWorkout(A, workout(id, "2026-10-01T11:00:00.000Z", 3))).toBe("stale");
+    expect((await data.getWorkout(A, id))!.exercises[0]!.sets[0]!.reps).toBe(10);
+    expect(await data.upsertWorkout(A, workout(id, "2026-10-01T12:00:00.000Z", 10))).toBe("saved");
+    expect((await data.getWorkout(A, id))!.exercises).toHaveLength(1);
   });
 
-  it("correcting a product later doesn't rewrite past diary entries", () => {
-    const food = data.saveCustomProduct(A, { name: "Bread", brand: null, barcode: null, basis: "g", state: null, nutrients: { ...emptyNutrients(), kcal: 250 }, servings: [] });
-    data.addEntry(A, { productId: food, amount: 100, date: "2026-10-03", meal: null });
-    data.saveCustomProduct(A, { id: food, name: "Bread", brand: null, barcode: null, basis: "g", state: null, nutrients: { ...emptyNutrients(), kcal: 300 }, servings: [] });
-    expect(data.diaryDay(A, "2026-10-03").totals.kcal).toBe(250);
+  it("correcting a product later doesn't rewrite past diary entries", async () => {
+    const food = await data.saveCustomProduct(A, { name: "Bread", brand: null, barcode: null, basis: "g", state: null, nutrients: { ...emptyNutrients(), kcal: 250 }, servings: [] });
+    await data.addEntry(A, { productId: food, amount: 100, date: "2026-10-03", meal: null });
+    await data.saveCustomProduct(A, { id: food, name: "Bread", brand: null, barcode: null, basis: "g", state: null, nutrients: { ...emptyNutrients(), kcal: 300 }, servings: [] });
+    expect((await data.diaryDay(A, "2026-10-03")).totals.kcal).toBe(250);
   });
 
-  it("missing nutrients stay missing in totals", () => {
-    data.addEntry(A, { date: "2026-10-04", meal: null, amount: 100, quick: { name: "Lunch out", kcal: 700 } });
-    const d = data.diaryDay(A, "2026-10-04");
+  it("delete + undo restores the exact entry", async () => {
+    const id = (await data.addEntry(A, { date: "2026-10-05", meal: "lunch", amount: 100, quick: { name: "Soup", kcal: 320 } }))!;
+    expect(await data.deleteEntry(A, id)).toBe(true);
+    expect((await data.diaryDay(A, "2026-10-05")).entries).toEqual([]);
+    expect(await data.undoDelete(A, id)).toBe(true);
+    const e = (await data.diaryDay(A, "2026-10-05")).entries[0]!;
+    expect(e).toMatchObject({ id, name: "Soup", meal: "lunch" });
+    expect(await data.undoDelete(A, id)).toBe(false);
+  });
+
+  it("missing nutrients stay missing in totals", async () => {
+    await data.addEntry(A, { date: "2026-10-04", meal: null, amount: 100, quick: { name: "Lunch out", kcal: 700 } });
+    const d = await data.diaryDay(A, "2026-10-04");
     expect(d.totals.kcal).toBe(700);
     expect(d.totals.protein).toBeNull();
   });
 
-  it("deleting an account removes all of its data", () => {
-    const D = auth.createUser("d@test.test", "D", "password-dddd-1", false);
-    data.createPlan(D, "p", "manual", plan as never, null);
-    data.addEntry(D, { date: "2026-10-01", meal: null, amount: 100, quick: { name: "x", kcal: 1 } });
-    data.deleteUser(D);
-    const db = new DatabaseSync(path.join(dir, "forma.db"));
+  it("recent foods and intake history aggregate correctly", async () => {
+    const food = await data.saveCustomProduct(A, { name: "Oats", brand: null, barcode: null, basis: "g", state: "raw", nutrients: { ...emptyNutrients(), kcal: 380, protein: 13 }, servings: [] });
+    await data.addEntry(A, { productId: food, amount: 50, date: "2026-10-06", meal: null });
+    await data.addEntry(A, { productId: food, amount: 80, date: "2026-10-07", meal: null });
+    const recent = await data.recentProducts(A, 5);
+    expect(recent.find((p) => p.id === food)!.lastAmount).toBe(80);
+    const hist = await data.intakeHistory(A, "2026-10-06");
+    expect(hist.find((h) => h.date === "2026-10-07")!.kcal).toBeCloseTo(304, 0);
+  });
+
+  it("deleting an account removes all of its data", async () => {
+    const D = await auth.createUser("d@test.test", "D", "password-dddd-1", false);
+    await data.createPlan(D, "p", "manual", plan as never, null);
+    await data.addEntry(D, { date: "2026-10-01", meal: null, amount: 100, quick: { name: "x", kcal: 1 } });
+    await data.deleteUser(D);
+    const q = await dbm.db();
     for (const t of ["plans", "diary_entries", "sessions", "training_profiles"]) {
-      expect((db.prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE user_id = ?`).get(D) as { n: number }).n).toBe(0);
+      expect((await q.get<{ n: number }>(`SELECT COUNT(*)::int AS n FROM ${t} WHERE user_id = ?`, [D]))!.n).toBe(0);
     }
   });
 });
 
 describe("backup and restore", () => {
-  it("backs up a live database and restores it", () => {
-    const env = { ...process.env, DATA_DIR: dir, BACKUP_DIR: path.join(dir, "backups") };
-    execFileSync(process.execPath, ["scripts/backup.mjs"], { env });
-    const [file] = fs.readdirSync(path.join(dir, "backups"));
-    expect(file).toMatch(/^forma-.*\.db$/);
-    const restoreDir = fs.mkdtempSync(path.join(os.tmpdir(), "forma-restore-"));
-    execFileSync(process.execPath, ["scripts/restore.mjs", path.join(dir, "backups", file!)], { env: { ...env, DATA_DIR: restoreDir } });
-    const db = new DatabaseSync(path.join(restoreDir, "forma.db"), { readOnly: true });
-    expect((db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n).toBeGreaterThanOrEqual(2);
-  });
+  it("backs up a database to JSON and restores it into another", async () => {
+    const make = async () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "forma-bk-"));
+      const d = await dbm.openPglite(path.join(dir, "pg"));
+      await dbm.migrate(d);
+      return { dir, d };
+    };
+    const src = await make();
+    await src.d.run("INSERT INTO users (id, email, name, password_hash, created_at) VALUES ('u1','x@test.test','X','h','2026')");
+    await src.d.close();
+    const dst = await make();
+    await dst.d.close();
+
+    const env = { ...process.env, DATABASE_URL: "", BACKUP_DIR: path.join(src.dir, "backups") };
+    delete (env as Record<string, string | undefined>).DATABASE_URL;
+    execFileSync(process.execPath, ["scripts/backup.mjs"], { env: { ...env, DATA_DIR: src.dir } });
+    const [file] = fs.readdirSync(path.join(src.dir, "backups"));
+    expect(file).toMatch(/^forma-.*\.json$/);
+    execFileSync(process.execPath, ["scripts/restore.mjs", path.join(src.dir, "backups", file!)], { env: { ...env, DATA_DIR: dst.dir } });
+
+    const check = await dbm.openPglite(path.join(dst.dir, "pg"));
+    expect(await check.all("SELECT email FROM users")).toEqual([{ email: "x@test.test" }]);
+    await check.close();
+  }, 120_000);
 });

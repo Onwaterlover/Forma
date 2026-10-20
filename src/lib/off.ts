@@ -36,7 +36,7 @@ async function get(url: string): Promise<unknown> {
 }
 
 export async function lookupBarcode(userId: string, barcode: string, lang: "pl" | "de" | "en"): Promise<{ product: Product; warnings: ProductDraft["warnings"] } | { error: OffError }> {
-  const cached = productByBarcode(userId, barcode);
+  const cached = await productByBarcode(userId, barcode);
   if (cached && (cached.source === "custom" || (cached.fetched_at && Date.now() - Date.parse(cached.fetched_at) < PRODUCT_TTL))) {
     return { product: cached, warnings: [] };
   }
@@ -46,8 +46,8 @@ export async function lookupBarcode(userId: string, barcode: string, lang: "pl" 
     if (!data || data.status !== 1) return cached ? { product: cached, warnings: [] } : { error: "not_found" };
     const draft = mapOffProduct({ ...(data.product as object), code: barcode }, lang);
     if (!draft) return { error: "not_found" };
-    upsertOffProduct(draft);
-    return { product: productByBarcode(userId, barcode)!, warnings: draft.warnings };
+    await upsertOffProduct(draft);
+    return { product: (await productByBarcode(userId, barcode))!, warnings: draft.warnings };
   } catch (e) {
     if (cached) return { product: cached, warnings: [] };
     return { error: (e as Error).message === "rate_limited" ? "rate_limited" : "unavailable" };
@@ -58,17 +58,17 @@ export async function searchRemote(userId: string, query: string, lang: "pl" | "
   const q = query.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 80);
   if (q.length < 2) return { products: [] };
   const key = `${lang}:${q}`;
-  const hit = cachedSearch(key, SEARCH_TTL);
-  if (hit) return { products: productsByBarcodes(userId, hit) };
+  const hit = await cachedSearch(key, SEARCH_TTL);
+  if (hit) return { products: await productsByBarcodes(userId, hit) };
   if (!buckets.search.take()) return { error: "rate_limited" };
   try {
     const url = `${BASE}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=${lang}&fields=${OFF_FIELDS}`;
     const data = (await get(url)) as { products?: unknown[] } | null;
     const drafts = (data?.products ?? []).map((p) => mapOffProduct(p, lang)).filter((d): d is ProductDraft => !!d && !d.warnings.includes("no_nutrition"));
-    for (const d of drafts) upsertOffProduct(d);
+    for (const d of drafts) await upsertOffProduct(d);
     const codes = drafts.map((d) => d.barcode);
-    storeSearch(key, codes);
-    return { products: productsByBarcodes(userId, codes) };
+    await storeSearch(key, codes);
+    return { products: await productsByBarcodes(userId, codes) };
   } catch (e) {
     return { error: (e as Error).message === "rate_limited" ? "rate_limited" : "unavailable" };
   }

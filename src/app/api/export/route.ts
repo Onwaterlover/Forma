@@ -6,7 +6,7 @@ import { exportUser } from "@/lib/data";
 export async function GET() {
   const user = await apiUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const body = JSON.stringify(exportUser(user.id), null, 2);
+  const body = JSON.stringify(await exportUser(user.id), null, 2);
   return new NextResponse(body, {
     headers: {
       "Content-Type": "application/json; charset=utf-8",

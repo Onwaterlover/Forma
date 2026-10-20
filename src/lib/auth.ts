@@ -43,14 +43,14 @@ async function secureCookie(): Promise<boolean> {
 export async function createSession(userId: string) {
   const token = crypto.randomBytes(32).toString("base64url");
   const expires = new Date(Date.now() + SESSION_DAYS * 86_400_000);
-  db().prepare("INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").run(sha256(token), userId, expires.toISOString(), nowIso());
+  await (await db()).run("INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)", [sha256(token), userId, expires.toISOString(), nowIso()]);
   (await cookies()).set(COOKIE, token, { httpOnly: true, sameSite: "lax", secure: await secureCookie(), path: "/", expires });
 }
 
 export async function destroySession() {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
-  if (token) db().prepare("DELETE FROM sessions WHERE id = ?").run(sha256(token));
+  if (token) await (await db()).run("DELETE FROM sessions WHERE id = ?", [sha256(token)]);
   jar.delete(COOKIE);
 }
 
@@ -58,14 +58,14 @@ export async function destroySession() {
 export const currentUser = cache(async (): Promise<User | null> => {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
-  const row = db()
-    .prepare(
-      `SELECT u.id, u.email, u.name, u.is_admin, u.locale, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?`,
-    )
-    .get(sha256(token)) as (User & { expires_at: string }) | undefined;
+  const d = await db();
+  const row = await d.get<User & { expires_at: string }>(
+    "SELECT u.id, u.email, u.name, u.is_admin, u.locale, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?",
+    [sha256(token)],
+  );
   if (!row) return null;
   if (Date.parse(row.expires_at) < Date.now()) {
-    db().prepare("DELETE FROM sessions WHERE id = ?").run(sha256(token));
+    await d.run("DELETE FROM sessions WHERE id = ?", [sha256(token)]);
     return null;
   }
   const { expires_at: _e, ...user } = row;
@@ -83,47 +83,51 @@ export async function apiUser(): Promise<User | null> {
   return currentUser();
 }
 
-export function userCount(): number {
-  return (db().prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n;
+export async function userCount(): Promise<number> {
+  return (await (await db()).get<{ n: number }>("SELECT COUNT(*)::int AS n FROM users"))!.n;
 }
 
-export function createUser(email: string, name: string, password: string, isAdmin: boolean, locale = "pl"): string {
+export async function createUser(email: string, name: string, password: string, isAdmin: boolean, locale = "pl"): Promise<string> {
   const id = newId();
-  db()
-    .prepare("INSERT INTO users (id, email, name, password_hash, is_admin, locale, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    .run(id, email.trim().toLowerCase(), name.trim(), hashPassword(password), isAdmin ? 1 : 0, locale, nowIso());
+  await (await db()).run(
+    "INSERT INTO users (id, email, name, password_hash, is_admin, locale, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [id, email.trim().toLowerCase(), name.trim(), hashPassword(password), isAdmin ? 1 : 0, locale, nowIso()],
+  );
   return id;
 }
 
-// Simple in-memory throttle for login attempts (single-process server).
-const attempts = new Map<string, { n: number; until: number }>();
-export function throttle(key: string, max = 8, windowMs = 15 * 60_000): boolean {
+/** Login/registration throttle stored in the database, so it holds across serverless instances. */
+export async function throttle(key: string, max = 8, windowMs = 15 * 60_000): Promise<boolean> {
   const now = Date.now();
-  const a = attempts.get(key);
-  if (!a || a.until < now) {
-    attempts.set(key, { n: 1, until: now + windowMs });
-    return true;
-  }
-  a.n++;
-  return a.n <= max;
+  const row = await (await db()).get<{ n: number }>(
+    `INSERT INTO login_attempts (key, n, until_ms) VALUES (?, 1, ?)
+     ON CONFLICT (key) DO UPDATE SET
+       n = CASE WHEN login_attempts.until_ms < ? THEN 1 ELSE login_attempts.n + 1 END,
+       until_ms = CASE WHEN login_attempts.until_ms < ? THEN excluded.until_ms ELSE login_attempts.until_ms END
+     RETURNING n`,
+    [sha256(key), now + windowMs, now, now],
+  );
+  return (row?.n ?? 1) <= max;
 }
 
-export function createInvite(createdBy: string | null, note: string | null, days = 14): string {
+export async function createInvite(createdBy: string | null, note: string | null, days = 14): Promise<string> {
   // Short enough to type on a phone, long enough not to be guessable.
   const code = crypto.randomBytes(9).toString("base64url").replace(/[-_]/g, "x").slice(0, 12).toUpperCase();
-  db()
-    .prepare("INSERT INTO invites (code_hash, created_by, note, created_at, expires_at) VALUES (?, ?, ?, ?, ?)")
-    .run(sha256(code), createdBy, note, nowIso(), new Date(Date.now() + days * 86_400_000).toISOString());
+  await (await db()).run(
+    "INSERT INTO invites (code_hash, created_by, note, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
+    [sha256(code), createdBy, note, nowIso(), new Date(Date.now() + days * 86_400_000).toISOString()],
+  );
   return code;
 }
 
-export function consumeInvite(code: string, userId: string): boolean {
-  const r = db()
-    .prepare("UPDATE invites SET used_by = ?, used_at = ? WHERE code_hash = ? AND used_by IS NULL AND expires_at > ?")
-    .run(userId, nowIso(), sha256(code.trim().toUpperCase()), nowIso());
-  return r.changes === 1;
+export async function consumeInvite(code: string, userId: string): Promise<boolean> {
+  const n = await (await db()).run(
+    "UPDATE invites SET used_by = ?, used_at = ? WHERE code_hash = ? AND used_by IS NULL AND expires_at > ?",
+    [userId, nowIso(), sha256(code.trim().toUpperCase()), nowIso()],
+  );
+  return n === 1;
 }
 
-export function inviteValid(code: string): boolean {
-  return !!db().prepare("SELECT 1 FROM invites WHERE code_hash = ? AND used_by IS NULL AND expires_at > ?").get(sha256(code.trim().toUpperCase()), nowIso());
+export async function inviteValid(code: string): Promise<boolean> {
+  return !!(await (await db()).get("SELECT 1 AS ok FROM invites WHERE code_hash = ? AND used_by IS NULL AND expires_at > ?", [sha256(code.trim().toUpperCase()), nowIso()]));
 }

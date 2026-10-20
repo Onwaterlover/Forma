@@ -4,7 +4,7 @@ import { LoginForm } from "./form";
 
 export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
-  if (userCount() === 0) redirect("/register");
+export default async function LoginPage() {
+  if (await userCount() === 0) redirect("/register");
   return <LoginForm />;
 }

@@ -10,7 +10,7 @@ export default async function RecipesPage() {
   return (
     <>
       <PageHeader title={t("nutrition.recipes")} subtitle={t("nutrition.help")} />
-      <Recipes recipes={listRecipes(user.id)} />
+      <Recipes recipes={await listRecipes(user.id)} />
     </>
   );
 }

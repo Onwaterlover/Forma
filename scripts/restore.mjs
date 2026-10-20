@@ -1,32 +1,33 @@
-// Restore a backup. STOP THE APP FIRST.
-// Usage: npm run restore -- backups/forma-2026-10-20-1830.db
+// Restore a JSON backup, replacing ALL current data. Stop the app first when using the local database.
+// Usage: npm run restore -- backups/forma-2026-10-20-1830.json
 import fs from "node:fs";
-import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { connect, decode, existingTables, TABLES } from "./db-lib.mjs";
 
 const src = process.argv[2];
 if (!src || !fs.existsSync(src)) {
-  console.error("Usage: npm run restore -- <path-to-backup.db>");
+  console.error("Usage: npm run restore -- <path-to-backup.json>");
   process.exit(1);
 }
-// Sanity-check the backup before touching anything.
-const check = new DatabaseSync(src, { readOnly: true });
-const ok = check.prepare("PRAGMA integrity_check").get();
-const users = check.prepare("SELECT COUNT(*) AS n FROM users").get();
-check.close();
-if (Object.values(ok)[0] !== "ok") {
-  console.error("Backup failed integrity check; nothing was changed.");
+const backup = JSON.parse(fs.readFileSync(src, "utf8"));
+if (backup.format !== "forma-backup" || !backup.tables?.users) {
+  console.error("Not a Forma backup file; nothing was changed.");
   process.exit(1);
 }
 
-const dataDir = path.resolve(process.env.DATA_DIR ?? "./data");
-const dbFile = path.join(dataDir, "forma.db");
-fs.mkdirSync(dataDir, { recursive: true });
-if (fs.existsSync(dbFile)) {
-  const safety = `${dbFile}.before-restore-${Date.now()}`;
-  fs.copyFileSync(dbFile, safety);
-  console.log(`Current database kept as ${safety}`);
+const db = await connect();
+const present = await existingTables(db);
+if (!present.includes("users")) {
+  console.error("Database schema not found. Start the app once against this database, then rerun.");
+  process.exit(1);
 }
-for (const ext of ["-wal", "-shm"]) fs.rmSync(dbFile + ext, { force: true });
-fs.copyFileSync(src, dbFile);
-console.log(`Restored ${src} → ${dbFile} (${users.n} users). Start the app again.`);
+await db.tx(async (q) => {
+  for (const t of [...present].reverse()) await q.query(`DELETE FROM ${t}`);
+  for (const t of TABLES.filter((x) => present.includes(x))) {
+    for (const row of backup.tables[t] ?? []) {
+      const cols = Object.keys(row);
+      await q.query(`INSERT INTO ${t} (${cols.join(",")}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(",")})`, cols.map((c) => decode(row[c])));
+    }
+  }
+});
+await db.close();
+console.log(`Restored ${src} (${backup.tables.users.length} users).`);

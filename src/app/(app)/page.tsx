@@ -15,18 +15,18 @@ export const dynamic = "force-dynamic";
 export default async function TodayPage() {
   const { user, locale, t, settings } = await pageCtx();
   const today = todayIso();
-  const plan = settings.modules.training ? getActivePlan(user.id) : null;
-  const running = inProgressWorkout(user.id);
-  const day = diaryDay(user.id, today);
-  const target = currentTarget(user.id);
-  const weights = listWeights(user.id, today);
-  const library = libraryFor(user.id);
+  const plan = settings.modules.training ? await getActivePlan(user.id) : null;
+  const running = await inProgressWorkout(user.id);
+  const day = await diaryDay(user.id, today);
+  const target = await currentTarget(user.id);
+  const weights = await listWeights(user.id, today);
+  const library = await libraryFor(user.id);
   const lookup = (id: string) => library.find((e) => e.id === id);
 
-  const next = plan ? nextSession(plan.data.sessions, weekdayOf(today) as never, lastCompletedSessionKey(user.id, plan.id)) : null;
+  const next = plan ? nextSession(plan.data.sessions, weekdayOf(today) as never, await lastCompletedSessionKey(user.id, plan.id)) : null;
   const scheduledToday = plan?.data.sessions.some((s) => s.day === weekdayOf(today));
   const showStart = !settings.onboarded && !plan && day.entries.length === 0;
-  const profile = getProfile(user.id);
+  const profile = await getProfile(user.id);
   const locName = (id: string) => profile?.locations.find((l) => l.id === id)?.name ?? "";
 
   return (

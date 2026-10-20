@@ -8,8 +8,8 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
   const { date: raw } = await searchParams;
   const { user, settings } = await pageCtx();
   const date = isIsoDate(raw) ? raw : todayIso();
-  const day = diaryDay(user.id, date);
-  const target = currentTarget(user.id);
+  const day = await diaryDay(user.id, date);
+  const target = await currentTarget(user.id);
   return (
     <Diary
       date={date}
@@ -18,9 +18,9 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
       totals={day.totals}
       complete={day.complete}
       target={target ? { kcal: target.kcal, protein: target.protein_g } : null}
-      recents={recentProducts(user.id, 15)}
-      favorites={favoriteProducts(user.id)}
-      recipes={listRecipes(user.id).map((r) => ({ id: r.id, name: r.name, isMeal: r.isMeal, servings: r.servings, finalWeight: r.calc.finalWeight, perServingKcal: r.calc.perServing.kcal, totalKcal: r.calc.total.kcal }))}
+      recents={await recentProducts(user.id, 15)}
+      favorites={await favoriteProducts(user.id)}
+      recipes={(await listRecipes(user.id)).map((r) => ({ id: r.id, name: r.name, isMeal: r.isMeal, servings: r.servings, finalWeight: r.calc.finalWeight, perServingKcal: r.calc.perServing.kcal, totalKcal: r.calc.total.kcal }))}
       showFiber={settings.showFiber}
     />
   );

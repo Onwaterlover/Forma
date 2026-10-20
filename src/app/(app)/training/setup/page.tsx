@@ -10,7 +10,7 @@ export default async function SetupPage() {
   return (
     <>
       <PageHeader title={t("onb.title")} />
-      <SetupWizard initial={getProfile(user.id)} />
+      <SetupWizard initial={await getProfile(user.id)} />
     </>
   );
 }

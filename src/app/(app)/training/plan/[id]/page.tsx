@@ -12,9 +12,9 @@ export default async function PlanPage({ params, searchParams }: { params: Promi
   const { id } = await params;
   const { then } = await searchParams;
   const { user, locale, t } = await pageCtx();
-  const plan = getPlan(user.id, id);
+  const plan = await getPlan(user.id, id);
   if (!plan) notFound();
-  const versions = listVersions(user.id, id);
+  const versions = await listVersions(user.id, id);
   const btn = "h-9 rounded-xl bg-surface-2 px-3 text-sm font-medium hover:bg-border";
 
   return (
@@ -33,9 +33,9 @@ export default async function PlanPage({ params, searchParams }: { params: Promi
         planId={id}
         name={plan.name}
         initial={plan.data}
-        profile={getProfile(user.id)}
-        prefs={getPrefs(user.id)}
-        custom={getCustomExercises(user.id)}
+        profile={await getProfile(user.id)}
+        prefs={await getPrefs(user.id)}
+        custom={await getCustomExercises(user.id)}
         source={plan.source}
         then={then === "analyze" || then === "optimize" ? then : null}
       />

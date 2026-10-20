@@ -1,0 +1,16 @@
+import { PageHeader } from "@/components/ui";
+import { pageCtx } from "@/lib/ctx";
+import { getProfile } from "@/lib/data";
+import { SetupWizard } from "./wizard";
+
+export const dynamic = "force-dynamic";
+
+export default async function SetupPage() {
+  const { user, t } = await pageCtx();
+  return (
+    <>
+      <PageHeader title={t("onb.title")} />
+      <SetupWizard initial={getProfile(user.id)} />
+    </>
+  );
+}

@@ -1,0 +1,298 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { adaptToLocation, shortenSession } from "@/engine/adapt";
+import { estimateMinutes } from "@/engine/duration";
+import { ENGINE_VERSION, generatePlan } from "@/engine/generator";
+import { prescribe } from "@/engine/prescribe";
+import { parseProfile } from "@/engine/profile";
+import { suggestNext } from "@/engine/progression";
+import { PATTERN_MUSCLES } from "@/engine/templates";
+import { PATTERNS, type Exercise, type ExercisePref, type Pattern, type Plan, type PlannedSession } from "@/engine/types";
+import { validatePlan } from "@/engine/validate";
+import { weeklySets } from "@/engine/volume";
+import { translator, exName } from "@/i18n";
+import { requireUser } from "@/lib/auth";
+import {
+  addCustomExercise, createPlan, exerciseHistory, getActivePlan, getPlan, getPlanVersion, getPrefs, getProfile, getSettings, getWorkout, libraryFor,
+  renamePlan, saveProfile, savePlanVersion, saveSettings, setPlanStatus, setPref, upsertWorkout, type WorkoutPayload,
+} from "@/lib/data";
+import { nowIso } from "@/lib/db";
+import { planSchema } from "@/lib/schemas";
+
+function generatedName(locale: "pl" | "en" | "de", split: string) {
+  const t = translator(locale);
+  return t("plan.generatedName", { split: t(`split.${split}`) });
+}
+
+export async function saveProfileAndGenerate(raw: unknown): Promise<{ error?: string }> {
+  const user = await requireUser();
+  let profile;
+  try {
+    profile = saveProfile(user.id, parseProfile(raw));
+  } catch {
+    return { error: "invalid_profile" };
+  }
+  const library = libraryFor(user.id);
+  const plan = generatePlan({ profile, prefs: getPrefs(user.id), library });
+  const active = getActivePlan(user.id);
+  // Regenerating a generated plan adds a version; a manual/imported plan is never overwritten.
+  if (active && active.source === "generated") savePlanVersion(user.id, active.id, plan, "regenerated");
+  else createPlan(user.id, generatedName(user.locale, plan.split), "generated", plan, null, true);
+  saveSettings(user.id, { onboarded: true, modules: { training: true, nutrition: true } });
+  revalidatePath("/", "layout");
+  redirect("/training");
+}
+
+export async function saveProfileOnly(raw: unknown): Promise<{ error?: string }> {
+  const user = await requireUser();
+  try {
+    saveProfile(user.id, parseProfile(raw));
+  } catch {
+    return { error: "invalid_profile" };
+  }
+  revalidatePath("/training");
+  return {};
+}
+
+export async function savePlanEdit(planId: string, raw: unknown, note: string | null) {
+  const user = await requireUser();
+  const parsed = planSchema.safeParse(raw);
+  if (!parsed.success) return { error: "invalid_plan" };
+  const plan = parsed.data as Plan;
+  const library = libraryFor(user.id);
+  const lookup = (id: string) => library.find((e) => e.id === id);
+  for (const s of plan.sessions) s.estimatedMinutes = estimateMinutes(s.exercises, lookup);
+  plan.weeklySets = weeklySets(plan.sessions, lookup);
+  const v = savePlanVersion(user.id, planId, plan, note?.slice(0, 120) ?? "edited");
+  if (v === null) return { error: "not_found" };
+  revalidatePath("/training");
+  return { version: v };
+}
+
+export async function planAction(planId: string, action: "activate" | "archive" | "deactivate" | "duplicate" | "rename", name?: string) {
+  const user = await requireUser();
+  const plan = getPlan(user.id, planId);
+  if (!plan) return;
+  if (action === "activate") setPlanStatus(user.id, planId, "active");
+  if (action === "archive") setPlanStatus(user.id, planId, "archived");
+  if (action === "deactivate") setPlanStatus(user.id, planId, "inactive");
+  if (action === "rename" && name?.trim()) renamePlan(user.id, planId, name.trim().slice(0, 60));
+  if (action === "duplicate") {
+    const id = createPlan(user.id, `${plan.name} (2)`.slice(0, 60), plan.source, plan.data, `copy of ${plan.name}`, false);
+    revalidatePath("/training");
+    redirect(`/training/plan/${id}`);
+  }
+  revalidatePath("/training");
+}
+
+export async function restoreVersion(planId: string, version: number) {
+  const user = await requireUser();
+  const data = getPlanVersion(user.id, planId, version);
+  if (!data) return;
+  savePlanVersion(user.id, planId, data, `restored v${version}`);
+  revalidatePath(`/training/plan/${planId}`);
+}
+
+export async function setExercisePref(exerciseId: string, pref: ExercisePref) {
+  const user = await requireUser();
+  if (!/^[a-z0-9_-]{1,80}$/.test(exerciseId)) return;
+  if (!["favorite", "like", "neutral", "dislike", "exclude", "pain"].includes(pref)) return;
+  setPref(user.id, exerciseId, pref);
+  revalidatePath("/training/exercises");
+}
+
+const customSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  pattern: z.enum(PATTERNS),
+  loading: z.enum(["total", "per_dumbbell", "per_side", "bodyweight", "bodyweight_plus", "assisted", "time"]),
+});
+
+function customFrom(input: z.infer<typeof customSchema>): Omit<Exercise, "id"> {
+  const isolation = ["knee_ext", "knee_flex", "calf", "chest_fly", "lateral_raise", "rear_delt", "elbow_flex", "elbow_ext", "core"].includes(input.pattern);
+  return {
+    name: { pl: input.name, en: input.name, de: input.name },
+    primary: PATTERN_MUSCLES[input.pattern], secondary: [], pattern: input.pattern,
+    // Custom exercises carry no equipment requirement: the user created them for a place they train at.
+    equipment: [], kind: input.loading === "bodyweight" || input.loading === "bodyweight_plus" ? "bodyweight" : "machine",
+    mechanics: isolation ? "isolation" : "compound", skill: 1, fatigue: isolation ? "low" : "moderate", stable: true, loading: input.loading,
+    cue: {}, custom: true,
+  };
+}
+
+export async function createCustomExercise(raw: unknown): Promise<{ id?: string; error?: string }> {
+  const user = await requireUser();
+  const p = customSchema.safeParse(raw);
+  if (!p.success) return { error: "invalid" };
+  const id = addCustomExercise(user.id, customFrom(p.data));
+  revalidatePath("/training/exercises");
+  return { id };
+}
+
+// ── Import ───────────────────────────────────────────────────────────────
+const importSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  sessions: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(60),
+        exercises: z
+          .array(
+            z.object({
+              name: z.string().trim().min(1).max(80),
+              exerciseId: z.string().max(80).nullable(),
+              pattern: z.enum(PATTERNS),
+              sets: z.number().int().min(1).max(12),
+              repMin: z.number().int().min(0).max(100),
+              repMax: z.number().int().min(0).max(100),
+              seconds: z.number().int().min(1).max(7200).optional(),
+            }),
+          )
+          .min(1)
+          .max(20),
+      }),
+    )
+    .min(1)
+    .max(7),
+});
+
+export async function saveImportedPlan(raw: unknown): Promise<{ error?: string; id?: string }> {
+  const user = await requireUser();
+  const p = importSchema.safeParse(raw);
+  if (!p.success) return { error: "invalid" };
+  const profile = getProfile(user.id);
+  let library = libraryFor(user.id);
+  const sessions: PlannedSession[] = [];
+  const customCache = new Map<string, string>();
+  p.data.sessions.forEach((s, i) => {
+    const exercises = s.exercises.map((e) => {
+      let id = e.exerciseId && library.some((x) => x.id === e.exerciseId) ? e.exerciseId : null;
+      if (!id) {
+        const key = `${e.name.toLowerCase()}|${e.pattern}`;
+        id = customCache.get(key) ?? addCustomExercise(user.id, customFrom({ name: e.name, pattern: e.pattern, loading: e.seconds ? "time" : "total" }));
+        customCache.set(key, id);
+      }
+      return {
+        exerciseId: id, sets: e.sets, repMin: e.seconds ? 0 : Math.min(e.repMin || 8, e.repMax || 12), repMax: e.seconds ? 0 : Math.max(e.repMin || 8, e.repMax || 12),
+        ...(e.seconds ? { seconds: e.seconds } : {}), restSec: 90, effort: "leave_1_3" as const, progression: e.seconds ? ("time" as const) : ("double" as const),
+        pattern: e.pattern as Pattern, priority: 2 as const,
+      };
+    });
+    sessions.push({ key: String.fromCharCode(65 + i), template: "IMPORTED", name: s.name, day: null, locationId: profile?.locations[0]?.id ?? "", exercises, estimatedMinutes: 0 } as PlannedSession);
+  });
+  library = libraryFor(user.id);
+  const lookup = (id: string) => library.find((x) => x.id === id);
+  for (const s of sessions) s.estimatedMinutes = estimateMinutes(s.exercises, lookup);
+  const plan: Plan = { engineVersion: ENGINE_VERSION, split: "imported", sessions, weeklySets: weeklySets(sessions, lookup), tradeoffs: [], notes: [] };
+  const id = createPlan(user.id, p.data.name, "imported", plan, "imported", true);
+  saveSettings(user.id, { onboarded: true });
+  revalidatePath("/", "layout");
+  return { id };
+}
+
+/** "Optimise for my time and equipment": deterministic adaptation of an existing plan, saved as a new version. */
+export async function optimizePlan(planId: string) {
+  const user = await requireUser();
+  const plan = getPlan(user.id, planId);
+  const profile = getProfile(user.id);
+  if (!plan || !profile) return { error: "no_profile" };
+  const ctx = { profile, prefs: getPrefs(user.id), library: libraryFor(user.id) };
+  const days = profile.week.map((d, i) => ({ d, i })).filter((x) => !x.d.rest && x.d.locations.length);
+  const changes: string[] = [];
+  const sessions = plan.data.sessions.map((s, idx) => {
+    const slot = days.length ? days[Math.round((idx * days.length) / plan.data.sessions.length) % days.length]! : null;
+    const locationId = slot ? slot.d.locations[0]! : profile.locations[0]!.id;
+    const adapted = adaptToLocation({ ...s, day: slot ? (slot.i as PlannedSession["day"]) : null }, locationId, ctx);
+    const short = shortenSession(adapted.session, profile.sessionMinutes, ctx);
+    changes.push(...adapted.changes.map((c) => c.code), ...short.changes.map((c) => c.code));
+    return short.session;
+  });
+  const lookup = (id: string) => ctx.library.find((x) => x.id === id);
+  const next: Plan = { ...plan.data, sessions, weeklySets: weeklySets(sessions, lookup), tradeoffs: [...plan.data.tradeoffs] };
+  savePlanVersion(user.id, planId, next, "optimized");
+  revalidatePath(`/training/plan/${planId}`);
+  return { changes: changes.length };
+}
+
+export async function analyzePlan(planId: string) {
+  const user = await requireUser();
+  const plan = getPlan(user.id, planId);
+  const profile = getProfile(user.id);
+  if (!plan || !profile) return { error: "no_profile" as const };
+  return { issues: validatePlan({ plan: plan.data, profile, prefs: getPrefs(user.id), library: libraryFor(user.id) }) };
+}
+
+// ── Workouts ─────────────────────────────────────────────────────────────
+export async function startWorkout(planId: string | null, sessionKey: string | null) {
+  const user = await requireUser();
+  const library = libraryFor(user.id);
+  const plan = planId ? getPlan(user.id, planId) : null;
+  const session = plan?.data.sessions.find((s) => s.key === sessionKey) ?? null;
+  const exercises = session?.exercises ?? [];
+  const t = translator(user.locale);
+  const id = crypto.randomUUID();
+  const payload: WorkoutPayload = {
+    id, planId: plan?.id ?? null, planVersion: plan?.current_version ?? null, sessionKey: session?.key ?? null,
+    name: session ? session.name ?? t(`template.${session.template}`) : t("workout.emptyWorkout"),
+    locationId: session?.locationId ?? null, mode: getSettings(user.id).logMode, status: "in_progress",
+    startedAt: nowIso(), endedAt: null, notes: null, clientUpdatedAt: nowIso(),
+    exercises: exercises.map((pe, i) => {
+      const ex = library.find((e) => e.id === pe.exerciseId);
+      const hist = exerciseHistory(user.id, pe.exerciseId, 3);
+      const sug = ex ? suggestNext(ex, pe, hist) : { kind: "insufficient_data" as const };
+      const lastSets = hist[0]?.sets.filter((s) => s.type !== "warmup") ?? [];
+      const w = sug.kind === "increase_load" || sug.kind === "add_reps" ? sug.weightKg : sug.kind === "consider_reduce" ? null : lastSets[0]?.weightKg ?? null;
+      return {
+        id: `${id}:${i}`, exerciseId: pe.exerciseId, name: exName(ex, user.locale, pe.exerciseId), loading: ex?.loading ?? "total",
+        target: { sets: pe.sets, repMin: pe.repMin, repMax: pe.repMax, seconds: pe.seconds, restSec: pe.restSec, effort: pe.effort, priority: pe.priority },
+        completed: false, skipped: false, notes: null,
+        sets: Array.from({ length: pe.sets }, (_, j) => ({
+          id: `${id}:${i}:${j}`, type: "working" as const, reps: null, weightKg: w ?? lastSets[j]?.weightKg ?? null, rir: null, rpe: null, durationS: null, completed: false,
+        })),
+      };
+    }),
+  };
+  upsertWorkout(user.id, payload);
+  redirect(`/workout/${id}`);
+}
+
+/** Make the exercises done today the plan's permanent version of that session (new plan version). */
+export async function applyWorkoutToPlan(workoutId: string) {
+  const user = await requireUser();
+  const w = getWorkout(user.id, workoutId);
+  if (!w?.planId || !w.sessionKey) return;
+  const plan = getPlan(user.id, w.planId);
+  const profile = getProfile(user.id);
+  if (!plan) return;
+  const library = libraryFor(user.id);
+  const lookup = (id: string) => library.find((e) => e.id === id);
+  const sessions = plan.data.sessions.map((s) => {
+    if (s.key !== w.sessionKey) return s;
+    const exercises = w.exercises
+      .filter((e) => !e.skipped)
+      .map((e) => {
+        const old = s.exercises.find((x) => x.exerciseId === e.exerciseId);
+        const ex = lookup(e.exerciseId);
+        const base = old ?? (ex && profile ? prescribe(profile, ex, 2) : null);
+        return base ? { ...base, sets: Math.max(1, e.sets.filter((x) => x.type !== "warmup").length || base.sets) } : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => !!x);
+    return { ...s, exercises, estimatedMinutes: estimateMinutes(exercises, lookup), locationId: w.locationId ?? s.locationId };
+  });
+  savePlanVersion(user.id, plan.id, { ...plan.data, sessions, weeklySets: weeklySets(sessions, lookup) }, "from workout");
+  revalidatePath("/training");
+}
+
+export async function createManualPlan() {
+  const user = await requireUser();
+  const t = translator(user.locale);
+  const profile = getProfile(user.id);
+  const plan: Plan = {
+    engineVersion: ENGINE_VERSION, split: "custom",
+    sessions: [{ key: "A", template: "IMPORTED", name: `${t("template.IMPORTED")} A`, day: null, locationId: profile?.locations[0]?.id ?? "", exercises: [], estimatedMinutes: 0 }],
+    weeklySets: {}, tradeoffs: [], notes: [],
+  };
+  const id = createPlan(user.id, t("plan.newName"), "manual", plan, null, false);
+  redirect(`/training/plan/${id}`);
+}

@@ -1,0 +1,65 @@
+import { describe, expect, it } from "vitest";
+import { EXERCISES } from "@/engine/exercises";
+import { guessPattern, matchExercise, parseImport, parseLine } from "./parse";
+
+describe("plan import", () => {
+  it("parses a typical Polish text plan with headers", () => {
+    const d = parseImport(
+      `Dzień 1 - Push
+Wyciskanie sztangi na ławce płaskiej 4x6-8
+Wyciskanie hantli nad głowę 3 x 10
+- Pompki na poręczach 3xAMRAP
+
+Dzień 2 - Pull:
+Podciąganie 4x5 @ 10kg
+Wiosłowanie sztangą 3×8
+To jest jakiś komentarz bez serii`,
+      EXERCISES,
+    );
+    expect(d.sessions.map((s) => s.name)).toEqual(["Dzień 1 - Push", "Dzień 2 - Pull"]);
+    const [a, b] = d.sessions;
+    expect(a!.exercises[0]).toMatchObject({ sets: 4, repMin: 6, repMax: 8, match: { exerciseId: "bench_press_bb" } });
+    expect(a!.exercises[1]!.match?.exerciseId).toBe("db_shoulder_press");
+    expect(a!.exercises[2]).toMatchObject({ sets: 3, repMin: 1, repMax: 20, match: { exerciseId: "dip" } });
+    expect(b!.exercises[0]).toMatchObject({ sets: 4, repMin: 5, weightKg: 10 });
+    expect(b!.exercises[0]!.match?.exerciseId).toMatch(/pull_up|chin_up|negative_pull_up|band_assisted_pull_up/);
+    expect(b!.exercises[1]!.match?.exerciseId).toBe("barbell_row");
+    expect(d.unparsed).toEqual(["To jest jakiś komentarz bez serii"]);
+  });
+
+  it("parses English and German set notation and timed sets", () => {
+    expect(parseLine("Squat: 4 sets of 5", EXERCISES)).toMatchObject({ sets: 4, repMin: 5, repMax: 5, match: { exerciseId: "back_squat" } });
+    expect(parseLine("Plank 3x30s", EXERCISES)).toMatchObject({ sets: 3, seconds: 30, match: { exerciseId: "plank" } });
+    expect(parseLine("Kniebeuge 5x5", EXERCISES)!.match?.exerciseId).toBe("back_squat");
+  });
+
+  it("parses a pasted spreadsheet / CSV with headers", () => {
+    const d = parseImport(
+      `Day;Exercise;Sets;Reps;Weight
+A;Lat pulldown;3;10-12;45
+A;Leg press;3;12;120,5
+B;"Cable fly, low to high";2;15;`,
+      EXERCISES,
+    );
+    expect(d.sessions).toHaveLength(2);
+    expect(d.sessions[0]!.exercises[1]).toMatchObject({ name: "Leg press", sets: 3, repMin: 12, repMax: 12, weightKg: 120.5, match: { exerciseId: "leg_press" } });
+    expect(d.sessions[1]!.exercises[0]!.match?.exerciseId).toBe("cable_fly");
+  });
+
+  it("leaves unknown exercises unmatched but keeps them with a pattern guess", () => {
+    const e = parseLine("Zercher deficit hackenschmidt thing 3x8", EXERCISES)!;
+    expect(e.match).toBeNull();
+    expect(parseLine("Spider curls 3x12", EXERCISES)!.guessedPattern).toBe("elbow_flex");
+    expect(guessPattern("Wiosłowanie T-bar")).toBe("h_pull");
+  });
+
+  it("matches across languages and aliases", () => {
+    expect(matchExercise("rdl", EXERCISES)?.exerciseId).toMatch(/romanian_deadlift/);
+    expect(matchExercise("Latzug", EXERCISES)?.exerciseId).toBe("lat_pulldown");
+    expect(matchExercise("xyz", EXERCISES)).toBeNull();
+  });
+
+  it("returns nothing for empty input", () => {
+    expect(parseImport("   \n  ", EXERCISES)).toEqual({ sessions: [], unparsed: [] });
+  });
+});

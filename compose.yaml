@@ -1,0 +1,11 @@
+services:
+  forma:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - path: .env.local
+        required: false
+    restart: unless-stopped

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.next/
+.expo/
+.env
+.env.local
+*.log
+.DS_Store
+data/
+*.tsbuildinfo
+next-env.d.ts
+certificates/
+backups/
+data-dev/
+.claude/

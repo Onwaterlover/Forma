@@ -53,7 +53,16 @@ Ikona Formy pojawi się jak zwykła aplikacja i otworzy się na pełnym ekranie.
 
 ## Asystent AI (opcjonalnie)
 
-Asystent działa w tej samej aplikacji na Vercelu, więc nie trzeba nic osobno stawiać. Klucz jest tylko na serwerze. Korzysta z modelu Claude firmy Anthropic, płatnego za użycie.
+Asystent działa w tej samej aplikacji na Vercelu, więc nie trzeba nic osobno stawiać. Klucz jest tylko na serwerze. Możesz wybrać jednego z dwóch dostawców.
+
+**Darmowo: Google Gemini (zalecane na start)**
+1. Wejdź na [aistudio.google.com/apikey](https://aistudio.google.com/apikey) i kliknij **Create API key**. Możesz też użyć tego samego klucza co w StudyOS.
+2. W Vercelu otwórz *Settings → Environments → Production → Environment Variables* i dodaj `GEMINI_API_KEY`. Opcjonalnie dodaj też `GEMINI_MODEL` (domyślnie `gemini-3.5-flash-lite`). Potem kliknij **Redeploy**.
+3. W aplikacji: **Ustawienia → Asystent AI → włącz**.
+
+Darmowy plan ma dzienny limit zapytań. Google może też wykorzystywać wysłane wiadomości do ulepszania swoich usług, a aplikacja mówi o tym przy włączaniu asystenta.
+
+**Płatnie: Claude (Anthropic)** działa, gdy nie ma `GEMINI_API_KEY`:
 
 1. Wejdź na [console.anthropic.com](https://console.anthropic.com) i załóż konto.
 2. **Billing:** doładuj konto małą kwotą (np. 5 $). W **Limits** ustaw miesięczny limit wydatków, np. 10 $, żeby nic Cię nie zaskoczyło.

@@ -19,7 +19,9 @@
 - The camera needs a **secure context** (HTTPS or `localhost`). Over plain LAN HTTP the scanner says so and offers manual entry. See the README for Tailscale HTTPS.
 - Fallbacks: manual code entry, product search, and creating a custom product with the scanned code pre-filled when a product isn't found.
 
-## Optional AI assistant (Claude)
+## Optional AI assistant (Gemini or Claude)
+
+- **Providers:** Google Gemini when `GEMINI_API_KEY` is set (REST `generateContent` with function calling; model `GEMINI_MODEL`, default `gemini-3.5-flash-lite`). Otherwise Claude when `ANTHROPIC_API_KEY` is set. On the Gemini free tier Google may use prompts to improve its products, and the consent text says so.
 
 - **Off unless configured and chosen.** The assistant exists only when the server has `ANTHROPIC_API_KEY`, and each user must switch it on (Settings → AI assistant, or the consent screen the first time they open it). Every core feature works without it.
 - **Where it runs:** inside the same Next.js app (`src/lib/assistant.ts`, server actions in `src/app/actions/assistant.ts`). The key stays on the server and is never sent to the browser. Model: `AI_MODEL` (default `claude-opus-5-5`; `claude-haiku-5-5` is much cheaper). Requests use low effort, prompt caching and the server-side refusal fallback (`fallbacks: "default"`).

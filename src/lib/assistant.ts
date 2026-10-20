@@ -13,11 +13,15 @@ import {
 } from "./data";
 import { searchRemote } from "./off";
 
-// Optional assistant. Nothing here runs unless ANTHROPIC_API_KEY is set and the user switched AI on.
+// Optional assistant. Nothing here runs unless a provider key is set and the user switched AI on.
 // It never changes data itself: write tools only store a proposal (ai_suggestions) that the user applies.
+// Provider: Gemini when GEMINI_API_KEY is set (free tier), otherwise Claude when ANTHROPIC_API_KEY is set.
 
-export const aiConfigured = () => !!process.env.ANTHROPIC_API_KEY;
+export type Provider = "gemini" | "anthropic";
+export const aiProvider = (): Provider | null => (process.env.GEMINI_API_KEY ? "gemini" : process.env.ANTHROPIC_API_KEY ? "anthropic" : null);
+export const aiConfigured = () => aiProvider() !== null;
 const MODEL = process.env.AI_MODEL || "claude-opus-5-5";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 export type Scope = "training" | "nutrition";
 export interface ChatTurn { role: "user" | "assistant"; text: string }
@@ -294,6 +298,9 @@ export async function runAssistant(o: { userId: string; locale: Locale; scope: S
   const messages: BetaMessageParam[] = o.history.slice(0, -1).map((h) => ({ role: h.role, content: h.text }));
   messages.push({ role: "user", content: [{ type: "text", text: `<app_data>\n${context}\n</app_data>` }, { type: "text", text: last.text }] });
   const c: Ctx = { userId: o.userId, locale: o.locale, date: o.date, proposals: [] };
+  if (aiProvider() === "gemini") return runGemini(o, `<app_data>
+${context}
+</app_data>`, last.text, c);
 
   try {
     for (let i = 0; i < 6; i++) {
@@ -330,4 +337,51 @@ export async function runAssistant(o: { userId: string; locale: Locale; scope: S
     }
     throw e;
   }
+}
+
+// ── Gemini (REST, function calling) ──────────────────────────────────────
+type GPart = { text?: string; thought?: boolean; functionCall?: { id?: string; name: string; args?: unknown }; functionResponse?: unknown };
+type GContent = { role: "user" | "model"; parts: GPart[] };
+
+async function runGemini(o: { locale: Locale; scope: Scope; history: ChatTurn[] }, appData: string, question: string, c: Ctx): Promise<{ reply: string; proposals: Proposal[] } | { error: string }> {
+  const t = translator(o.locale);
+  const contents: GContent[] = o.history.slice(0, -1).map((h) => ({ role: h.role === "assistant" ? "model" : "user", parts: [{ text: h.text }] }));
+  contents.push({ role: "user", parts: [{ text: appData }, { text: question }] });
+  const tools = [{ functionDeclarations: (o.scope === "training" ? TRAINING_TOOLS : NUTRITION_TOOLS).map((x) => ({ name: x.name, description: x.description, parametersJsonSchema: x.input_schema })) }];
+
+  for (let i = 0; i < 6; i++) {
+    let res: Response;
+    try {
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt(o.locale, o.scope) }] }, contents, tools }),
+        signal: AbortSignal.timeout(60_000),
+      });
+    } catch {
+      return { error: "unavailable" };
+    }
+    const data = (await res.json().catch(() => null)) as { candidates?: { content?: GContent }[]; promptFeedback?: { blockReason?: string }; error?: { message?: string } } | null;
+    if (!res.ok) {
+      console.error("gemini", res.status, data?.error?.message);
+      if (res.status === 429 || res.status === 503) return { error: "busy" };
+      if (res.status === 401 || res.status === 403 || /api key/i.test(data?.error?.message ?? "")) return { error: "key" };
+      return { error: "unavailable" };
+    }
+    const content = data?.candidates?.[0]?.content;
+    if (!content?.parts?.length) return { reply: t(data?.promptFeedback?.blockReason ? "assistant.refused" : "assistant.empty"), proposals: c.proposals };
+    const calls = content.parts.filter((p) => p.functionCall);
+    const text = content.parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim();
+    if (!calls.length) return { reply: text || t("assistant.empty"), proposals: c.proposals };
+    // Echo the model turn unchanged: it may carry thought signatures that later turns need.
+    contents.push(content);
+    const parts: GPart[] = [];
+    for (const p of calls) {
+      const out = await runTool(c, p.functionCall!.name, p.functionCall!.args ?? {});
+      parts.push({ functionResponse: { ...(p.functionCall!.id ? { id: p.functionCall!.id } : {}), name: p.functionCall!.name, response: typeof out === "string" ? { result: out } : { error: out.error } } });
+    }
+    contents.push({ role: "user", parts });
+  }
+  return { reply: t("assistant.empty"), proposals: c.proposals };
 }

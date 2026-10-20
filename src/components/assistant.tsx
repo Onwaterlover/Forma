@@ -13,7 +13,7 @@ type Card = Proposal & { state?: "busy" | "applied" | "rejected" | "failed"; err
 type Msg = { role: "user" | "assistant"; text: string; proposals?: Card[]; error?: boolean };
 
 /** "Asystent" button + chat sheet. Changes only happen when the user taps "Apply" on a proposal card. */
-export function Assistant({ scope, date, enabled }: { scope: "training" | "nutrition"; date: string; enabled: boolean }) {
+export function Assistant({ scope, date, enabled, provider }: { scope: "training" | "nutrition"; date: string; enabled: boolean; provider: "gemini" | "anthropic" }) {
   const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -84,7 +84,8 @@ export function Assistant({ scope, date, enabled }: { scope: "training" | "nutri
         {!on ? (
           <div className="space-y-4">
             <p className="font-medium">{t("assistant.consentTitle")}</p>
-            <p className="text-sm text-muted">{t("settings.aiHint")}</p>
+            <p className="text-sm text-muted">{t("settings.aiHint", { provider: provider === "gemini" ? "Google Gemini" : "Claude (Anthropic)" })}</p>
+            {provider === "gemini" && <p className="text-sm text-muted">{t("settings.aiGeminiNote")}</p>}
             <Button full onClick={async () => { await updateSettings({ ai: true }); setOn(true); }}>{t("assistant.enable")}</Button>
           </div>
         ) : (

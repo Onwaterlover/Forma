@@ -38,7 +38,7 @@ Supabase Postgres (DATABASE_URL, via postgres.js)  ·  or  ·  DATA_DIR/pg (PGli
 - Inputs from the browser are validated with zod (`src/lib/schemas.ts`, inside actions). Nutrient data from external sources is sanitised (impossible values become `null`).
 - The admin can create invites but has no screen or query that reads other users' health or food data.
 - The service worker never caches `/api/*` and clears cached pages when the login page is shown.
-- No telemetry. The only outbound calls are Open Food Facts lookups/searches made on the user's explicit action and, if the admin configured it and the user switched it on, the Anthropic API for the assistant (see [integrations](integrations.md#optional-ai-assistant-claude)).
+- No telemetry. The only outbound calls are Open Food Facts lookups/searches made on the user's explicit action and, if the admin configured it and the user switched it on, the Anthropic API for the assistant (see [integrations](integrations.md#optional-ai-assistant-gemini-or-claude)).
 
 ## Offline behaviour
 

@@ -273,8 +273,9 @@ export const en: Dict = {
     passwordChanged: "Password changed. Please log in again.", wrongPassword: "Current password is wrong.", about: "About",
     disclaimer: "This app is not a medical device and doesn't replace advice from a doctor, physiotherapist or dietitian. If you have pain or health concerns, see a professional.",
     ai: "AI assistant", used: "used", expires: "valid until",
-    aiSwitch: "Turn on the AI assistant", aiHint: "Your question and the data it needs (your training plan or that day's food diary, calorie target, latest weight) are sent to Claude (Anthropic). Photos and passwords are never sent. You always confirm changes to your plan or diary first.",
-    aiNotConfigured: "The assistant isn't connected yet: the admin needs to add ANTHROPIC_API_KEY in the Vercel settings (see the README). All core features work without AI.",
+    aiSwitch: "Turn on the AI assistant", aiHint: "Your question and the data it needs (your training plan or that day's food diary, calorie target, latest weight) are sent to {provider}. Photos and passwords are never sent. You always confirm changes to your plan or diary first.",
+    aiGeminiNote: "Gemini free tier: Google may use the messages you send to improve its services. Don't tell the assistant anything you don't want to share.",
+    aiNotConfigured: "The assistant isn't connected yet: the admin needs to add GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in the Vercel settings (see the README). All core features work without AI.",
   },
   assistant: {
     open: "Assistant", title: "Assistant", placeholder: "Say what to change or ask a question…", send: "Send", thinking: "Thinking…", newChat: "New chat",

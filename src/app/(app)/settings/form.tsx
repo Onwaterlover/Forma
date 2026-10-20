@@ -10,16 +10,17 @@ import { useI18n } from "@/i18n/client";
 import type { Settings } from "@/lib/data";
 
 const LANG_NAMES: Record<Locale, string> = { pl: "Polski", en: "English", de: "Deutsch" };
+export const PROVIDER_NAME = { gemini: "Google Gemini", anthropic: "Claude (Anthropic)" } as const;
 
 export function SettingsForm({
-  settings, locale, isAdmin, users, invites, aiConfigured,
+  settings, locale, isAdmin, users, invites, aiProvider,
 }: {
   settings: Settings;
   locale: Locale;
   isAdmin: boolean;
   users: { name: string; created: string; admin: boolean }[];
   invites: { note: string | null; created_at: string; expires_at: string; used_at: string | null }[];
-  aiConfigured: boolean;
+  aiProvider: "gemini" | "anthropic" | null;
 }) {
   const { t } = useI18n();
   const toast = useToast();
@@ -90,9 +91,9 @@ export function SettingsForm({
       )}
 
       <SectionTitle>{t("settings.ai")}</SectionTitle>
-      <Card className={aiConfigured ? "py-1 sm:py-1" : undefined}>
-        {aiConfigured
-          ? <Switch checked={settings.ai} label={t("settings.aiSwitch")} hint={t("settings.aiHint")} onChange={(v) => set({ ai: v })} />
+      <Card className={aiProvider ? "py-1 sm:py-1" : undefined}>
+        {aiProvider
+          ? <Switch checked={settings.ai} label={t("settings.aiSwitch")} hint={`${t("settings.aiHint", { provider: PROVIDER_NAME[aiProvider] })}${aiProvider === "gemini" ? ` ${t("settings.aiGeminiNote")}` : ""}`} onChange={(v) => set({ ai: v })} />
           : <p className="text-sm text-muted">{t("settings.aiNotConfigured")}</p>}
       </Card>
 

@@ -272,8 +272,9 @@ export const pl = {
     passwordChanged: "Hasło zmienione. Zaloguj się ponownie.", wrongPassword: "Nieprawidłowe obecne hasło.", about: "O aplikacji",
     disclaimer: "Aplikacja nie jest wyrobem medycznym i nie zastępuje porady lekarza, fizjoterapeuty ani dietetyka. Przy bólu lub problemach zdrowotnych skonsultuj się ze specjalistą.",
     ai: "Asystent AI", used: "wykorzystane", expires: "ważne do",
-    aiSwitch: "Włącz asystenta AI", aiHint: "Twoje pytanie i potrzebne do niego dane (plan treningowy albo dziennik z danego dnia, cel kalorii, ostatnia waga) są wysyłane do Claude (Anthropic). Zdjęć i haseł asystent nigdy nie dostaje. Zmiany w planie i dzienniku zawsze najpierw zatwierdzasz.",
-    aiNotConfigured: "Asystent nie jest jeszcze podłączony: administrator musi dodać klucz ANTHROPIC_API_KEY w ustawieniach Vercela (instrukcja w README). Wszystkie podstawowe funkcje działają bez AI.",
+    aiSwitch: "Włącz asystenta AI", aiHint: "Twoje pytanie i potrzebne do niego dane (plan treningowy albo dziennik z danego dnia, cel kalorii, ostatnia waga) są wysyłane do {provider}. Zdjęć i haseł asystent nigdy nie dostaje. Zmiany w planie i dzienniku zawsze najpierw zatwierdzasz.",
+    aiGeminiNote: "Darmowy plan Gemini: Google może wykorzystywać wysłane wiadomości do ulepszania swoich usług. Nie pisz asystentowi niczego, czego nie chcesz udostępniać.",
+    aiNotConfigured: "Asystent nie jest jeszcze podłączony: administrator musi dodać klucz GEMINI_API_KEY (darmowy) albo ANTHROPIC_API_KEY w ustawieniach Vercela (instrukcja w README). Wszystkie podstawowe funkcje działają bez AI.",
   },
   assistant: {
     open: "Asystent", title: "Asystent", placeholder: "Napisz, co zmienić albo o co zapytać…", send: "Wyślij", thinking: "Myślę…", newChat: "Nowa rozmowa",

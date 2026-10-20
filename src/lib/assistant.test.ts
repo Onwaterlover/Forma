@@ -73,3 +73,30 @@ describe("assistant tools", () => {
     expect(await data.pendingSuggestion(A, id)).toBeNull();
   });
 });
+
+describe("gemini provider", () => {
+  it("runs tool calls and returns the proposal with the final text", async () => {
+    const { vi } = await import("vitest");
+    process.env.GEMINI_API_KEY = "test-key";
+    const bodies: { contents: { role: string; parts: Record<string, unknown>[] }[] }[] = [];
+    const replies = [
+      { candidates: [{ content: { role: "model", parts: [{ functionCall: { id: "c1", name: "propose_quick_entry", args: { name: "Obiad", kcal: 650, protein: null, carbs: null, fat: null, meal: "lunch" } }, thoughtSignature: "sig" }] } }] },
+      { candidates: [{ content: { role: "model", parts: [{ text: "Kliknij Zastosuj." }] } }] },
+    ];
+    vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      return new Response(JSON.stringify(replies[bodies.length - 1]), { status: 200 });
+    });
+    try {
+      const r = await ai.runAssistant({ userId: A, locale: "pl", scope: "nutrition", date: "2026-10-20", history: [{ role: "user", text: "Dodaj 650 kcal na obiad" }] });
+      expect(r).toMatchObject({ reply: "Kliknij Zastosuj." });
+      expect("proposals" in r && r.proposals).toHaveLength(1);
+      const second = bodies[1]!.contents;
+      expect(second.at(-2)!.parts[0]).toHaveProperty("thoughtSignature", "sig");
+      expect(second.at(-1)!.parts[0]).toMatchObject({ functionResponse: { id: "c1", name: "propose_quick_entry" } });
+    } finally {
+      vi.unstubAllGlobals();
+      delete process.env.GEMINI_API_KEY;
+    }
+  });
+});

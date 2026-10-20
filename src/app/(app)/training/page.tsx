@@ -8,7 +8,7 @@ import { PlanActions } from "./plan-actions";
 import { PlanView } from "./plan-view";
 import { exName } from "@/i18n";
 import { Assistant } from "@/components/assistant";
-import { aiConfigured } from "@/lib/assistant";
+import { aiProvider } from "@/lib/assistant";
 import { todayIso } from "@/lib/ctx";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export default async function TrainingPage() {
   return (
     <>
       <PageHeader title={plan?.name ?? t("plan.title")} subtitle={plan ? `${t(`split.${plan.data.split}`, {})} · ${t("plan.perWeek", { n: plan.data.sessions.length })}` : undefined}
-        action={<div className="flex gap-2">{aiConfigured() && <Assistant scope="training" date={todayIso()} enabled={settings.ai} />}{plan && <LinkButton href={`/training/plan/${plan.id}`} variant="secondary" size="sm"><Pencil size={16} aria-hidden />{t("plan.edit")}</LinkButton>}</div>} />
+        action={<div className="flex gap-2">{aiProvider() && <Assistant scope="training" date={todayIso()} enabled={settings.ai} provider={aiProvider()!} />}{plan && <LinkButton href={`/training/plan/${plan.id}`} variant="secondary" size="sm"><Pencil size={16} aria-hidden />{t("plan.edit")}</LinkButton>}</div>} />
 
       {running && (
         <Card className="mb-4 flex items-center justify-between gap-3">

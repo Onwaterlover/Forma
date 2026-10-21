@@ -200,7 +200,7 @@ export const en: Dict = {
     pdfNote: "PDFs and images need the optional AI assistant (not configured). Copy the text and paste it here, or enter the plan manually.",
     parse: "Recognise", review: "Check what we recognised", unparsed: "These lines weren't recognised", matched: "matched", unmatched: "not found — will become a custom exercise",
     chooseMatch: "Match to an exercise", saveAsIs: "Save exactly as imported", analyze: "Analyse my plan", optimize: "Fit it to my time and equipment",
-    fromNotes: "in your notes: {name}", weight: "Weight (kg)", ownExercise: "Own exercise: {name}", similar: "Similar", allExercises: "All exercises", noSets: "No sets in your notes – typical ones filled in, adjust if you do it differently.", found: "Exercises recognised: {n}", nothing: "No exercises with sets (e.g. 3x10) found.", pattern: "Movement type (for time estimates)", importedName: "Imported plan",
+    fromNotes: "in your notes: {name}", weight: "Weight (kg)", ownExercise: "Own exercise: {name}", similar: "Similar", allExercises: "All exercises", undo: "Undo import", undoConfirm: "Delete this imported plan together with the exercises the import added? You can import it again right away.", done: "Plan imported. Something wrong?", noSets: "No sets in your notes – typical ones filled in, adjust if you do it differently.", found: "Exercises recognised: {n}", nothing: "No exercises with sets (e.g. 3x10) found.", pattern: "Movement type (for time estimates)", importedName: "Imported plan",
     analysisTitle: "Plan analysis", optimizeNote: "This creates a new version. The original stays in the version history.", noProfile: "First answer a few questions about your time and equipment.",
   },
   nutrition: {

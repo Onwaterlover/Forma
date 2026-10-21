@@ -384,11 +384,11 @@ export async function createManualPlan() {
   redirect(`/training/plan/${id}`);
 }
 
-export async function deletePlanAction(planId: string) {
+export async function deletePlanAction(planId: string, then?: "import") {
   const user = await requireUser();
   await deletePlan(user.id, planId);
   revalidatePath("/", "layout");
-  redirect("/training");
+  redirect(then === "import" ? "/training/import" : "/training");
 }
 
 const feedbackSchema = z.object({

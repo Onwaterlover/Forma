@@ -72,7 +72,7 @@ export function Importer({ custom }: { custom: Exercise[] }) {
         })),
       });
       if (r.error || !r.id) return toast({ text: t("common.error") });
-      router.push(`/training/plan/${r.id}${then === "none" ? "" : `?then=${then}`}`);
+      router.push(`/training/plan/${r.id}?imported=1${then === "none" ? "" : `&then=${then}`}`);
     });
 
   const total = draft?.sessions.reduce((a, s) => a + s.rows.length, 0) ?? 0;

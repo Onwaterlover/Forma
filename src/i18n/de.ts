@@ -200,7 +200,7 @@ export const de: Dict = {
     pdfNote: "PDFs und Bilder brauchen den optionalen KI-Assistenten (nicht eingerichtet). Kopiere den Text und füge ihn hier ein oder gib den Plan manuell ein.",
     parse: "Erkennen", review: "Prüfe, was wir erkannt haben", unparsed: "Diese Zeilen wurden nicht erkannt", matched: "zugeordnet", unmatched: "nicht gefunden — wird eigene Übung",
     chooseMatch: "Übung zuordnen", saveAsIs: "Genau so speichern", analyze: "Plan prüfen", optimize: "An meine Zeit und Ausrüstung anpassen",
-    fromNotes: "in den Notizen: {name}", weight: "Gewicht (kg)", ownExercise: "Eigene Übung: {name}", similar: "Ähnlich", allExercises: "Alle Übungen", noSets: "Keine Sätze in den Notizen – übliche eingesetzt, bei Bedarf anpassen.", found: "Erkannte Übungen: {n}", nothing: "Keine Übungen mit Sätzen (z. B. 3x10) gefunden.", pattern: "Bewegungsart (für die Zeitschätzung)", importedName: "Importierter Plan",
+    fromNotes: "in den Notizen: {name}", weight: "Gewicht (kg)", ownExercise: "Eigene Übung: {name}", similar: "Ähnlich", allExercises: "Alle Übungen", undo: "Import rückgängig", undoConfirm: "Diesen importierten Plan samt der beim Import angelegten Übungen löschen? Du kannst ihn gleich neu importieren.", done: "Plan importiert. Stimmt etwas nicht?", noSets: "Keine Sätze in den Notizen – übliche eingesetzt, bei Bedarf anpassen.", found: "Erkannte Übungen: {n}", nothing: "Keine Übungen mit Sätzen (z. B. 3x10) gefunden.", pattern: "Bewegungsart (für die Zeitschätzung)", importedName: "Importierter Plan",
     analysisTitle: "Planprüfung", optimizeNote: "Es entsteht eine neue Version. Das Original bleibt im Versionsverlauf.", noProfile: "Beantworte zuerst ein paar Fragen zu Zeit und Ausrüstung.",
   },
   nutrition: {

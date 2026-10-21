@@ -771,7 +771,27 @@ export async function passwordHash(userId: string): Promise<string | null> {
 
 export async function deletePlan(userId: string, planId: string) {
   // Versions cascade; logged workouts keep their data (plan_id is set to NULL).
-  await (await db()).run("DELETE FROM plans WHERE id = ? AND user_id = ?", [planId, userId]);
+  await (await db()).tx(async (q) => {
+    const plan = await q.get<{ source: string; created_at: string }>("SELECT source, created_at FROM plans WHERE id = ? AND user_id = ?", [planId, userId]);
+    if (!plan) return;
+    // An imported plan takes along the custom exercises its import created (made in the minute before the plan),
+    // unless another plan or a logged workout uses them. Exercises the user made themselves stay.
+    const orphans: string[] = [];
+    if (plan.source === "imported") {
+      const ids = new Set<string>();
+      for (const v of await q.all<{ data: string }>("SELECT data FROM plan_versions WHERE plan_id = ?", [planId]))
+        for (const s of (JSON.parse(v.data) as Plan).sessions) for (const e of s.exercises) if (e.exerciseId.startsWith("custom_")) ids.add(e.exerciseId);
+      const since = new Date(Date.parse(plan.created_at) - 60_000).toISOString();
+      const others = await q.all<{ data: string }>("SELECT pv.data FROM plan_versions pv JOIN plans p ON p.id = pv.plan_id WHERE p.user_id = ? AND p.id <> ?", [userId, planId]);
+      for (const id of ids) {
+        const made = await q.get<{ id: string }>("SELECT id FROM custom_exercises WHERE id = ? AND user_id = ? AND created_at >= ? AND created_at <= ?", [id, userId, since, plan.created_at]);
+        const logged = await q.get<{ n: number }>("SELECT COUNT(*) AS n FROM workout_exercises we JOIN workouts w ON w.id = we.workout_id WHERE w.user_id = ? AND we.exercise_id = ?", [userId, id]);
+        if (made && !Number(logged?.n) && !others.some((o) => o.data.includes(`"${id}"`))) orphans.push(id);
+      }
+    }
+    await q.run("DELETE FROM plans WHERE id = ? AND user_id = ?", [planId, userId]);
+    for (const id of orphans) await q.run("DELETE FROM custom_exercises WHERE id = ? AND user_id = ?", [id, userId]);
+  });
 }
 
 // ── Progress photos (private; stored in the database, served only to their owner) ──

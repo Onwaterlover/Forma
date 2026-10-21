@@ -245,4 +245,28 @@ describe("progress photos", () => {
     expect(mine?.mime).toBe("image/jpeg");
     expect([...mine!.data].slice(0, 3)).toEqual([0xff, 0xd8, 0xff]);
   });
+
+  it("deleting an imported plan also removes the custom exercises its import created, and nothing else", async () => {
+    const mk = (name: string) => data.addCustomExercise(A, {
+      name: { pl: name, en: name, de: name }, primary: ["glutes"], secondary: [], pattern: "hip_ext", equipment: [], kind: "machine",
+      mechanics: "isolation", skill: 1, fatigue: "low", stable: true, loading: "total", cue: {},
+    });
+    const own = await mk("Moje stare"); // made by the user long before the import
+    await dbm.db().then((d) => d.run("UPDATE custom_exercises SET created_at = ? WHERE id = ?", ["2020-01-01T00:00:00.000Z", own]));
+    const fromImport = await mk("Z importu");
+    const shared = await mk("Też w innym planie");
+    const pe = (exerciseId: string) => ({ exerciseId, sets: 3, repMin: 8, repMax: 12, restSec: 90, effort: "leave_1_3", progression: "double", pattern: "hip_ext", priority: 2 });
+    const session = (ids: string[]) => ({ key: "A", template: "IMPORTED", name: "A", day: null, locationId: "", exercises: ids.map(pe), estimatedMinutes: 10 });
+    const other = await data.createPlan(A, "Inny", "manual", { ...plan, sessions: [session([shared])] } as never, null, false);
+    const imported = await data.createPlan(A, "Import", "imported", { ...plan, sessions: [session([own, fromImport, shared])] } as never, "imported", true);
+    await data.deletePlan(A, imported);
+    const left = (await data.getCustomExercises(A)).map((e) => e.id);
+    expect(left).toContain(own);
+    expect(left).toContain(shared);
+    expect(left).not.toContain(fromImport);
+    expect(await data.getPlan(A, other)).toBeTruthy();
+    // Another user's call cannot delete A's plan.
+    await data.deletePlan(B, other);
+    expect(await data.getPlan(A, other)).toBeTruthy();
+  });
 });

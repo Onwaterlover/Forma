@@ -95,18 +95,19 @@ export function PlanMenu({ planId, exercises, library, feedback, logging, hasPro
 }
 
 /** "Delete plan" with confirmation (used on the plan edit page). */
-export function DeletePlanButton({ planId }: { planId: string }) {
+/** `undoImport`: shown right after an import; removes the plan with the exercises the import added and goes back to the importer. */
+export function DeletePlanButton({ planId, undoImport }: { planId: string; undoImport?: boolean }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   return (
     <>
-      <Button variant="ghost" size="sm" className="text-danger" onClick={() => setOpen(true)}><Trash2 size={16} aria-hidden />{t("plan.delete")}</Button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={t("plan.delete")}>
-        <p className="mb-4 text-sm">{t("plan.deleteConfirm")}</p>
+      <Button variant={undoImport ? "secondary" : "ghost"} size="sm" className={undoImport ? "shrink-0 whitespace-nowrap" : "text-danger"} onClick={() => setOpen(true)}><Trash2 size={16} aria-hidden />{t(undoImport ? "import.undo" : "plan.delete")}</Button>
+      <Sheet open={open} onClose={() => setOpen(false)} title={t(undoImport ? "import.undo" : "plan.delete")}>
+        <p className="mb-4 text-sm">{t(undoImport ? "import.undoConfirm" : "plan.deleteConfirm")}</p>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
-          <Button full variant="danger" disabled={pending} onClick={() => start(() => deletePlanAction(planId))}>{t("plan.delete")}</Button>
+          <Button full variant="danger" disabled={pending} onClick={() => start(() => deletePlanAction(planId, undoImport ? "import" : undefined))}>{t(undoImport ? "import.undo" : "plan.delete")}</Button>
         </div>
       </Sheet>
     </>

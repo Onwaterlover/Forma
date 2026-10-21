@@ -199,7 +199,7 @@ export const pl = {
     pdfNote: "PDF i zdjęcia wymagają opcjonalnego asystenta AI (nie jest skonfigurowany). Skopiuj tekst i wklej go tutaj albo wpisz plan ręcznie.",
     parse: "Rozpoznaj", review: "Sprawdź, co rozpoznaliśmy", unparsed: "Nie rozpoznano tych linii", matched: "dopasowano", unmatched: "nie znaleziono — zostanie własnym ćwiczeniem",
     chooseMatch: "Dopasuj do ćwiczenia", saveAsIs: "Zapisz dokładnie tak", analyze: "Sprawdź mój plan", optimize: "Dopasuj do mojego czasu i sprzętu",
-    fromNotes: "w notatkach: {name}", weight: "Ciężar (kg)", ownExercise: "Własne ćwiczenie: {name}", similar: "Podobne", allExercises: "Wszystkie ćwiczenia", noSets: "Bez serii w notatkach – przyjęto typowe, popraw jeśli robisz inaczej.", found: "Rozpoznano ćwiczeń: {n}", nothing: "Nie znaleziono żadnych ćwiczeń z seriami (np. 3x10).", pattern: "Rodzaj ruchu (do szacowania czasu)", importedName: "Zaimportowany plan",
+    fromNotes: "w notatkach: {name}", weight: "Ciężar (kg)", ownExercise: "Własne ćwiczenie: {name}", similar: "Podobne", allExercises: "Wszystkie ćwiczenia", undo: "Cofnij import", undoConfirm: "Usunąć ten zaimportowany plan razem z ćwiczeniami dodanymi przy imporcie? Możesz od razu zaimportować go jeszcze raz.", done: "Plan zaimportowany. Coś się nie zgadza?", noSets: "Bez serii w notatkach – przyjęto typowe, popraw jeśli robisz inaczej.", found: "Rozpoznano ćwiczeń: {n}", nothing: "Nie znaleziono żadnych ćwiczeń z seriami (np. 3x10).", pattern: "Rodzaj ruchu (do szacowania czasu)", importedName: "Zaimportowany plan",
     analysisTitle: "Analiza planu", optimizeNote: "Utworzymy nową wersję. Oryginał zostaje w historii wersji.", noProfile: "Najpierw odpowiedz na kilka pytań o czas i sprzęt.",
   },
   nutrition: {

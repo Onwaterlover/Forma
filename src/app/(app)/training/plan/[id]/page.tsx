@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { planAction, restoreVersion } from "@/app/actions/training";
-import { Badge, Card, PageHeader, SectionTitle } from "@/components/ui";
+import { Badge, Card, Notice, PageHeader, SectionTitle } from "@/components/ui";
 import { fmtDate } from "@/i18n";
 import { pageCtx } from "@/lib/ctx";
 import { getCustomExercises, getPlan, getPrefs, getProfile, listVersions } from "@/lib/data";
@@ -9,9 +9,9 @@ import { DeletePlanButton } from "../../plan-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function PlanPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ then?: string }> }) {
+export default async function PlanPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ then?: string; imported?: string }> }) {
   const { id } = await params;
-  const { then } = await searchParams;
+  const { then, imported } = await searchParams;
   const { user, locale, t } = await pageCtx();
   const plan = await getPlan(user.id, id);
   if (!plan) notFound();
@@ -23,6 +23,13 @@ export default async function PlanPage({ params, searchParams }: { params: Promi
       <PageHeader back={{ href: "/training", label: t("nav.training") }}         title={plan.name}
         subtitle={<span className="flex flex-wrap gap-2"><Badge tone={plan.status === "active" ? "accent" : "neutral"}>{t(`plan.status.${plan.status}`)}</Badge><Badge>{t(`plan.source.${plan.source}`)}</Badge><Badge>{t("plan.version", { n: plan.current_version })}</Badge></span>}
       />
+      {imported && plan.source === "imported" && (
+        // Right after an import: one clear way back if the result is wrong.
+        <Notice tone="accent" className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <span>{t("import.done")}</span>
+          <DeletePlanButton planId={id} undoImport />
+        </Notice>
+      )}
       <div className="mb-5 flex flex-wrap gap-2">
         {plan.status !== "active" && <form action={planAction.bind(null, id, "activate", undefined)}><button className={btn}>{t("plan.activate")}</button></form>}
         <form action={planAction.bind(null, id, "duplicate", undefined)}><button className={btn}>{t("plan.duplicate")}</button></form>

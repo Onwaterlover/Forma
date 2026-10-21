@@ -31,18 +31,58 @@ function toCanvas(src: CanvasImageSource & { width: number; height: number }, w:
   return c;
 }
 
-/** The middle band of the frame (where the guide box is): less to search, so decoding is faster. */
-function centerBand(v: HTMLVideoElement) {
+/**
+ * The middle band of the frame (where the guide box is), optionally turned by a few degrees.
+ * ZXing reads 1D codes along pixel rows and often misses a code that lies exactly level (long codes on
+ * curved cups especially), while the same code tilted slightly reads at once, so frames are also tried tilted.
+ */
+function centerBand(v: HTMLVideoElement, deg = 0) {
   const w = v.videoWidth, h = v.videoHeight;
-  // Full width: long codes (and codes on curved cups) often reach past the guide box.
-  const cw = w, ch = Math.round(h * 0.5);
-  const k = Math.min(1, 1280 / cw);
+  const k = Math.min(1, 1280 / w);
   const c = document.createElement("canvas");
-  c.width = Math.round(cw * k);
-  c.height = Math.round(ch * k);
-  c.getContext("2d", { willReadFrequently: true })!.drawImage(v, (w - cw) / 2, (h - ch) / 2, cw, ch, 0, 0, c.width, c.height);
+  c.width = Math.round(w * k);
+  c.height = Math.round(h * 0.5 * k);
+  const g = c.getContext("2d", { willReadFrequently: true })!;
+  g.translate(c.width / 2, c.height / 2);
+  g.rotate((deg * Math.PI) / 180);
+  g.drawImage(v, (-w * k) / 2, (-h * k) / 2, w * k, h * k);
   return c;
 }
+
+const SIZE = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+const CAMERA_KEY = "forma.scanCamera";
+const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+/**
+ * Back camera for scanning. On iPhones with several lenses the default is a virtual camera that keeps
+ * switching between them (and refocusing) as the code gets closer, so the view jumps. The plain wide
+ * camera is picked instead (its label is the shortest of the back cameras in every language) and
+ * remembered, so later scans open it directly.
+ */
+async function openCamera(): Promise<MediaStream> {
+  const md = navigator.mediaDevices;
+  let saved: string | null = null;
+  try { saved = localStorage.getItem(CAMERA_KEY); } catch {}
+  if (saved) {
+    try { return await md.getUserMedia({ audio: false, video: { deviceId: { exact: saved }, ...SIZE } }); } catch {}
+  }
+  const stream = await md.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, ...SIZE } });
+  if (!isIos()) return stream;
+  try {
+    const back = (await md.enumerateDevices()).filter((d) => d.kind === "videoinput" && d.label && !/front|przedni|vorder|frontal|selfie/i.test(d.label));
+    if (back.length < 2) return stream;
+    const wide = back.reduce((a, b) => (b.label.length < a.label.length ? b : a));
+    try { localStorage.setItem(CAMERA_KEY, wide.deviceId); } catch {}
+    if (stream.getVideoTracks()[0]?.getSettings().deviceId === wide.deviceId) return stream;
+    stream.getTracks().forEach((tr) => tr.stop());
+    return await md.getUserMedia({ audio: false, video: { deviceId: { exact: wide.deviceId }, ...SIZE } });
+  } catch {
+    return stream.active ? stream : md.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, ...SIZE } });
+  }
+}
+
+// Per try: level band, band tilted both ways, whole frame.
+const TILTS = [0, 8, -8, null] as const;
 
 /**
  * Barcode scanner (EAN-13/EAN-8/UPC-A/UPC-E). Uses the browser's own BarcodeDetector where available
@@ -94,16 +134,10 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
     (async () => {
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) return setState("insecure");
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        });
+        stream = await openCamera();
         if (stopped || !video.current) return stop();
         const track = stream.getVideoTracks()[0];
         try { await track?.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] }); } catch {}
-        // Phone cameras can't focus up close: a 2× zoom lets the code be sharp from ~20 cm, where long codes fit the frame.
-        const zoom = (track?.getCapabilities?.() as { zoom?: { max: number } } | undefined)?.zoom;
-        if (zoom && zoom.max >= 1.5) try { await track!.applyConstraints({ advanced: [{ zoom: Math.min(2, zoom.max) } as MediaTrackConstraintSet] }); } catch {}
         video.current.srcObject = stream;
         await video.current.play().catch(() => {});
         setState("scanning");
@@ -120,8 +154,8 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
                 const r = (await native.detect(v))[0];
                 if (r) return hit(r.rawValue, r.format.toUpperCase());
               } else if (z) {
-                // Mostly the band behind the guide box; every third try the whole frame.
-                const src = ++n % 3 === 0 ? toCanvas(v, v.videoWidth, v.videoHeight, 1280) : centerBand(v);
+                const tilt = TILTS[n++ % TILTS.length];
+                const src = tilt == null ? toCanvas(v, v.videoWidth, v.videoHeight, 1280) : centerBand(v, tilt);
                 const r = z.reader.decodeFromCanvas(src);
                 return hit(r.getText(), z.BarcodeFormat[r.getBarcodeFormat()]);
               }

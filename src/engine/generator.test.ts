@@ -99,6 +99,17 @@ describe("workout generator", () => {
     expect(allExercises(plan).some((e) => e.pattern === "v_pull")).toBe(true);
   });
 
+  it("a bodyweight preference at a gym keeps dips, push-ups and pull-ups but loads rows and legs", () => {
+    const p = profile({ styles: ["bodyweight"], experience: "intermediate", goal: "muscle", sessionsPerWeek: 3, sessionMinutes: 60, week: week({ 0: ["gym"], 2: ["gym"], 4: ["gym"] }), locations: [gym()] });
+    const { plan } = gen(p);
+    const all = allExercises(plan);
+    const upper = all.filter((e) => ["h_push", "v_pull"].includes(e.pattern));
+    const legs = all.filter((e) => ["squat", "hinge", "single_leg", "h_pull"].includes(e.pattern));
+    expect(upper.some((e) => e.kind === "bodyweight")).toBe(true);
+    expect(legs.length).toBeGreaterThan(0);
+    expect(legs.every((e) => e.kind !== "bodyweight")).toBe(true);
+  });
+
   it("bodyweight only at home with no equipment at all", () => {
     const p = profile({ sessionsPerWeek: 2, sessionMinutes: 30, week: week({ 1: ["bw"], 4: ["bw"] }), locations: [{ id: "bw", name: "Flat", kind: "home", equipment: [] }] });
     const { plan } = gen(p);

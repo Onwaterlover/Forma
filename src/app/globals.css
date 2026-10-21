@@ -140,5 +140,6 @@ dialog::backdrop {
     --accent: #2f5a49; color-scheme: light;
   }
   body { background: #ffffff; }
-  @page { margin: 14mm; }
+  @page { size: A4; margin: 10mm; }
+  html { font-size: 12px; }
 }

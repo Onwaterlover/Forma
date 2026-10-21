@@ -97,6 +97,11 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
     if (!d) return;
     if (open && !d.open) d.showModal();
     if (!open && d.open) d.close();
+    if (!open) return;
+    // Keep the page behind still while a sheet is open (iOS otherwise scrolls it under the finger).
+    const root = document.documentElement;
+    root.style.overflow = "hidden";
+    return () => { root.style.overflow = ""; };
   }, [open]);
   return (
     <dialog
@@ -122,7 +127,7 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
           </button>
         </div>
         {/* Closed sheets render nothing, so cameras, timers and forms inside them really stop. */}
-        <div className="safe-bottom overflow-y-auto px-5 py-4">{open ? children : null}</div>
+        <div className="safe-bottom overflow-y-auto overscroll-contain px-5 py-4">{open ? children : null}</div>
       </div>
     </dialog>
   );

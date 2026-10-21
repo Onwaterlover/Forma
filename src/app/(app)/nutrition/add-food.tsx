@@ -40,10 +40,12 @@ export function AddFood({
   const [meal, setMeal] = useState<string | null>(null);
   const [picked, setPicked] = useState<Product | null>(null);
   const [barcodeForNew, setBarcodeForNew] = useState<string | null>(null);
+  const [scanned, setScanned] = useState(false);
   const [pending, start] = useTransition();
 
   useEffect(() => {
     if (open) {
+      setScanned(false);
       setView(startView);
       setPicked(product);
       setBarcodeForNew(null);
@@ -66,6 +68,7 @@ export function AddFood({
     const data = await res.json().catch(() => ({}));
     if (data.product) {
       setPicked(data.product);
+      setScanned(true);
       if (data.warnings?.includes("energy_mismatch")) toast({ text: t("nutrition.energyMismatch") });
     } else if (data.error === "not_found") {
       toast({ text: t("nutrition.notFound") });
@@ -82,6 +85,7 @@ export function AddFood({
       {picked ? (
         // From "Recent" on the diary page the sheet only exists for this product, so adding closes it.
         <AmountPicker product={picked} pending={pending} onBack={() => (product ? onClose() : setPicked(null))} onAdd={(amount) => add(picked, amount, !!product)}
+          onRescan={scanned ? () => { setPicked(null); setScanned(false); setView("scan"); } : undefined}
           meal={<MealSelect meal={meal} onChange={setMeal} />} />
       ) : (
         <div className="space-y-4">
@@ -219,7 +223,7 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
   );
 }
 
-export function AmountPicker({ product, onAdd, onBack, pending, meal }: { product: Product & { lastAmount?: number }; onAdd: (amount: number) => void; onBack: () => void; pending: boolean; meal?: ReactNode }) {
+export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }: { product: Product & { lastAmount?: number }; onAdd: (amount: number) => void; onBack: () => void; pending: boolean; meal?: ReactNode; onRescan?: () => void }) {
   const { t, locale } = useI18n();
   const [amount, setAmount] = useState<number | null>(product.lastAmount ?? product.servings[0]?.amount ?? 100);
   const [fav, setFav] = useState(!!product.favorite);
@@ -232,6 +236,16 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal }: { produc
   );
   return (
     <div className="space-y-4">
+      {onRescan && (
+        // After a scan, make sure it is the right product before choosing the amount.
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-accent-soft px-3 py-2.5 text-sm">
+          <span className="min-w-0">
+            <span className="block font-medium text-accent">{t("nutrition.scannedCheck")}</span>
+            <span className="block truncate text-muted">{product.name}{product.brand ? ` · ${product.brand}` : ""}{product.barcode ? ` · ${product.barcode}` : ""}</span>
+          </span>
+          <Button size="sm" variant="ghost" onClick={onRescan}>{t("nutrition.rescan")}</Button>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         {product.brand && <Badge>{product.brand}</Badge>}
         {product.state && <Badge tone="accent">{t(`nutrition.state.${product.state}`)}</Badge>}
@@ -243,9 +257,7 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal }: { produc
       </div>
       {energyMismatch(product.nutrients) && <Notice tone="warning">{t("nutrition.energyMismatch")}</Notice>}
       {meal}
-      <Field label={`${t("nutrition.amount")} (${product.basis})`} htmlFor="amount">
-        <DecimalInput id="amount" value={amount} onChange={setAmount} autoFocus className="h-14 text-2xl font-semibold" />
-      </Field>
+      <AmountWheel value={amount} onChange={setAmount} unit={product.basis} />
       <div className="flex flex-wrap gap-2">
         {product.servings.map((s) => <Button key={s.label} size="sm" variant="secondary" onClick={() => setAmount(s.amount)}>{s.label}</Button>)}
         {[50, 100, 150, 200].map((g) => <Button key={g} size="sm" variant="secondary" onClick={() => setAmount(g)}>{g} {product.basis}</Button>)}
@@ -362,5 +374,81 @@ function QuickTab({ onAdd, pending }: { onAdd: (q: { name: string; kcal: number;
       </div>
       <Button type="submit" full disabled={pending || v.kcal === null}>{t("common.add")}</Button>
     </form>
+  );
+}
+
+const ROW = 40;
+/** Amounts on the wheel: 5 g steps up to 1 kg, then 10 g steps up to 2 kg (an off-step value is slotted in). */
+function wheelValues(extra: number | null): number[] {
+  const v: number[] = [];
+  for (let x = 5; x <= 1000; x += 5) v.push(x);
+  for (let x = 1010; x <= 2000; x += 10) v.push(x);
+  if (extra && extra > 0 && !v.includes(extra)) v.splice(v.findIndex((x) => x > extra) === -1 ? v.length : v.findIndex((x) => x > extra), 0, extra);
+  return v;
+}
+
+/** Scroll wheel for the amount (like a phone's time picker); a tap on "type it" switches to the keyboard. */
+function AmountWheel({ value, onChange, unit }: { value: number | null; onChange: (v: number) => void; unit: string }) {
+  const { t } = useI18n();
+  const [typing, setTyping] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const [values, setValues] = useState(() => wheelValues(value));
+  const settled = useRef(value);
+  const frame = useRef(0);
+
+  // Follow outside changes (serving chips): rebuild the list if needed and scroll to the value.
+  useEffect(() => {
+    if (value === null || value === settled.current) return;
+    settled.current = value;
+    const list = values.includes(value) ? values : wheelValues(value);
+    if (list !== values) setValues(list);
+    requestAnimationFrame(() => ref.current?.scrollTo({ top: list.indexOf(value) * ROW, behavior: "smooth" }));
+  }, [value, values]);
+
+  useEffect(() => {
+    if (value !== null && ref.current) ref.current.scrollTop = Math.max(0, values.indexOf(value)) * ROW;
+  }, [typing]);
+
+  if (typing) {
+    return (
+      <div className="flex items-center gap-2">
+        <DecimalInput id="amount" value={value} onChange={(v) => v !== null && onChange(v)} autoFocus className="h-14 text-2xl font-semibold" />
+        <span className="text-muted">{unit}</span>
+        <Button variant="ghost" size="sm" onClick={() => setTyping(false)}>{t("nutrition.wheel")}</Button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center justify-center gap-3">
+      <div className="relative h-[200px] w-36">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 h-10 -translate-y-1/2 rounded-xl bg-surface-2" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-surface to-transparent" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-t from-surface to-transparent" />
+        <div ref={ref} role="listbox" aria-label={t("nutrition.amount")} tabIndex={0}
+          className="no-scrollbar relative h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            cancelAnimationFrame(frame.current);
+            frame.current = requestAnimationFrame(() => {
+              const v = values[Math.min(values.length - 1, Math.max(0, Math.round(el.scrollTop / ROW)))]!;
+              if (v !== settled.current) { settled.current = v; onChange(v); }
+            });
+          }}>
+          <div style={{ height: 80 }} />
+          {values.map((v) => (
+            <button key={v} type="button" role="option" aria-selected={v === value}
+              onClick={(e) => e.currentTarget.parentElement?.scrollTo({ top: values.indexOf(v) * ROW, behavior: "smooth" })}
+              className={cx("flex h-10 w-full snap-center items-center justify-center tabular-nums transition-colors", v === value ? "text-2xl font-semibold" : "text-lg text-muted")}>
+              {v}
+            </button>
+          ))}
+          <div style={{ height: 80 }} />
+        </div>
+      </div>
+      <div className="flex flex-col items-start gap-2">
+        <span className="text-lg text-muted">{unit}</span>
+        <Button variant="ghost" size="sm" onClick={() => setTyping(true)}>{t("nutrition.typeAmount")}</Button>
+      </div>
+    </div>
   );
 }

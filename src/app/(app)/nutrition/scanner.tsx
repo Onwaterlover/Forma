@@ -31,6 +31,18 @@ function toCanvas(src: CanvasImageSource & { width: number; height: number }, w:
   return c;
 }
 
+/** The middle band of the frame (where the guide box is): less to search, so decoding is faster. */
+function centerBand(v: HTMLVideoElement) {
+  const w = v.videoWidth, h = v.videoHeight;
+  const cw = Math.round(w * 0.9), ch = Math.round(h * 0.45);
+  const k = Math.min(1, 1000 / cw);
+  const c = document.createElement("canvas");
+  c.width = Math.round(cw * k);
+  c.height = Math.round(ch * k);
+  c.getContext("2d", { willReadFrequently: true })!.drawImage(v, (w - cw) / 2, (h - ch) / 2, cw, ch, 0, 0, c.width, c.height);
+  return c;
+}
+
 /**
  * Barcode scanner (EAN-13/EAN-8/UPC-A/UPC-E). Uses the browser's own BarcodeDetector where available
  * (Android Chrome) and ZXing elsewhere (iPhone). The camera is always released when the scanner closes,
@@ -85,6 +97,7 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
 
         const native = nativeDetector();
         const z = native ? null : await zxingReader();
+        let n = 0;
         const tick = async () => {
           const v = video.current;
           if (stopped || !v) return;
@@ -94,12 +107,14 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
                 const r = (await native.detect(v))[0];
                 if (r) return hit(r.rawValue, r.format.toUpperCase());
               } else if (z) {
-                const r = z.reader.decodeFromCanvas(toCanvas(v, v.videoWidth, v.videoHeight, 1280));
+                // Mostly the band behind the guide box; every fourth try the whole frame.
+                const src = ++n % 4 === 0 ? toCanvas(v, v.videoWidth, v.videoHeight, 1280) : centerBand(v);
+                const r = z.reader.decodeFromCanvas(src);
                 return hit(r.getText(), z.BarcodeFormat[r.getBarcodeFormat()]);
               }
             } catch { /* no code in this frame */ }
           }
-          timer = setTimeout(tick, 150);
+          timer = setTimeout(tick, native ? 120 : 60);
         };
         tick();
       } catch (e) {

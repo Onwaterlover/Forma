@@ -22,9 +22,12 @@ export function Nav({ items, variant }: { items: { href: string; label: string; 
           const on = active(it.href);
           return (
             <li key={it.href} className="flex-1">
-              <Link href={it.href} onClick={tap(it.href)} aria-current={on ? "page" : undefined} className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[11px]", on ? "text-accent" : "text-muted")}>
-                <Icon size={22} strokeWidth={on ? 2.2 : 1.8} aria-hidden />
-                {it.label}
+              <Link href={it.href} onClick={tap(it.href)} aria-current={on ? "page" : undefined} className="flex h-16 items-center justify-center px-1">
+                {/* The whole tab lights up, not just the icon. */}
+                <span className={cx("flex w-full max-w-20 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px]", on ? "bg-accent-soft font-medium text-accent" : "text-muted")}>
+                  <Icon size={22} strokeWidth={on ? 2.2 : 1.8} aria-hidden />
+                  {it.label}
+                </span>
               </Link>
             </li>
           );

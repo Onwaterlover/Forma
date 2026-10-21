@@ -34,11 +34,11 @@ export function Card({ className, ...rest }: ComponentProps<"div">) {
 
 export function PageHeader({ title, subtitle, action, back }: { title: string; subtitle?: ReactNode; action?: ReactNode; back?: { href: string; label: string } }) {
   return (
-    <header className="mb-5 flex items-start justify-between gap-3">
+    <header className="mb-5 flex items-start justify-between gap-3 print:mb-2">
       <div className="min-w-0">
         {back && <div className="print:hidden"><BackButton href={back.href} label={back.label} /></div>}
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+        <h1 className="text-2xl font-semibold tracking-tight print:text-lg">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm text-muted print:text-[10px]">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0 print:hidden">{action}</div>}
     </header>

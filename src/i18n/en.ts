@@ -167,7 +167,7 @@ export const en: Dict = {
     completed: "Workout saved. Nice work!", offline: "Offline — saved on this device, will sync later.", syncing: "Syncing…", synced: "Synced",
     simpleNote: "A workout ticked off without sets isn't used to calculate progress.", perDumbbell: "per dumbbell", perSide: "per side", assistance: "assistance",
     bodyweight: "bodyweight", plusWeight: "+ added weight", setType: { warmup: "Warm-up", working: "Working", drop: "Drop", failure: "To failure" },
-    choose: "Choose a workout", other: "Another workout from the plan", emptyWorkout: "Empty workout", confirmFinish: "Finish the workout?", confirmAbandon: "Stop the workout? Logged sets are kept.", stopTitle: "Stop this workout?", stopKeep: "Stop and keep the sets you did", discardWorkout: "Delete this workout (save nothing)", nothingSaved: "No sets logged yet, so this workout will simply disappear.", cancelWorkout: "Cancel workout",
+    choose: "Choose a workout", other: "Another workout from the plan", emptyWorkout: "Empty workout", confirmFinish: "Finish the workout?", confirmAbandon: "Stop the workout? Logged sets are kept.", editWorkout: "Correct sets", editDone: "Save corrections", deleteWorkoutConfirm: "Delete this workout? This can't be undone.", stopTitle: "Stop this workout?", stopKeep: "Stop and keep the sets you did", discardWorkout: "Delete this workout (save nothing)", nothingSaved: "No sets logged yet, so this workout will simply disappear.", cancelWorkout: "Cancel workout",
     suggestion: {
       insufficient_data: "Log your sets and I'll suggest the next step.", increase_load: "Try {weight} kg × {reps}", add_reps: "Stay at {weight} kg and add a rep (aim {reps})",
       add_reps_bw: "Aim for {reps} reps", harder_variant: "Time for a harder variation", add_weight: "You could add {weight} kg",
@@ -204,7 +204,7 @@ export const en: Dict = {
     analysisTitle: "Plan analysis", optimizeNote: "This creates a new version. The original stays in the version history.", noProfile: "First answer a few questions about your time and equipment.",
   },
   nutrition: {
-    title: "Diary", add: "Add food", searchShort: "Search", scan: "Scan", search: "Search", recent: "Recent", favorites: "Favourites", meals: "Meals", custom: "Custom food",
+    title: "Diary", add: "Add food", searchShort: "Search", wheel: "Wheel", typeAmount: "Type", scan: "Scan", search: "Search", recent: "Recent", favorites: "Favourites", meals: "Meals", custom: "Custom food",
     quick: "Calories only", copyYesterday: "Copy yesterday", protein: "Protein", carbs: "Carbs", fat: "Fat", fiber: "Fibre", sugar: "Sugars", satFat: "Saturated fat", salt: "Salt",
     target: "Target", remaining: "{n} left", over: "{n} over target", noTarget: "No calorie target", setTarget: "Set target",
     dayComplete: "I logged everything", dayIncomplete: "Incomplete day", completeHint: "Optional. Helps expenditure estimates — incomplete days are skipped.",
@@ -214,7 +214,7 @@ export const en: Dict = {
     unavailable: "The product database is unavailable. Search your saved foods or add the product manually.", searchRemote: "Search Open Food Facts", localResults: "Your and saved foods",
     remoteResults: "Open Food Facts", noResults: "No results.", createProduct: "Add a food", fromLabel: "Values from the label (per 100 g / 100 ml)", barcode: "Barcode",
     manualBarcode: "Type the code", cameraDenied: "No camera access. Type the code or search for the product.", cameraInsecure: "The camera needs an HTTPS connection. See the README, or type the code.",
-    scanning: "Point the camera at the barcode", scanResume: "Resume scanning", scanPhoto: "Take a photo of the barcode", scanPhotoFailed: "I can't find a barcode in the photo. Take it closer, sharp and in good light, or type the number under the code.", invalidBarcode: "That doesn't look like a valid barcode.", state: { raw: "raw", cooked: "cooked" }, stateLabel: "State",
+    scanning: "Point the camera at the barcode", scanResume: "Resume scanning", scannedCheck: "Is this the right product?", rescan: "Scan again", scanPhoto: "Take a photo of the barcode", scanPhotoFailed: "I can't find a barcode in the photo. Take it closer, sharp and in good light, or type the number under the code.", invalidBarcode: "That doesn't look like a valid barcode.", state: { raw: "raw", cooked: "cooked" }, stateLabel: "State",
     saveMeal: "Save as meal", mealName: "Meal name", logMeal: "Add", recipes: "Recipes", newRecipe: "New recipe", ingredients: "Ingredients", addIngredient: "Add ingredient",
     cookedYield: "Cooked weight (g)", cookedYieldHint: "Optional — then per-100 g values refer to the finished dish.", servings: "Servings", logServings: "Servings", logGrams: "Grams",
     perServing: "per serving", total: "Total", meal: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack" }, mealLabel: "Meal", noMeal: "No category",

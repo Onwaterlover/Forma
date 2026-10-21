@@ -1,6 +1,6 @@
 import { Clock, Link2, MapPin } from "lucide-react";
 import { startWorkout } from "@/app/actions/training";
-import { Notice } from "@/components/ui";
+import { cx, Notice } from "@/components/ui";
 import { BALANCED } from "@/engine/volume";
 import type { Effort, Exercise, Issue, Plan, TrainingProfile } from "@/engine/types";
 import { exName, fmt, fmtRest, renderMessage, type Locale, type T } from "@/i18n";
@@ -38,19 +38,20 @@ export function PlanView({
         </Notice>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-2 print:block print:space-y-4">
+      {/* Printed: compact columns so a typical plan fits one A4 page. */}
+      <div className={cx("grid gap-3 lg:grid-cols-2 print:gap-2", plan.sessions.length >= 5 ? "print:grid-cols-3" : "print:grid-cols-2")}>
         {plan.sessions.map((s) => {
           // The most common effort cue is said once per day; only exceptions appear on the line itself.
           const counts = new Map<Effort, number>();
           for (const e of s.exercises) counts.set(e.effort, (counts.get(e.effort) ?? 0) + 1);
           const mainEffort = [...counts].sort((a, b) => b[1] - a[1])[0]?.[0];
           return (
-            <section key={s.key} className="break-inside-avoid rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5">
-              <header className="mb-2 flex items-start justify-between gap-3">
+            <section key={s.key} className="break-inside-avoid rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 print:rounded-lg print:p-2.5">
+              <header className="mb-2 flex items-start justify-between gap-3 print:mb-1">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-accent">{s.day !== null ? days[s.day] : t("plan.flexibleDay")}</p>
-                  <h3 className="text-lg font-semibold leading-snug">{s.name ?? t(`template.${s.template}`)}</h3>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-muted">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-accent print:text-[9px]">{s.day !== null ? days[s.day] : t("plan.flexibleDay")}</p>
+                  <h3 className="text-lg font-semibold leading-snug print:text-[13px]">{s.name ?? t(`template.${s.template}`)}</h3>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-muted print:text-[9px]">
                     <span className="inline-flex items-center gap-1"><Clock size={14} aria-hidden />{t("plan.estimated", { n: s.estimatedMinutes })}</span>
                     {locName(s.locationId) && <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden />{locName(s.locationId)}</span>}
                   </p>
@@ -71,18 +72,18 @@ export function PlanView({
                     e.effort !== mainEffort && t(`effort.${e.effort}`),
                   ].filter(Boolean).join(" · ");
                   return (
-                    <li key={e.exerciseId} className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 py-2.5">
+                    <li key={e.exerciseId} className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 py-2.5 print:grid-cols-[0.9rem_1fr_auto] print:gap-x-1.5 print:py-[3px] print:text-[10.5px]">
                       <span className="text-sm tabular-nums text-muted">{prevSame ? <Link2 size={14} aria-label={t("plan.superset")} /> : i + 1}</span>
                       <span className="min-w-0">
-                        <span className="block text-[15px] font-medium leading-snug">{exName(lookup(e.exerciseId), locale, e.exerciseId)}</span>
-                        {details && <span className="block text-xs text-muted">{details}</span>}
+                        <span className="block text-[15px] font-medium leading-snug print:text-[10.5px] print:leading-tight">{exName(lookup(e.exerciseId), locale, e.exerciseId)}</span>
+                        {details && <span className="block text-xs text-muted print:text-[8.5px]">{details}</span>}
                       </span>
-                      <span className="text-right text-[15px] font-semibold tabular-nums">{e.sets} × {e.seconds ? `${e.seconds} s` : `${e.repMin}–${e.repMax}`}</span>
+                      <span className="text-right text-[15px] font-semibold tabular-nums print:text-[10.5px]">{e.sets} × {e.seconds ? `${e.seconds} s` : `${e.repMin}–${e.repMax}`}</span>
                     </li>
                   );
                 })}
               </ol>
-              {mainEffort && <p className="mt-2 border-t border-border pt-2 text-xs text-muted">{t(`effort.${mainEffort}`)}</p>}
+              {mainEffort && <p className="mt-2 border-t border-border pt-2 text-xs text-muted print:mt-1 print:pt-1 print:text-[8.5px]">{t(`effort.${mainEffort}`)}</p>}
             </section>
           );
         })}

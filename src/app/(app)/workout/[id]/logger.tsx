@@ -1,5 +1,5 @@
 "use client";
-import { ArrowDown, ArrowUp, Check, CircleHelp, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, CircleHelp, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Pencil, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { applyWorkoutToPlan } from "@/app/actions/training";
@@ -63,7 +63,10 @@ export function WorkoutLogger({
   const [lastRest, setLastRest] = useState(90);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(w);
-  const readOnly = w.status !== "in_progress";
+  const finished = w.status !== "in_progress";
+  // A finished workout can be corrected afterwards; edits sync the same way as during the workout.
+  const [editing, setEditing] = useState(false);
+  const readOnly = finished && !editing;
 
   // ── Persistence: local first, then server; newer data always wins ──────
   const discarded = useRef(false);
@@ -258,10 +261,10 @@ export function WorkoutLogger({
           </div>
           <div className="flex items-center gap-2">
             <p className="text-3xl font-semibold tabular-nums tracking-tight" role="timer" aria-label={t("workout.elapsed")}>{clock(elapsed)}</p>
-            {!readOnly && <Button size="sm" onClick={() => setSheet({ kind: "finish" })}>{t("common.done")}</Button>}
+            {!finished && <Button size="sm" onClick={() => setSheet({ kind: "finish" })}>{t("common.done")}</Button>}
           </div>
         </div>
-        {!readOnly && (
+        {!finished && (
           <div className="mt-2 flex items-center gap-2">
             <div className="flex rounded-xl bg-surface-2 p-0.5 text-sm" role="radiogroup" aria-label={t("settings.logging")}>
               {(["simple", "detailed"] as const).map((m) => (
@@ -279,7 +282,7 @@ export function WorkoutLogger({
 
       {readOnly && summary}
 
-      {w.mode === "simple" && !readOnly && <Notice>{t("workout.simpleNote")}</Notice>}
+      {w.mode === "simple" && !finished && <Notice>{t("workout.simpleNote")}</Notice>}
 
       {w.exercises.map((e, i) => {
         const ex = lookup(e.exerciseId);
@@ -306,7 +309,7 @@ export function WorkoutLogger({
               {e.skipped ? <Badge>{t("workout.skipped")}</Badge> : (e.completed || (doneSets > 0 && doneSets === e.sets.length)) && <Badge tone="accent">✓</Badge>}
             </div>
 
-            {!readOnly && (
+            {!finished && (
               <div className="space-y-1 text-sm">
                 <p className="text-muted">
                   {t("workout.last")}:{" "}
@@ -322,7 +325,7 @@ export function WorkoutLogger({
               </div>
             )}
 
-            {w.mode === "detailed" || readOnly ? (
+            {w.mode === "detailed" || finished ? (
               <div className="space-y-2">
                 {e.sets.length > 0 && (
                   <div className={cx("grid items-center gap-2 text-xs text-muted", settings.showEffort ? "grid-cols-[2rem_1fr_1fr_3.5rem_3rem]" : "grid-cols-[2rem_1fr_1fr_3rem]")}>
@@ -405,8 +408,15 @@ export function WorkoutLogger({
         );
       })}
 
-      {readOnly ? (
-        <Button variant="danger" onClick={() => setSheet({ kind: "delete" })}><Trash2 size={16} aria-hidden />{t("common.delete")}</Button>
+      {finished ? (
+        editing ? (
+          <Button full onClick={() => { setEditing(false); router.refresh(); }}><Check size={16} aria-hidden />{t("workout.editDone")}</Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button full variant="secondary" onClick={() => { setEditing(true); window.scrollTo({ top: 0 }); }}><Pencil size={16} aria-hidden />{t("workout.editWorkout")}</Button>
+            <Button variant="ghost" className="text-danger" onClick={() => setSheet({ kind: "delete" })}><Trash2 size={16} aria-hidden />{t("common.delete")}</Button>
+          </div>
+        )
       ) : (
         <div className="flex gap-2">
           <Button full onClick={() => setSheet({ kind: "finish" })}>{t("workout.finish")}</Button>
@@ -414,7 +424,7 @@ export function WorkoutLogger({
         </div>
       )}
 
-      {settings.restTimer && !readOnly && (
+      {settings.restTimer && !finished && (
         <div className="fixed inset-x-4 bottom-20 z-40 mx-auto max-w-md md:bottom-6">
           {rest ? (
             <div role="timer" aria-live="polite" className="overflow-hidden rounded-2xl bg-text text-bg shadow-xl">
@@ -528,7 +538,7 @@ export function WorkoutLogger({
         </div>
       </Sheet>
 
-      <Sheet open={sheet?.kind === "delete"} onClose={() => setSheet(null)} title={t("common.delete")}>
+      <Sheet open={sheet?.kind === "delete"} onClose={() => setSheet(null)} title={t("workout.deleteWorkoutConfirm")}>
         <Button full variant="danger" onClick={async () => {
           await fetch(`/api/workouts/${w.id}`, { method: "DELETE" });
           try { localStorage.removeItem(STORE(w.id)); } catch {}

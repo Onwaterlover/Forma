@@ -166,7 +166,7 @@ export const pl = {
     completed: "Trening zapisany. Dobra robota!", offline: "Brak sieci — zapisano na urządzeniu, zsynchronizuję później.", syncing: "Synchronizuję…", synced: "Zsynchronizowano",
     simpleNote: "Trening odhaczony bez serii nie jest używany do wyliczania postępów.", perDumbbell: "na hantlę", perSide: "na stronę", assistance: "odciążenie",
     bodyweight: "masa ciała", plusWeight: "+ obciążenie", setType: { warmup: "Rozgrzewka", working: "Robocza", drop: "Drop", failure: "Do upadku" },
-    choose: "Wybierz trening", other: "Inny trening z planu", emptyWorkout: "Pusty trening", confirmFinish: "Zakończyć trening?", confirmAbandon: "Przerwać trening? Zapisane serie zostaną.", stopTitle: "Przerwać trening?", stopKeep: "Przerwij i zachowaj zrobione serie", discardWorkout: "Usuń ten trening (nic nie zapisuj)", nothingSaved: "Nie zapisano jeszcze żadnej serii, więc ten trening po prostu zniknie.", cancelWorkout: "Anuluj trening",
+    choose: "Wybierz trening", other: "Inny trening z planu", emptyWorkout: "Pusty trening", confirmFinish: "Zakończyć trening?", confirmAbandon: "Przerwać trening? Zapisane serie zostaną.", editWorkout: "Popraw serie", editDone: "Zapisz poprawki", deleteWorkoutConfirm: "Usunąć ten trening? Tego nie da się cofnąć.", stopTitle: "Przerwać trening?", stopKeep: "Przerwij i zachowaj zrobione serie", discardWorkout: "Usuń ten trening (nic nie zapisuj)", nothingSaved: "Nie zapisano jeszcze żadnej serii, więc ten trening po prostu zniknie.", cancelWorkout: "Anuluj trening",
     suggestion: {
       insufficient_data: "Zapisz serie, a zaproponuję kolejny krok.", increase_load: "Spróbuj {weight} kg × {reps}", add_reps: "Zostań przy {weight} kg i dodaj powtórzenie (cel {reps})",
       add_reps_bw: "Celuj w {reps} powtórzeń", harder_variant: "Czas na trudniejszą wersję", add_weight: "Możesz dodać {weight} kg obciążenia",
@@ -203,7 +203,7 @@ export const pl = {
     analysisTitle: "Analiza planu", optimizeNote: "Utworzymy nową wersję. Oryginał zostaje w historii wersji.", noProfile: "Najpierw odpowiedz na kilka pytań o czas i sprzęt.",
   },
   nutrition: {
-    title: "Dziennik", add: "Dodaj jedzenie", searchShort: "Szukaj", scan: "Skanuj", search: "Szukaj", recent: "Ostatnie", favorites: "Ulubione", meals: "Posiłki", custom: "Własny produkt",
+    title: "Dziennik", add: "Dodaj jedzenie", searchShort: "Szukaj", wheel: "Kółko", typeAmount: "Wpisz", scan: "Skanuj", search: "Szukaj", recent: "Ostatnie", favorites: "Ulubione", meals: "Posiłki", custom: "Własny produkt",
     quick: "Tylko kalorie", copyYesterday: "Kopiuj wczoraj", protein: "Białko", carbs: "Węglowodany", fat: "Tłuszcz", fiber: "Błonnik", sugar: "Cukry", satFat: "Kw. tłuszczowe nasycone", salt: "Sól",
     target: "Cel", remaining: "zostało {n}", over: "{n} ponad cel", noTarget: "Bez celu kalorycznego", setTarget: "Ustaw cel",
     dayComplete: "Wpisałem/am wszystko", dayIncomplete: "Niepełny dzień", completeHint: "Opcjonalne. Pomaga szacunkom zapotrzebowania — niepełne dni są pomijane.",
@@ -213,7 +213,7 @@ export const pl = {
     unavailable: "Baza produktów jest niedostępna. Możesz wyszukać wśród zapisanych lub dodać produkt ręcznie.", searchRemote: "Szukaj w Open Food Facts", localResults: "Twoje i zapisane produkty",
     remoteResults: "Open Food Facts", noResults: "Brak wyników.", createProduct: "Dodaj produkt", fromLabel: "Wartości z etykiety (na 100 g / 100 ml)", barcode: "Kod kreskowy",
     manualBarcode: "Wpisz kod ręcznie", cameraDenied: "Brak dostępu do aparatu. Wpisz kod ręcznie lub wyszukaj produkt.", cameraInsecure: "Aparat wymaga połączenia HTTPS. Zobacz instrukcję w README lub wpisz kod ręcznie.",
-    scanning: "Skieruj aparat na kod kreskowy", scanResume: "Wznów skanowanie", scanPhoto: "Zrób zdjęcie kodu kreskowego", scanPhotoFailed: "Nie widzę kodu na zdjęciu. Zrób je bliżej, ostro i przy dobrym świetle albo wpisz numer spod kodu.", invalidBarcode: "To nie wygląda na prawidłowy kod kreskowy.", state: { raw: "surowy", cooked: "po ugotowaniu" }, stateLabel: "Stan",
+    scanning: "Skieruj aparat na kod kreskowy", scanResume: "Wznów skanowanie", scannedCheck: "Czy to ten produkt?", rescan: "Skanuj ponownie", scanPhoto: "Zrób zdjęcie kodu kreskowego", scanPhotoFailed: "Nie widzę kodu na zdjęciu. Zrób je bliżej, ostro i przy dobrym świetle albo wpisz numer spod kodu.", invalidBarcode: "To nie wygląda na prawidłowy kod kreskowy.", state: { raw: "surowy", cooked: "po ugotowaniu" }, stateLabel: "Stan",
     saveMeal: "Zapisz jako posiłek", mealName: "Nazwa posiłku", logMeal: "Dodaj", recipes: "Przepisy", newRecipe: "Nowy przepis", ingredients: "Składniki", addIngredient: "Dodaj składnik",
     cookedYield: "Waga po ugotowaniu (g)", cookedYieldHint: "Opcjonalnie — wtedy wartości na 100 g dotyczą gotowej potrawy.", servings: "Liczba porcji", logServings: "Porcje", logGrams: "Gramy",
     perServing: "na porcję", total: "Razem", meal: { breakfast: "Śniadanie", lunch: "Obiad", dinner: "Kolacja", snack: "Przekąska" }, mealLabel: "Posiłek", noMeal: "Bez kategorii",

@@ -102,7 +102,7 @@ export default async function TodayPage() {
 
       {settings.modules.nutrition && (
         <>
-          <SectionTitle action={<Link href="/nutrition" className="text-sm font-medium text-accent">{t("today.logFood")}</Link>}>{t("today.food")}</SectionTitle>
+          <SectionTitle>{t("today.food")}</SectionTitle>
           <Link href="/nutrition" className="block">
             <Card className="transition-colors hover:border-accent">
               <div className="flex items-baseline justify-between">

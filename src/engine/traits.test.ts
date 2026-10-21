@@ -28,6 +28,15 @@ describe("exercise traits for the plan review", () => {
     expect(diffs.map((d) => d.key)).toContain("progressionWorse");
     expect(compareTo(ex("db_bench_press"), ex("push_up")).map((d) => d.key)).toContain("progressionBetter");
     expect(compareTo(ex("db_bench_press"), ex("db_bench_press"))).toEqual([{ key: "similar", good: true }]);
-    for (const a of EXERCISES.slice(0, 30)) for (const b of EXERCISES.slice(0, 30)) expect(compareTo(a, b).length).toBeLessThanOrEqual(2);
+    // At most two "how" differences plus one "what it trains" line.
+    for (const a of EXERCISES.slice(0, 30)) for (const b of EXERCISES.slice(0, 30)) {
+      const d = compareTo(a, b);
+      expect(d.filter((x) => x.key !== "focus").length).toBeLessThanOrEqual(2);
+      expect(d.filter((x) => x.key === "focus").length).toBeLessThanOrEqual(1);
+    }
+    // Incline vs flat press: same pattern, different focus — said explicitly, both ways.
+    expect(compareTo(ex("incline_db_press"), ex("db_bench_press"))[0]).toMatchObject({ key: "focus", emphasis: "upper_chest" });
+    expect(compareTo(ex("db_bench_press"), ex("incline_db_press"))[0]).toMatchObject({ key: "focus", emphasis: "upper_chest_off" });
+    expect(compareTo(ex("dip"), ex("db_bench_press"))[0]).toMatchObject({ key: "focus", muscles: ["triceps"] });
   });
 });

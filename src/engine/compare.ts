@@ -1,7 +1,7 @@
-import type { Exercise } from "./types";
+import type { Exercise, Muscle } from "./types";
 
 /** One difference of an alternative versus the recommended exercise; `good` = in the alternative's favour. */
-export type Diff = { key: DiffKey; good: boolean };
+export type Diff = { key: DiffKey; good: boolean; emphasis?: string; muscles?: Muscle[] };
 export type DiffKey =
   | "progressionBetter" | "progressionWorse"
   | "easier" | "harder"
@@ -10,6 +10,7 @@ export type DiffKey =
   | "lessTiring" | "moreTiring"
   | "moreMuscles" | "targeted"
   | "guided" | "freeWeight"
+  | "focus"
   | "similar";
 
 // How easily load can be added in small steps (drives long-term progression).
@@ -23,6 +24,13 @@ const MACHINE = new Set(["machine", "cable", "smith"]);
  * each line comes from the exercise data.
  */
 export function compareTo(alt: Exercise, rec: Exercise): Diff[] {
+  // Different training focus comes first and is always shown: it changes what the slot trains, not just how.
+  const focus: Diff[] = [];
+  if (alt.emphasis !== rec.emphasis) focus.push({ key: "focus", good: true, emphasis: alt.emphasis ?? `${rec.emphasis}_off` });
+  else {
+    const more = alt.primary.filter((m) => !rec.primary.includes(m));
+    if (more.length) focus.push({ key: "focus", good: true, muscles: more });
+  }
   const out: Diff[] = [];
   const la = LOAD_RANK[alt.loading] ?? 1;
   const lr = LOAD_RANK[rec.loading] ?? 1;
@@ -35,5 +43,5 @@ export function compareTo(alt: Exercise, rec: Exercise): Diff[] {
   else if (alt.stable !== rec.stable) out.push(alt.stable ? { key: "moreStable", good: true } : { key: "lessStable", good: false });
   if (alt.fatigue !== rec.fatigue) out.push(FATIGUE[alt.fatigue] < FATIGUE[rec.fatigue] ? { key: "lessTiring", good: true } : { key: "moreTiring", good: false });
   if (alt.mechanics !== rec.mechanics) out.push(alt.mechanics === "compound" ? { key: "moreMuscles", good: true } : { key: "targeted", good: true });
-  return out.length ? out.slice(0, 2) : [{ key: "similar", good: true }];
+  return [...focus, ...(out.length ? out.slice(0, 2) : focus.length ? [] : [{ key: "similar", good: true } as Diff])];
 }

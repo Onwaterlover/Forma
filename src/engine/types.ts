@@ -73,6 +73,8 @@ export interface Exercise {
   cue: Partial<Record<Lang, string>>;
   safety?: Partial<Record<Lang, string>>;
   custom?: boolean;
+  /** Part of the muscle the variant stresses more than the plain lift (incline press → upper chest). */
+  emphasis?: "upper_chest";
   /** Never picked by the generator (e.g. abduction/adduction machines); still available to import, swap or add. */
   accessoryOnly?: boolean;
 }

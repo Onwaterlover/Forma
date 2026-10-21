@@ -19,7 +19,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   const lookup = (exId: string) => library.find((e) => e.id === exId);
   const option = (exId: string) => {
     const ex = lookup(exId);
-    return { id: exId, name: exName(ex, locale, exId), traits: ex ? traitsOf(ex, prefs[exId], profile.experience) : [] };
+    return { id: exId, name: exName(ex, locale, exId), traits: ex ? traitsOf(ex, prefs[exId], profile.experience) : [], primary: ex?.primary ?? [], secondary: ex?.secondary ?? [] };
   };
   // Alternatives explain themselves by how they differ from the recommended exercise, not by repeating its traits.
   const alternative = (exId: string, rec: string) => {

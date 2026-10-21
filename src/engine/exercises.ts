@@ -245,6 +245,7 @@ export const EXERCISES: Exercise[] = [
     cuePl: "Hantle nad klatką, łokcie ok. 45° od tułowia.", cueEn: "Dumbbells over the chest, elbows about 45° from the torso.",
   }),
   ex("incline_db_press", {
+    emphasis: "upper_chest",
     pl: "Wyciskanie hantli na ławce skośnej", en: "Incline dumbbell press", de: "Schrägbankdrücken mit Kurzhanteln", aliases: ["incline press"],
     primary: ["chest"], secondary: ["front_delts", "triceps"], pattern: "h_push", equipment: [...DB, "incline_bench"], kind: "dumbbell",
     mechanics: "compound", skill: 1, fatigue: "moderate", stable: true, loading: "per_dumbbell",

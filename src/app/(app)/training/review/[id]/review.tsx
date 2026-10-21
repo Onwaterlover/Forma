@@ -7,9 +7,10 @@ import { useToast } from "@/components/client";
 import { Badge, Button, Card, cx } from "@/components/ui";
 import type { Diff } from "@/engine/compare";
 import type { Trait } from "@/engine/traits";
+import type { Muscle } from "@/engine/types";
 import { useI18n } from "@/i18n/client";
 
-type Option = { id: string; name: string; traits: Trait[]; diffs?: Diff[] };
+type Option = { id: string; name: string; traits: Trait[]; diffs?: Diff[]; primary: Muscle[]; secondary: Muscle[] };
 export type ReviewDay = { key: string; day: string; title: string; slots: { index: number; options: Option[] }[] };
 
 /**
@@ -17,7 +18,7 @@ export type ReviewDay = { key: string; day: string; title: string; slots: { inde
  * options" opens the alternatives. A choice applies to that exercise in every day of the plan.
  */
 export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[] }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const toast = useToast();
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -31,11 +32,20 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
     const pick = choice[rec.id];
     return slot.options.find((o) => o.id === pick) ?? rec;
   };
+  // What the exercise trains, in one short line: "Klatka · także triceps, przód barków".
+  const lower = (s: string) => (locale === "de" ? s : s.toLowerCase());
+  const muscles = (o: Option) => {
+    const main = o.primary.map((m) => t(`muscles.${m}`)).join(", ");
+    return o.secondary.length ? `${main} · ${t("review.also")} ${o.secondary.map((m) => lower(t(`muscles.${m}`))).join(", ")}` : main;
+  };
+  const diffText = (d: Diff) =>
+    d.key !== "focus" ? t(`review.diff.${d.key}`)
+    : t("review.diff.focus", { what: d.emphasis ? t(`review.emphasis.${d.emphasis}`) : (d.muscles ?? []).map((m) => lower(t(`muscles.${m}`))).join(", ") });
   // Recommended: why it is recommended. Alternatives: + / − versus the recommended one.
   const why = (o: Option) => (
     <>
       {o.diffs?.map((d) => (
-        <span key={d.key} className={cx("block", d.good ? "text-accent" : "text-muted")}>{d.key === "similar" ? "" : d.good ? "+ " : "− "}{t(`review.diff.${d.key}`)}</span>
+        <span key={d.key} className={cx("block", d.good ? "text-accent" : "text-muted")}>{d.key === "similar" || d.key === "focus" ? "" : d.good ? "+ " : "− "}{diffText(d)}</span>
       ))}
       {o.traits.length > 0 && <span className="block">{o.traits.map((tr) => t(`review.trait.${tr}`)).join(" · ")}</span>}
     </>
@@ -79,6 +89,7 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
                       <span className="w-5 shrink-0 pt-0.5 text-sm tabular-nums text-muted">{s.index + 1}</span>
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-x-2 font-medium">{c.name}{c.id === rec.id && <Badge tone="accent">{t("review.recommended")}</Badge>}</span>
+                        {c.primary.length > 0 && <span className="block text-xs text-text/80">{muscles(c)}</span>}
                         <span className="block text-xs text-muted">{why(c)}</span>
                       </span>
                       {s.options.length > 1 && <ChevronDown size={18} className={cx("mt-0.5 shrink-0 text-muted transition-transform", expanded && "rotate-180")} aria-hidden />}
@@ -95,6 +106,7 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
                               </span>
                               <span className="min-w-0">
                                 <span className="block text-[15px]">{o.name}{o.id === rec.id && <span className="ml-1.5 text-xs text-accent">{t("review.recommended")}</span>}</span>
+                                {o.primary.length > 0 && <span className="block text-xs text-text/80">{muscles(o)}</span>}
                                 <span className="block text-xs text-muted">{why(o)}</span>
                               </span>
                             </button>

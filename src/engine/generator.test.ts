@@ -110,6 +110,18 @@ describe("workout generator", () => {
     expect(legs.every((e) => e.kind !== "bodyweight")).toBe(true);
   });
 
+  it("matches bodyweight exercises to experience: push-ups for beginners, dips and pull-ups later", () => {
+    const pick = (experience: "beginner" | "advanced") => {
+      const p = profile({ styles: ["bodyweight"], experience, goal: "muscle", sessionsPerWeek: 3, sessionMinutes: 60, week: week({ 0: ["gym"], 2: ["gym"], 4: ["gym"] }), locations: [gym()] });
+      return allExercises(gen(p).plan).filter((e) => e.pattern === "h_push" || e.pattern === "v_pull").map((e) => e.id);
+    };
+    expect(pick("beginner")).toContain("push_up");
+    const advanced = pick("advanced");
+    expect(advanced).not.toContain("push_up");
+    expect(advanced).toContain("dip");
+    expect(advanced).toContain("pull_up");
+  });
+
   it("bodyweight only at home with no equipment at all", () => {
     const p = profile({ sessionsPerWeek: 2, sessionMinutes: 30, week: week({ 1: ["bw"], 4: ["bw"] }), locations: [{ id: "bw", name: "Flat", kind: "home", equipment: [] }] });
     const { plan } = gen(p);

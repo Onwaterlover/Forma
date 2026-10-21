@@ -284,7 +284,7 @@ export const en: Dict = {
   review: {
     title: "Choose your exercises", hint: "The recommended ones are already selected. Change only what you want.", dayOf: "Workout {n} of {total}", recommended: "Recommended",
     everywhere: "A change applies to that exercise in every workout of the plan.", acceptAll: "Accept all", summary: "Your week", confirm: "Confirm plan",
-    trait: { favorite: "your favourite", unilateral: "one side at a time – takes longer", machine: "guided movement, simple technique", bodyweight: "bodyweight", loadable: "easy to add weight", stable: "stable, safe for hard sets", easy: "easy to learn", technical: "needs good technique", compound: "several muscles at once", isolation: "targets one muscle" },
+    trait: { favorite: "your favourite", forAdvanced: "for more experienced lifters", tooEasy: "likely too easy at your level", unilateral: "one side at a time – takes longer", machine: "guided movement, simple technique", bodyweight: "bodyweight", loadable: "easy to add weight", stable: "stable, safe for hard sets", easy: "easy to learn", technical: "needs good technique", compound: "several muscles at once", isolation: "targets one muscle" },
   },
   checkin: {
     title: "Week {range}", stats: "Average {kcal} kcal a day from {days} logged days.",

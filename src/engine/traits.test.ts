@@ -14,4 +14,11 @@ describe("exercise traits for the plan review", () => {
   it("puts the user's favourites first", () => {
     expect(traitsOf(ex("dip"), "favorite")[0]).toBe("favorite");
   });
+
+  it("tells the level: push-ups are too easy for experienced lifters, technical lifts are for later", () => {
+    expect(traitsOf(ex("push_up"), undefined, "advanced")).toContain("tooEasy");
+    expect(traitsOf(ex("push_up"), undefined, "beginner")).not.toContain("tooEasy");
+    const technical = EXERCISES.find((e) => e.skill === 3)!;
+    expect(traitsOf(technical, undefined, "beginner")).toContain("forAdvanced");
+  });
 });

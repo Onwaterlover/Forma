@@ -283,7 +283,7 @@ export const pl = {
   review: {
     title: "Wybierz ćwiczenia", hint: "Polecane są już zaznaczone. Zmień tylko to, co chcesz.", dayOf: "Trening {n} z {total}", recommended: "Polecane",
     everywhere: "Zmiana obowiązuje dla tego ćwiczenia we wszystkich treningach planu.", acceptAll: "Akceptuj wszystko", summary: "Twój tydzień", confirm: "Zatwierdź plan",
-    trait: { favorite: "Twoje ulubione", unilateral: "jedna strona naraz – trwa dłużej", machine: "prowadzony ruch, prosta technika", bodyweight: "z masą ciała", loadable: "łatwo dokładać ciężar", stable: "stabilne, bezpieczne do mocnych serii", easy: "łatwe do nauczenia", technical: "wymaga dobrej techniki", compound: "kilka mięśni naraz", isolation: "celuje w jeden mięsień" },
+    trait: { favorite: "Twoje ulubione", forAdvanced: "dla bardziej zaawansowanych", tooEasy: "przy Twoim stażu raczej za łatwe", unilateral: "jedna strona naraz – trwa dłużej", machine: "prowadzony ruch, prosta technika", bodyweight: "z masą ciała", loadable: "łatwo dokładać ciężar", stable: "stabilne, bezpieczne do mocnych serii", easy: "łatwe do nauczenia", technical: "wymaga dobrej techniki", compound: "kilka mięśni naraz", isolation: "celuje w jeden mięsień" },
   },
   checkin: {
     title: "Tydzień {range}", stats: "Średnio {kcal} kcal dziennie z {days} dni w dzienniku.",

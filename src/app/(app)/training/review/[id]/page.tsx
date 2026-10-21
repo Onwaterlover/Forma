@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui";
 import { substitutes } from "@/engine/select";
+import { compareTo } from "@/engine/compare";
 import { traitsOf } from "@/engine/traits";
 import { DICTS, exName } from "@/i18n";
 import { pageCtx } from "@/lib/ctx";
@@ -20,6 +21,13 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
     const ex = lookup(exId);
     return { id: exId, name: exName(ex, locale, exId), traits: ex ? traitsOf(ex, prefs[exId], profile.experience) : [] };
   };
+  // Alternatives explain themselves by how they differ from the recommended exercise, not by repeating its traits.
+  const alternative = (exId: string, rec: string) => {
+    const ex = lookup(exId);
+    const base = lookup(rec);
+    const level = option(exId).traits.filter((tr) => tr === "favorite" || tr === "forAdvanced" || tr === "tooEasy");
+    return { ...option(exId), traits: level, diffs: ex && base ? compareTo(ex, base) : [] };
+  };
 
   const days: ReviewDay[] = plan.data.sessions.map((s) => {
     const equipment = profile.locations.find((l) => l.id === s.locationId)?.equipment ?? [];
@@ -34,7 +42,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
         const alts = original
           ? substitutes(original, { profile, prefs, library, equipment, excludeIds: inSession }).filter((x) => x.pattern === original.pattern).slice(0, 3)
           : [];
-        return { index, options: [option(e.exerciseId), ...alts.map((x) => option(x.id))] };
+        return { index, options: [option(e.exerciseId), ...alts.map((x) => alternative(x.id, e.exerciseId))] };
       }),
     };
   });

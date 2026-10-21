@@ -5,10 +5,11 @@ import { useState, useTransition } from "react";
 import { applyReview } from "@/app/actions/training";
 import { useToast } from "@/components/client";
 import { Badge, Button, Card, cx } from "@/components/ui";
+import type { Diff } from "@/engine/compare";
 import type { Trait } from "@/engine/traits";
 import { useI18n } from "@/i18n/client";
 
-type Option = { id: string; name: string; traits: Trait[] };
+type Option = { id: string; name: string; traits: Trait[]; diffs?: Diff[] };
 export type ReviewDay = { key: string; day: string; title: string; slots: { index: number; options: Option[] }[] };
 
 /**
@@ -30,7 +31,15 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
     const pick = choice[rec.id];
     return slot.options.find((o) => o.id === pick) ?? rec;
   };
-  const why = (o: Option) => o.traits.map((tr) => t(`review.trait.${tr}`)).join(" · ");
+  // Recommended: why it is recommended. Alternatives: + / − versus the recommended one.
+  const why = (o: Option) => (
+    <>
+      {o.diffs?.map((d) => (
+        <span key={d.key} className={cx("block", d.good ? "text-accent" : "text-muted")}>{d.key === "similar" ? "" : d.good ? "+ " : "− "}{t(`review.diff.${d.key}`)}</span>
+      ))}
+      {o.traits.length > 0 && <span className="block">{o.traits.map((tr) => t(`review.trait.${tr}`)).join(" · ")}</span>}
+    </>
+  );
 
   const confirm = () =>
     start(async () => {

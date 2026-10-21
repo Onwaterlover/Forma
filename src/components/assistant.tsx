@@ -104,8 +104,8 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
       ) : (
         <>
           {/* Opens the camera straight away; the picked photo is sent at once. */}
-          <Button variant="secondary" size="tile" onClick={() => { setMode("photo"); if (on) takePhoto(); else setOpen(true); }}><Camera size={20} aria-hidden />{t("assistant.takePhoto")}</Button>
-          <Button variant="secondary" size="tile" onClick={() => { setMode("chat"); setOpen(true); }}><PenLine size={20} aria-hidden />{t("assistant.describe")}</Button>
+          <Button variant="secondary" size="tile" onClick={() => { setMode("photo"); if (on) takePhoto(); else setOpen(true); }}><Camera size={20} aria-hidden />{t("assistant.takePhotoShort")}</Button>
+          <Button variant="secondary" size="tile" onClick={() => { setMode("chat"); setOpen(true); }}><PenLine size={20} aria-hidden />{t("assistant.describeShort")}</Button>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
             onChange={async (e) => {
               const f = e.target.files?.[0];

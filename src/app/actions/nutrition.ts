@@ -3,8 +3,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { isIsoDate, shiftDate } from "@/lib/ctx";
+import { energyEstimate } from "@/lib/estimate";
 import {
-  addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, saveCustomProduct, undoDelete, saveRecipe, setDayComplete,
+  addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, intakeHistory, saveCustomProduct, undoDelete, saveRecipe, setDayComplete,
   setFavorite, setTarget, updateEntry, type Recipe,
 } from "@/lib/data";
 import { NUTRIENT_KEYS, sanitize, type Nutrients } from "@/nutrition/calc";
@@ -183,4 +184,19 @@ export async function saveTarget(input: { kcal: number | null; protein: number |
   await setTarget(user.id, p.data);
   revalidatePath("/", "layout");
   return {};
+}
+
+/**
+ * Weekly check-in: "was last week's diary complete?". The answer marks those days complete or
+ * incomplete (incomplete days are left out of the estimate), then returns the fresh estimate.
+ */
+export async function answerWeek(weekStart: string, complete: boolean) {
+  const user = await requireUser();
+  if (!isIsoDate(weekStart)) return { error: "invalid" };
+  const days = (await intakeHistory(user.id, weekStart)).filter((d) => d.date <= shiftDate(weekStart, 6) && d.kcal > 0);
+  for (const d of days) await setDayComplete(user.id, d.date, complete);
+  // No revalidation here: the card stays to show the result and refreshes the page when dismissed.
+  if (!complete) return {};
+  const { adaptive, suggestion } = await energyEstimate(user.id);
+  return { adaptive, suggestion };
 }

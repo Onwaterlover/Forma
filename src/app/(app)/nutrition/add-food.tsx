@@ -1,6 +1,6 @@
 "use client";
-import { Plus, Star } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { ChevronLeft, Flame, PackagePlus, Plus, ScanBarcode, Star, Utensils } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { addProductEntry, addQuickEntry, addRecipeEntry, productFor, saveFood, toggleFavorite } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, cx, Field, Input, Notice, Select } from "@/components/ui";
@@ -11,38 +11,54 @@ import { energyMismatch, NUTRIENT_KEYS, scale, type NutrientKey } from "@/nutrit
 import { Scanner } from "./scanner";
 
 export type RecipeLite = { id: string; name: string; isMeal: boolean; servings: number; finalWeight: number; perServingKcal: number | null; totalKcal: number | null };
-type Tab = "search" | "scan" | "recent" | "favorites" | "meals" | "custom" | "quick";
+type View = "search" | "scan" | "meals" | "custom" | "quick";
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
+/** Meal suggested by the time of day when logging for today (the user can change it). */
+export function mealNow(): (typeof MEALS)[number] {
+  const h = new Date().getHours() + new Date().getMinutes() / 60;
+  return h < 11 ? "breakfast" : h < 17 ? "lunch" : h < 22 ? "dinner" : "snack";
+}
+
 export function AddFood({
-  open, onClose, date, recents, favorites, recipes,
+  open, onClose, date, today, view: startView, product, favorites, recipes,
 }: {
   open: boolean;
   onClose: () => void;
   date: string;
-  recents: (Product & { lastAmount: number })[];
+  today: string;
+  /** Where the sheet opens: the search list or straight into the camera scanner. */
+  view: "search" | "scan";
+  /** Open directly on the amount screen for this product (e.g. tapped in "Recent"). */
+  product: Product | null;
   favorites: Product[];
   recipes: RecipeLite[];
 }) {
   const { t } = useI18n();
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>(recents.length ? "recent" : "search");
+  const [view, setView] = useState<View>(startView);
   const [meal, setMeal] = useState<string | null>(null);
   const [picked, setPicked] = useState<Product | null>(null);
   const [barcodeForNew, setBarcodeForNew] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   useEffect(() => {
-    if (!open) {
-      setPicked(null);
+    if (open) {
+      setView(startView);
+      setPicked(product);
       setBarcodeForNew(null);
+      setMeal(date === today ? mealNow() : null);
     }
-  }, [open]);
+  }, [open, startView, product, date, today]);
 
-  const quickAdd = (p: Product, amount: number) =>
+  const add = (p: Product, amount: number, close = false) =>
     start(async () => {
       const r = await addProductEntry({ productId: p.id, amount, date, meal });
       toast({ text: r.error ? t("common.error") : `${t("common.saved")}: ${p.name}` });
+      if (!r.error) {
+        setPicked(null);
+        if (close) onClose();
+      }
     });
 
   const onCode = useCallback(async (code: string, format?: string) => {
@@ -54,57 +70,51 @@ export function AddFood({
     } else if (data.error === "not_found") {
       toast({ text: t("nutrition.notFound") });
       setBarcodeForNew(data.barcode ?? code);
-      setTab("custom");
+      setView("custom");
     } else if (data.error === "invalid_barcode") toast({ text: t("nutrition.invalidBarcode") });
     else toast({ text: data.error === "rate_limited" ? t("nutrition.rateLimited") : t("nutrition.unavailable") });
   }, [t, toast]);
 
-  const tabs: { k: Tab; l: string }[] = [
-    { k: "recent", l: t("nutrition.recent") }, { k: "search", l: t("nutrition.search") }, { k: "scan", l: t("nutrition.scan") },
-    { k: "favorites", l: t("nutrition.favorites") }, { k: "meals", l: t("nutrition.meals") }, { k: "custom", l: t("nutrition.custom") }, { k: "quick", l: t("nutrition.quick") },
-  ];
+  const title = picked ? picked.name : view === "scan" ? t("nutrition.scan") : view === "meals" ? t("nutrition.meals") : view === "custom" ? t("nutrition.custom") : view === "quick" ? t("nutrition.quick") : t("nutrition.add");
 
   return (
-    <Sheet open={open} onClose={onClose} title={picked ? picked.name : t("nutrition.add")} wide>
+    <Sheet open={open} onClose={onClose} title={title} wide>
       {picked ? (
-        <AmountPicker product={picked} pending={pending} onBack={() => setPicked(null)}
-          onAdd={(amount) => start(async () => {
-            const r = await addProductEntry({ productId: picked.id, amount, date, meal });
-            toast({ text: r.error ? t("common.error") : `${t("common.saved")}: ${picked.name}` });
-            if (!r.error) setPicked(null);
-          })} />
+        // From "Recent" on the diary page the sheet only exists for this product, so adding closes it.
+        <AmountPicker product={picked} pending={pending} onBack={() => (product ? onClose() : setPicked(null))} onAdd={(amount) => add(picked, amount, !!product)}
+          meal={<MealSelect meal={meal} onChange={setMeal} />} />
       ) : (
         <div className="space-y-4">
-          <div className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto" role="tablist">
-            {tabs.map((x) => (
-              <button key={x.k} role="tab" type="button" aria-selected={tab === x.k} onClick={() => setTab(x.k)}
-                className={cx("h-9 shrink-0 rounded-full px-3.5 text-sm", tab === x.k ? "bg-accent text-accent-contrast" : "bg-surface-2 hover:bg-border")}>{x.l}</button>
-            ))}
-          </div>
-          <Select aria-label={t("nutrition.mealLabel")} value={meal ?? ""} onChange={(e) => setMeal(e.target.value || null)} className="h-10">
-            <option value="">{t("nutrition.noMeal")}</option>
-            {MEALS.map((m) => <option key={m} value={m}>{t(`nutrition.meal.${m}`)}</option>)}
-          </Select>
-
-          {tab === "search" && <SearchTab onPick={setPicked} />}
-          {tab === "scan" && <Scanner onCode={onCode} />}
-          {(tab === "recent" || tab === "favorites") && (
-            <ProductList
-              items={tab === "recent" ? recents : favorites.map((p) => ({ ...p, lastAmount: p.servings[0]?.amount ?? 100 }))}
-              onPick={setPicked}
-              onQuick={quickAdd}
-              pending={pending}
-            />
+          {view !== "search" && (
+            <button type="button" onClick={() => setView("search")} className="-ml-1 inline-flex items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={16} aria-hidden />{t("nutrition.search")}</button>
           )}
-          {tab === "meals" && <MealsTab recipes={recipes} pending={pending} onLog={(r, amount, mode) => start(async () => {
+          <MealSelect meal={meal} onChange={setMeal} />
+
+          {view === "search" && (
+            <SearchTab onPick={setPicked} onScan={() => setView("scan")}>
+              {favorites.length > 0 && (
+                <section>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.favorites")}</p>
+                  <ProductList items={favorites.map((p) => ({ ...p, lastAmount: p.servings[0]?.amount ?? 100 }))} onPick={setPicked} onQuick={(p, a) => add(p, a)} pending={pending} />
+                </section>
+              )}
+              <div className="grid grid-cols-3 gap-2">
+                {([["meals", Utensils, "nutrition.meals"], ["custom", PackagePlus, "nutrition.custom"], ["quick", Flame, "nutrition.quick"]] as const).map(([v, Icon, label]) => (
+                  <Button key={v} variant="secondary" size="tile" onClick={() => setView(v)}><Icon size={18} aria-hidden />{t(label)}</Button>
+                ))}
+              </div>
+            </SearchTab>
+          )}
+          {view === "scan" && open && <Scanner onCode={onCode} />}
+          {view === "meals" && <MealsTab recipes={recipes} pending={pending} onLog={(r, amount, mode) => start(async () => {
             const res = await addRecipeEntry({ recipeId: r.id, amount, mode, date, meal });
             toast({ text: res.error ? t("common.error") : `${t("common.saved")}: ${r.name}` });
           })} />}
-          {tab === "custom" && <CustomFood barcode={barcodeForNew} onSaved={async (id) => {
+          {view === "custom" && <CustomFood barcode={barcodeForNew} onSaved={async (id) => {
             const prod = await productFor(id);
             if (prod) setPicked(prod);
           }} />}
-          {tab === "quick" && <QuickTab pending={pending} onAdd={(q) => start(async () => {
+          {view === "quick" && <QuickTab pending={pending} onAdd={(q) => start(async () => {
             const r = await addQuickEntry({ ...q, date, meal });
             toast({ text: r.error ? t("common.error") : t("common.saved") });
           })} />}
@@ -112,6 +122,16 @@ export function AddFood({
         </div>
       )}
     </Sheet>
+  );
+}
+
+function MealSelect({ meal, onChange }: { meal: string | null; onChange: (m: string | null) => void }) {
+  const { t } = useI18n();
+  return (
+    <Select aria-label={t("nutrition.mealLabel")} value={meal ?? ""} onChange={(e) => onChange(e.target.value || null)} className="h-10">
+      <option value="">{t("nutrition.noMeal")}</option>
+      {MEALS.map((m) => <option key={m} value={m}>{t(`nutrition.meal.${m}`)}</option>)}
+    </Select>
   );
 }
 
@@ -142,7 +162,7 @@ function ProductList({ items, onPick, onQuick, pending }: { items: (Product & { 
   );
 }
 
-function SearchTab({ onPick }: { onPick: (p: Product) => void }) {
+function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void; onScan: () => void; children: ReactNode }) {
   const { t } = useI18n();
   const [q, setQ] = useState("");
   const [local, setLocal] = useState<Product[]>([]);
@@ -177,7 +197,9 @@ function SearchTab({ onPick }: { onPick: (p: Product) => void }) {
     <div className="space-y-3">
       <form onSubmit={(e) => { e.preventDefault(); if (q.trim().length >= 2) searchRemote(); }} className="flex gap-2">
         <Input type="search" autoFocus placeholder={t("nutrition.search")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("nutrition.search")} />
+        <Button type="button" variant="secondary" onClick={onScan} aria-label={t("nutrition.scan")}><ScanBarcode size={20} aria-hidden /></Button>
       </form>
+      {q.trim().length < 2 && children}
       {q.trim().length >= 2 && (
         <>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.localResults")}</p>
@@ -197,9 +219,9 @@ function SearchTab({ onPick }: { onPick: (p: Product) => void }) {
   );
 }
 
-export function AmountPicker({ product, onAdd, onBack, pending }: { product: Product; onAdd: (amount: number) => void; onBack: () => void; pending: boolean }) {
+export function AmountPicker({ product, onAdd, onBack, pending, meal }: { product: Product & { lastAmount?: number }; onAdd: (amount: number) => void; onBack: () => void; pending: boolean; meal?: ReactNode }) {
   const { t, locale } = useI18n();
-  const [amount, setAmount] = useState<number | null>(product.servings[0]?.amount ?? 100);
+  const [amount, setAmount] = useState<number | null>(product.lastAmount ?? product.servings[0]?.amount ?? 100);
   const [fav, setFav] = useState(!!product.favorite);
   const v = scale(product.nutrients, amount ?? 0);
   const row = (k: NutrientKey, label: string) => (
@@ -220,6 +242,7 @@ export function AmountPicker({ product, onAdd, onBack, pending }: { product: Pro
         </button>
       </div>
       {energyMismatch(product.nutrients) && <Notice tone="warning">{t("nutrition.energyMismatch")}</Notice>}
+      {meal}
       <Field label={`${t("nutrition.amount")} (${product.basis})`} htmlFor="amount">
         <DecimalInput id="amount" value={amount} onChange={setAmount} autoFocus className="h-14 text-2xl font-semibold" />
       </Field>

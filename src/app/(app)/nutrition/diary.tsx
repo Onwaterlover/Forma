@@ -1,16 +1,16 @@
 "use client";
-import { ChevronLeft, ChevronRight, Copy, ListPlus, Plus, Settings2, Utensils } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, ListPlus, Plus, ScanBarcode, Search, Settings2, Utensils } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
-import { copyFromYesterday, editEntry, markDay, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
+import { addProductEntry, copyFromYesterday, editEntry, markDay, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Button, Card, cx, Empty, Input, Meter, Select } from "@/components/ui";
 import { fmt, fmtDate } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { DiaryEntry, Product } from "@/lib/data";
 import type { Nutrients, NutrientKey } from "@/nutrition/calc";
-import { AddFood, type RecipeLite } from "./add-food";
+import { AddFood, mealNow, type RecipeLite } from "./add-food";
 
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
@@ -38,7 +38,7 @@ export function Diary({
   const { t, locale } = useI18n();
   const toast = useToast();
   const router = useRouter();
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<null | { view: "search" | "scan"; product: (Product & { lastAmount?: number }) | null }>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   const [amount, setAmount] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -97,8 +97,10 @@ export function Diary({
         </div>
       </Card>
 
-      <div className={cx("mb-2 grid gap-2", assistant ? "grid-cols-3" : "grid-cols-1")}>
-        <Button size={assistant ? "tile" : "md"} onClick={() => setAdding(true)}><Plus size={20} aria-hidden />{t(assistant ? "nutrition.addShort" : "nutrition.add")}</Button>
+      {/* Four ways to log, one tap each: search, barcode, photo, describe (the last two only with AI). */}
+      <div className={cx("mb-2 grid gap-2", assistant ? "grid-cols-4" : "grid-cols-2")}>
+        <Button size="tile" onClick={() => setAdding({ view: "search", product: null })}><Search size={20} aria-hidden />{t("nutrition.searchShort")}</Button>
+        <Button size="tile" variant="secondary" onClick={() => setAdding({ view: "scan", product: null })}><ScanBarcode size={20} aria-hidden />{t("nutrition.scan")}</Button>
         {assistant}
       </div>
       <div className="mb-4 flex flex-wrap gap-1">
@@ -138,6 +140,31 @@ export function Diary({
         </div>
       )}
 
+      {recents.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.recent")}</h2>
+          <ul className="divide-y divide-border rounded-[var(--radius-card)] border border-border bg-surface px-3">
+            {recents.slice(0, 8).map((p) => (
+              <li key={p.id} className="flex items-center gap-2">
+                <button type="button" onClick={() => setAdding({ view: "search", product: p })} className="min-w-0 flex-1 py-2.5 text-left">
+                  <span className="block truncate text-[15px] font-medium">{p.name}</span>
+                  <span className="block text-xs text-muted">{fmt(locale, p.lastAmount)} {p.basis}{p.nutrients.kcal !== null ? ` · ${fmt(locale, (p.nutrients.kcal * p.lastAmount) / 100)} kcal` : ""}</span>
+                </button>
+                <button type="button" disabled={pending} aria-label={`${t("common.add")} ${p.name}`}
+                  onClick={() => start(async () => {
+                    const r = await addProductEntry({ productId: p.id, amount: p.lastAmount, date, meal: date === today ? mealNow() : null });
+                    toast({ text: r.error ? t("common.error") : `${t("common.saved")}: ${p.name}` });
+                    router.refresh();
+                  })}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent hover:bg-accent hover:text-accent-contrast">
+                  <Plus size={20} aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {entries.length > 0 && (
         <div className="mt-6">
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -154,7 +181,7 @@ export function Diary({
         </div>
       )}
 
-      <AddFood open={adding} onClose={() => { setAdding(false); router.refresh(); }} date={date} recents={recents} favorites={favorites} recipes={recipes} />
+      <AddFood open={!!adding} onClose={() => { setAdding(null); router.refresh(); }} date={date} today={today} view={adding?.view ?? "search"} product={adding?.product ?? null} favorites={favorites} recipes={recipes} />
 
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.name ?? ""}>
         {editing && (

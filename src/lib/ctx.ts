@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { isLocale, translator, type Locale } from "@/i18n";
 import { currentUser, requireUser } from "./auth";
 import { getSettings } from "./data";
@@ -9,12 +10,12 @@ export async function guestLocale(): Promise<Locale> {
   return isLocale(c) ? c : "pl";
 }
 
-/** Everything a signed-in page needs: user, settings, locale and translator. */
-export async function pageCtx() {
+/** Everything a signed-in page needs: user, settings, locale and translator. Cached per request (layout + page share it). */
+export const pageCtx = cache(async () => {
   const user = await requireUser();
   const locale: Locale = isLocale(user.locale) ? user.locale : "pl";
   return { user, locale, t: translator(locale), settings: await getSettings(user.id) };
-}
+});
 
 export async function maybeUserLocale(): Promise<{ locale: Locale; theme: string }> {
   const u = await currentUser();

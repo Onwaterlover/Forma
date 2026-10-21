@@ -3,6 +3,7 @@ import { Logo } from "@/components/logo";
 import { I18nProvider } from "@/i18n/client";
 import { pageCtx } from "@/lib/ctx";
 import { Nav } from "./nav";
+import { NavPendingProvider, PendingMain } from "./nav-pending";
 import { SwRegister } from "./sw-register";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -17,16 +18,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <I18nProvider locale={locale}>
       <ToastProvider>
+        <NavPendingProvider>
         <div className="md:flex">
           <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-border px-4 py-6 md:flex print:hidden">
             <Logo className="mb-8 px-2" />
             <Nav items={items} variant="side" />
           </aside>
-          <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-28 pt-5 sm:px-6 md:pb-12 md:pt-8 print:max-w-none print:p-0">{children}</main>
+          <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-28 pt-5 sm:px-6 md:pb-12 md:pt-8 print:max-w-none print:p-0"><PendingMain>{children}</PendingMain></main>
         </div>
         <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 backdrop-blur md:hidden print:hidden" aria-label="Main">
           <Nav items={items} variant="bottom" />
         </nav>
+        </NavPendingProvider>
         <SwRegister />
       </ToastProvider>
     </I18nProvider>

@@ -11,7 +11,7 @@ const VARIANT: Record<Variant, string> = {
   ghost: "bg-transparent text-text hover:bg-surface-2",
   danger: "bg-danger-soft text-danger hover:brightness-95",
 };
-const SIZE = { sm: "h-9 px-3 text-sm", md: "h-11 px-4 text-[15px]", lg: "h-12 px-5 text-base", tile: "h-16 flex-col gap-1! px-2 text-sm" };
+const SIZE = { sm: "h-9 px-3 text-sm", md: "h-11 px-4 text-[15px]", lg: "h-12 px-5 text-base", tile: "h-14 flex-col gap-0.5! px-1 text-xs" };
 
 export function buttonClass(variant: Variant = "primary", size: keyof typeof SIZE = "md", full = false) {
   return cx(

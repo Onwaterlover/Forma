@@ -88,8 +88,11 @@ export type AdaptiveResult =
       weighIns: number;
     };
 
+/** Days of diary and weigh-ins the estimate looks at (long enough for people who weigh in only weekly). */
+export const ESTIMATE_DAYS = 42;
+
 export function adaptiveTdee(intake: IntakeDay[], weights: WeighIn[], opts: { windowDays?: number; today?: string } = {}): AdaptiveResult {
-  const window = opts.windowDays ?? 28;
+  const window = opts.windowDays ?? ESTIMATE_DAYS;
   const today = opts.today ?? new Date().toISOString().slice(0, 10);
   const inWindow = (d: string) => days(d, today) >= 0 && days(d, today) < window;
   const reasons: string[] = [];
@@ -105,7 +108,8 @@ export function adaptiveTdee(intake: IntakeDay[], weights: WeighIn[], opts: { wi
   const span = w.length >= 2 ? days(w[0]!.date, w[w.length - 1]!.date) : 0;
 
   if (logged.length < 10) reasons.push("too_few_logged_days");
-  if (w.length < 6) reasons.push("too_few_weigh_ins");
+  // Four weigh-ins over at least two weeks is the minimum; the interval below shows how sure the estimate is.
+  if (w.length < 4) reasons.push("too_few_weigh_ins");
   if (span < 14) reasons.push("weigh_in_span_too_short");
   if (reasons.length) return { status: "insufficient", reasons };
 
@@ -155,4 +159,13 @@ export function suggestTarget(r: AdaptiveResult, goal: WeightGoal, currentTarget
   if (onTrack) return { kind: "none", reason: "on_track" };
   if (currentTarget !== null && Math.abs(target - currentTarget) < 100) return { kind: "none", reason: "change_too_small" };
   return { kind: "change", kcal: target, reason: `goal_${goal}` };
+}
+
+/**
+ * Daily protein target: 1.8 g/kg while losing or recomposing (helps keep muscle in a deficit),
+ * 1.6 g/kg otherwise, rounded to 5 g. Both sit in the range supported for people who lift.
+ */
+export function proteinTarget(bodyweightKg: number, goal: WeightGoal): number {
+  const perKg = goal === "lose" || goal === "recomp" ? 1.8 : 1.6;
+  return Math.round((bodyweightKg * perKg) / 5) * 5;
 }

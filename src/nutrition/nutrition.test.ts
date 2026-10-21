@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { gtinChecksumOk, normalizeBarcode, upcEToUpcA } from "./barcode";
 import { emptyNutrients, energyMismatch, parseDecimal, recipe, sanitize, scale, sum, type Nutrients } from "./calc";
-import { adaptiveTdee, initialEstimate, suggestTarget, weightTrend, type IntakeDay, type WeighIn } from "./energy";
+import { adaptiveTdee, initialEstimate, proteinTarget, suggestTarget, weightTrend, type IntakeDay, type WeighIn } from "./energy";
 import { mapOffProduct } from "./off";
 
 const n = (o: Partial<Nutrients>): Nutrients => ({ ...emptyNutrients(), ...o });
@@ -146,6 +146,24 @@ describe("bodyweight trend and adaptive expenditure", () => {
     expect(r.tdee).toBeGreaterThan(2300);
     expect(r.tdee).toBeLessThan(2650);
     expect(r.low).toBeLessThan(r.tdee);
+  });
+
+  it("works with weekly weigh-ins over five weeks", () => {
+    const ds = dates(35);
+    const intake: IntakeDay[] = ds.map((date) => ({ date, kcal: 2000, complete: true }));
+    const weights: WeighIn[] = ds.filter((_, i) => i % 7 === 0).map((date, i) => ({ date, kg: 82 - i * 0.4 }));
+    const r = adaptiveTdee(intake, weights, { today: "2026-10-20" });
+    expect(r.status).not.toBe("insufficient");
+    if (r.status === "insufficient") return;
+    expect(r.weighIns).toBe(5);
+    expect(r.kgPerWeek).toBeCloseTo(-0.4, 1);
+  });
+
+  it("sets protein at 1.8 g/kg in a deficit and 1.6 g/kg otherwise", () => {
+    expect(proteinTarget(80, "lose")).toBe(145);
+    expect(proteinTarget(80, "recomp")).toBe(145);
+    expect(proteinTarget(80, "maintain")).toBe(130);
+    expect(proteinTarget(62, "gain")).toBe(100);
   });
 
   it("ignores days marked incomplete and implausibly low days", () => {

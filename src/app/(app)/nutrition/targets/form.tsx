@@ -6,7 +6,7 @@ import { Choices, DecimalInput, useToast } from "@/components/client";
 import { Button, Card, Field, Notice, Select } from "@/components/ui";
 import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
-import { initialEstimate, KCAL_PER_KG, type AdaptiveResult, type Sex, type TargetSuggestion, type WeightGoal } from "@/nutrition/energy";
+import { initialEstimate, KCAL_PER_KG, proteinTarget, type AdaptiveResult, type Sex, type TargetSuggestion, type WeightGoal } from "@/nutrition/energy";
 
 const GOALS: WeightGoal[] = ["maintain", "lose", "gain", "recomp"];
 const ACTIVITY = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 } as const;
@@ -37,6 +37,7 @@ export function TargetsForm({
   const suggestedFromEstimate = result
     ? Math.round((goal === "lose" ? result.tdee - Math.min(500, ((est.weight ?? 70) * 0.005 * KCAL_PER_KG) / 7) : goal === "gain" ? result.tdee + 200 : result.tdee) / 50) * 50
     : null;
+  const proteinSuggestion = est.weight && est.weight > 30 && est.weight < 300 ? proteinTarget(est.weight, goal) : lastKg ? proteinTarget(lastKg, goal) : null;
 
   const save = (k: number | null, p: number | null, source: "manual" | "estimate" | "suggestion") =>
     start(async () => {
@@ -79,8 +80,9 @@ export function TargetsForm({
               <Notice tone="accent">
                 <p className="font-medium">{t("targets.result", { tdee: fmt(locale, result.tdee), low: fmt(locale, result.low), high: fmt(locale, result.high) })}</p>
                 {suggestedFromEstimate && <p className="mt-1">{t("targets.suggested", { kcal: fmt(locale, suggestedFromEstimate) })}</p>}
+                {proteinSuggestion && <p className="mt-1">{t("targets.proteinSuggested", { g: proteinSuggestion, perKg: fmt(locale, goal === "lose" || goal === "recomp" ? 1.8 : 1.6, 1) })}</p>}
                 <p className="mt-2 text-xs text-muted">{t("targets.disclaimer")}</p>
-                {suggestedFromEstimate && <Button size="sm" className="mt-3" disabled={pending} onClick={() => { setKcal(suggestedFromEstimate); save(suggestedFromEstimate, protein, "estimate"); }}>{t("common.apply")}</Button>}
+                {suggestedFromEstimate && <Button size="sm" className="mt-3" disabled={pending} onClick={() => { setKcal(suggestedFromEstimate); setProtein(proteinSuggestion); save(suggestedFromEstimate, proteinSuggestion ?? protein, "estimate"); }}>{t("common.apply")}</Button>}
               </Notice>
             )}
           </Card>
@@ -88,7 +90,7 @@ export function TargetsForm({
           <Card className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label={t("targets.kcal")} htmlFor="kcal"><DecimalInput id="kcal" value={kcal} onChange={setKcal} /></Field>
-              <Field label={t("targets.protein")} htmlFor="protein" hint={t("targets.proteinHint")}><DecimalInput id="protein" value={protein} onChange={setProtein} /></Field>
+              <Field label={t("targets.protein")} htmlFor="protein" hint={proteinSuggestion ? t("targets.proteinSuggested", { g: proteinSuggestion, perKg: fmt(locale, goal === "lose" || goal === "recomp" ? 1.8 : 1.6, 1) }) : t("targets.proteinHint")}><DecimalInput id="protein" value={protein} onChange={setProtein} /></Field>
             </div>
             <Button disabled={pending || !kcal || kcal < 800} onClick={() => save(kcal, protein, "manual")}>{t("common.save")}</Button>
             <p className="text-xs text-muted">{t("targets.exerciseNote")}</p>
@@ -115,7 +117,7 @@ export function TargetsForm({
             <Notice tone="accent" className="mt-2">
               <p>{t(`targets.reason.${suggestion.reason}`)} {t("targets.suggested", { kcal: fmt(locale, suggestion.kcal) })}</p>
               <div className="mt-3 flex gap-2">
-                <Button size="sm" disabled={pending} onClick={() => save(suggestion.kcal, target?.protein ?? null, "suggestion")}>{t("common.accept")}</Button>
+                <Button size="sm" disabled={pending} onClick={() => save(suggestion.kcal, target?.protein ?? proteinSuggestion, "suggestion")}>{t("common.accept")}</Button>
                 <Button size="sm" variant="ghost" onClick={() => setDismissed(true)}>{t("common.reject")}</Button>
               </div>
             </Notice>

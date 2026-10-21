@@ -64,13 +64,13 @@ export const de: Dict = {
     low_bar: "Niedrige Stange", rings: "Turnringe", bands: "Widerstandsbänder", cable: "Kabelzug", smith: "Multipresse", leg_press: "Beinpresse",
     leg_curl: "Beinbeuger-Maschine", leg_extension: "Beinstrecker-Maschine", chest_press: "Brustpresse",
     shoulder_press_machine: "Schulterpresse", row_machine: "Rudermaschine", pec_deck: "Butterfly-Maschine", calf_machine: "Wadenmaschine",
-    assisted_pullup: "Klimmzugmaschine mit Unterstützung", back_extension: "Rückenstrecker-Bank", cardio_machine: "Rad / Rudergerät / Laufband", jump_rope: "Springseil",
+    assisted_pullup: "Klimmzugmaschine mit Unterstützung", glute_machines: "Gesäßmaschinen (Hip Thrust, Abduktoren, Adduktoren)", back_extension: "Rückenstrecker-Bank", cardio_machine: "Rad / Rudergerät / Laufband", jump_rope: "Springseil",
   },
   kinds: { barbell: "Langhanteln", dumbbell: "Kurzhanteln", kettlebell: "Kettlebells", machine: "Maschinen", cable: "Kabelzüge", smith: "Multipresse", bodyweight: "Körpergewicht", band: "Bänder", cardio: "Cardio" },
   muscles: {
     chest: "Brust", lats: "Latissimus", upper_back: "Oberer Rücken", front_delts: "Vordere Schulter", side_delts: "Seitliche Schulter",
     rear_delts: "Hintere Schulter", biceps: "Bizeps", triceps: "Trizeps", forearms: "Unterarme", quads: "Quadrizeps", hamstrings: "Beinbeuger",
-    glutes: "Gesäß", calves: "Waden", abs: "Bauch", lower_back: "Unterer Rücken",
+    glutes: "Gesäß", adductors: "Adduktoren", calves: "Waden", abs: "Bauch", lower_back: "Unterer Rücken",
   },
   patterns: {
     squat: "Kniebeuge", hinge: "Hüftbeugung", single_leg: "einbeinige Übung", knee_ext: "Kniestreckung", knee_flex: "Kniebeugung",
@@ -200,7 +200,7 @@ export const de: Dict = {
     pdfNote: "PDFs und Bilder brauchen den optionalen KI-Assistenten (nicht eingerichtet). Kopiere den Text und füge ihn hier ein oder gib den Plan manuell ein.",
     parse: "Erkennen", review: "Prüfe, was wir erkannt haben", unparsed: "Diese Zeilen wurden nicht erkannt", matched: "zugeordnet", unmatched: "nicht gefunden — wird eigene Übung",
     chooseMatch: "Übung zuordnen", saveAsIs: "Genau so speichern", analyze: "Plan prüfen", optimize: "An meine Zeit und Ausrüstung anpassen",
-    noSets: "Keine Sätze in den Notizen – übliche eingesetzt, bei Bedarf anpassen.", found: "Erkannte Übungen: {n}", nothing: "Keine Übungen mit Sätzen (z. B. 3x10) gefunden.", pattern: "Bewegungsart (für die Zeitschätzung)", importedName: "Importierter Plan",
+    fromNotes: "in den Notizen: {name}", weight: "Gewicht (kg)", ownExercise: "Eigene Übung: {name}", similar: "Ähnlich", allExercises: "Alle Übungen", noSets: "Keine Sätze in den Notizen – übliche eingesetzt, bei Bedarf anpassen.", found: "Erkannte Übungen: {n}", nothing: "Keine Übungen mit Sätzen (z. B. 3x10) gefunden.", pattern: "Bewegungsart (für die Zeitschätzung)", importedName: "Importierter Plan",
     analysisTitle: "Planprüfung", optimizeNote: "Es entsteht eine neue Version. Das Original bleibt im Versionsverlauf.", noProfile: "Beantworte zuerst ein paar Fragen zu Zeit und Ausrüstung.",
   },
   nutrition: {

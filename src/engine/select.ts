@@ -85,7 +85,7 @@ export function score(ex: Exercise, priority: 1 | 2 | 3, ctx: SelectContext): nu
 export type PickResult = { exercise: Exercise; disliked: boolean } | { exercise: null; reason: "pain" | "none" };
 
 export function pick(pattern: Pattern, priority: 1 | 2 | 3, ctx: SelectContext): PickResult {
-  const candidates = ctx.library.filter((e) => e.pattern === pattern && !ctx.usedInSession.has(e.id) && isAllowed(e, ctx));
+  const candidates = ctx.library.filter((e) => e.pattern === pattern && !e.accessoryOnly && !ctx.usedInSession.has(e.id) && isAllowed(e, ctx));
   if (candidates.length === 0) {
     const painOnly = ctx.library.some(
       (e) => e.pattern === pattern && isPossible(e, ctx.equipment, ctx.profile.excludedKinds) && painBlocked(e, ctx.prefs, ctx.library),
@@ -113,7 +113,8 @@ export function substitutes(
   const full: SelectContext = { ...ctx, usedInSession: ctx.excludeIds ?? new Set(), usedInWeek: new Map() };
   return ctx.library
     .filter((e) => e.id !== original.id && !full.usedInSession.has(e.id))
-    .filter((e) => e.pattern === original.pattern || e.primary.some((m) => original.primary.includes(m)))
+    // Accessory-only lifts (abduction/adduction) are offered only for the same muscle, not the whole pattern.
+    .filter((e) => (e.pattern === original.pattern && !e.accessoryOnly) || e.primary.some((m) => original.primary.includes(m)))
     .filter((e) => e.pattern !== "conditioning" || original.pattern === "conditioning")
     .filter((e) => isAllowed(e, full))
     .map((e) => ({ e, s: (e.pattern === original.pattern ? 10 : 0) + score(e, 2, full) }))

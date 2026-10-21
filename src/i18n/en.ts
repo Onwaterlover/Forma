@@ -64,13 +64,13 @@ export const en: Dict = {
     low_bar: "Low bar", rings: "Gymnastic rings", bands: "Resistance bands", cable: "Cable station", smith: "Smith machine", leg_press: "Leg press",
     leg_curl: "Leg curl machine", leg_extension: "Leg extension machine", chest_press: "Chest press machine",
     shoulder_press_machine: "Shoulder press machine", row_machine: "Row machine", pec_deck: "Pec deck (fly machine)", calf_machine: "Calf machine",
-    assisted_pullup: "Assisted pull-up machine", back_extension: "Back extension bench", cardio_machine: "Bike / rower / treadmill", jump_rope: "Jump rope",
+    assisted_pullup: "Assisted pull-up machine", glute_machines: "Glute machines (hip thrust, abduction, adduction)", back_extension: "Back extension bench", cardio_machine: "Bike / rower / treadmill", jump_rope: "Jump rope",
   },
   kinds: { barbell: "Barbells", dumbbell: "Dumbbells", kettlebell: "Kettlebells", machine: "Machines", cable: "Cables", smith: "Smith machine", bodyweight: "Bodyweight", band: "Bands", cardio: "Cardio" },
   muscles: {
     chest: "Chest", lats: "Lats", upper_back: "Upper back", front_delts: "Front delts", side_delts: "Side delts",
     rear_delts: "Rear delts", biceps: "Biceps", triceps: "Triceps", forearms: "Forearms", quads: "Quads", hamstrings: "Hamstrings",
-    glutes: "Glutes", calves: "Calves", abs: "Abs", lower_back: "Lower back",
+    glutes: "Glutes", adductors: "Adductors", calves: "Calves", abs: "Abs", lower_back: "Lower back",
   },
   patterns: {
     squat: "squat", hinge: "hip hinge", single_leg: "single-leg exercise", knee_ext: "knee extension", knee_flex: "knee flexion",
@@ -200,7 +200,7 @@ export const en: Dict = {
     pdfNote: "PDFs and images need the optional AI assistant (not configured). Copy the text and paste it here, or enter the plan manually.",
     parse: "Recognise", review: "Check what we recognised", unparsed: "These lines weren't recognised", matched: "matched", unmatched: "not found — will become a custom exercise",
     chooseMatch: "Match to an exercise", saveAsIs: "Save exactly as imported", analyze: "Analyse my plan", optimize: "Fit it to my time and equipment",
-    noSets: "No sets in your notes – typical ones filled in, adjust if you do it differently.", found: "Exercises recognised: {n}", nothing: "No exercises with sets (e.g. 3x10) found.", pattern: "Movement type (for time estimates)", importedName: "Imported plan",
+    fromNotes: "in your notes: {name}", weight: "Weight (kg)", ownExercise: "Own exercise: {name}", similar: "Similar", allExercises: "All exercises", noSets: "No sets in your notes – typical ones filled in, adjust if you do it differently.", found: "Exercises recognised: {n}", nothing: "No exercises with sets (e.g. 3x10) found.", pattern: "Movement type (for time estimates)", importedName: "Imported plan",
     analysisTitle: "Plan analysis", optimizeNote: "This creates a new version. The original stays in the version history.", noProfile: "First answer a few questions about your time and equipment.",
   },
   nutrition: {

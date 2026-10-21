@@ -28,7 +28,7 @@ const REGIONS = ["chest", "back", "shoulders", "arms", "legs", "glutes", "core",
 type Region = (typeof REGIONS)[number];
 const REGION_MUSCLES: Record<Exclude<Region, "conditioning">, Muscle[]> = {
   chest: ["chest"], back: ["lats", "upper_back", "lower_back"], shoulders: ["front_delts", "side_delts", "rear_delts"],
-  arms: ["biceps", "triceps", "forearms"], legs: ["quads", "hamstrings", "calves"], glutes: ["glutes"], core: ["abs"],
+  arms: ["biceps", "triceps", "forearms"], legs: ["quads", "hamstrings", "adductors", "calves"], glutes: ["glutes"], core: ["abs"],
 };
 const regionsOf = (e: Exercise): Region[] =>
   e.pattern === "conditioning"

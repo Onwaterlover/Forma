@@ -173,6 +173,24 @@ export const EXERCISES: Exercise[] = [
     skill: 2, fatigue: "moderate", stable: true, loading: "total",
     cuePl: "Łopatki na ławce, broda lekko przy klatce, wyprost bioder bez przeprostu lędźwi.", cueEn: "Shoulder blades on the bench, chin tucked, extend the hips without arching.",
   }),
+  ex("hip_thrust_machine", {
+    pl: "Hip thrust na maszynie", en: "Machine hip thrust", de: "Hip Thrust an der Maschine", aliases: ["hip thrust maszyna", "hip thrust na maszynie", "glute drive", "machine hip thrust"],
+    primary: ["glutes"], secondary: ["hamstrings"], pattern: "hip_ext", equipment: ["glute_machines"], kind: "machine", machineType: "plate_loaded",
+    mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "total",
+    cuePl: "Pas na biodrach, broda lekko przy klatce, pauza na górze z napiętymi pośladkami.", cueEn: "Pad on the hips, chin tucked, pause at the top squeezing the glutes.",
+  }),
+  ex("hip_abduction_machine", {
+    pl: "Odwodzenie nóg na maszynie", en: "Hip abduction machine", de: "Abduktorenmaschine", aliases: ["odwodzenie nóg", "odwodzenie", "abduktory", "abduction", "abduktoren"],
+    primary: ["glutes"], secondary: [], pattern: "hip_ext", equipment: ["glute_machines"], kind: "machine", machineType: "selectorized",
+    mechanics: "isolation", skill: 1, fatigue: "low", stable: true, loading: "total", smallMuscle: true, accessoryOnly: true,
+    cuePl: "Plecy przy oparciu, rozsuwaj nogi spokojnie, bez odbijania.", cueEn: "Back against the pad, push the knees apart smoothly, no bouncing.",
+  }),
+  ex("hip_adduction_machine", {
+    pl: "Przywodzenie nóg na maszynie", en: "Hip adduction machine", de: "Adduktorenmaschine", aliases: ["przywodzenie nóg", "przywodzenie", "przywodziciele", "adduction", "adduktoren"],
+    primary: ["adductors"], secondary: [], pattern: "hip_ext", equipment: ["glute_machines"], kind: "machine", machineType: "selectorized",
+    mechanics: "isolation", skill: 1, fatigue: "low", stable: true, loading: "total", smallMuscle: true, accessoryOnly: true,
+    cuePl: "Ściągaj nogi do środka kontrolowanie, nie puszczaj ciężaru w rozciągnięciu.", cueEn: "Bring the legs together under control; don't let the weight drop in the stretch.",
+  }),
   ex("glute_bridge", {
     pl: "Most biodrowy", en: "Glute bridge", de: "Glute Bridge",
     primary: ["glutes"], secondary: ["hamstrings"], pattern: "hip_ext", equipment: [], kind: "bodyweight", mechanics: "isolation", skill: 1,
@@ -329,7 +347,7 @@ export const EXERCISES: Exercise[] = [
   }),
   ex("seated_cable_row", {
     grips: ["narrow", "wide"],
-    pl: "Przyciąganie linki siedząc", en: "Seated cable row", de: "Rudern am Kabelzug sitzend", aliases: ["cable row"],
+    pl: "Przyciąganie linki siedząc", en: "Seated cable row", de: "Rudern am Kabelzug sitzend", aliases: ["cable row", "wiosłowanie siedząc na wyciągu", "wiosłowanie na wyciągu", "wiosłowanie siedząc"],
     primary: ["upper_back", "lats"], secondary: ["rear_delts", "biceps"], pattern: "h_pull", equipment: ["cable"], kind: "cable",
     mechanics: "compound", skill: 1, fatigue: "low", stable: true, loading: "total",
     cuePl: "Tułów stabilny, przyciągaj do brzucha, pełne wyprostowanie ramion.", cueEn: "Torso steady, pull to the stomach, full reach forward.",

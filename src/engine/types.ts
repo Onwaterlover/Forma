@@ -5,7 +5,7 @@ export type Weekday = (typeof WEEKDAYS)[number];
 
 export const MUSCLES = [
   "chest", "lats", "upper_back", "front_delts", "side_delts", "rear_delts",
-  "biceps", "triceps", "forearms", "quads", "hamstrings", "glutes", "calves", "abs", "lower_back",
+  "biceps", "triceps", "forearms", "quads", "hamstrings", "glutes", "adductors", "calves", "abs", "lower_back",
 ] as const;
 export type Muscle = (typeof MUSCLES)[number];
 
@@ -20,7 +20,7 @@ export const EQUIPMENT = [
   "barbell", "plates", "adjustable_dumbbells", "fixed_dumbbells", "kettlebell", "bench", "incline_bench",
   "rack", "pullup_bar", "dip_bars", "low_bar", "rings", "bands", "cable", "smith",
   "leg_press", "leg_curl", "leg_extension", "chest_press", "shoulder_press_machine", "row_machine",
-  "pec_deck", "calf_machine", "assisted_pullup", "back_extension", "cardio_machine", "jump_rope",
+  "pec_deck", "calf_machine", "assisted_pullup", "back_extension", "glute_machines", "cardio_machine", "jump_rope",
 ] as const;
 export type Equipment = (typeof EQUIPMENT)[number];
 /** Virtual capability satisfied by either dumbbell type. */
@@ -73,6 +73,8 @@ export interface Exercise {
   cue: Partial<Record<Lang, string>>;
   safety?: Partial<Record<Lang, string>>;
   custom?: boolean;
+  /** Never picked by the generator (e.g. abduction/adduction machines); still available to import, swap or add. */
+  accessoryOnly?: boolean;
 }
 
 export type Goal = "muscle" | "strength" | "health" | "conditioning" | "sport" | "start" | "unsure";
@@ -155,6 +157,8 @@ export interface PlannedExercise {
   superset?: number;
   grip?: Grip;
   note?: string;
+  /** Working weight from an imported plan: prefills the first workout until there is history. */
+  startKg?: number;
 }
 
 export interface PlannedSession {

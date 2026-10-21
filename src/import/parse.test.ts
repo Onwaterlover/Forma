@@ -81,4 +81,43 @@ Martwy ciąg 3x5`, EXERCISES);
     expect(d.sessions[1]!.exercises[0]!.noSets).toBeUndefined();
     expect(d.unparsed).toEqual(["Kupić nowe buty."]);
   });
+
+  it("reads a WhatsApp-style plan: *starred* / CAPS day names, (muscle notes), weights, glute machines", () => {
+    const d = parseImport(`GÓRA** (2× w tygodniu)
+1. Ściąganie drążka wyciągu górnego do klatki (plecy: najszerszy) 28.75 kg
+2. Wiosłowanie siedząc na wyciągu (plecy: środek pleców, łopatki) 26,25 kg
+3. Wyciskanie na maszynie na klatkę (klatka, trochę triceps i przód barków) 25kg
+4. Unoszenie hantli bokiem (barki: boczny akton) 4kg
+5. Prostowanie ramion na wyciągu (triceps) 8.75kg 
+6. Uginanie ramion z hantlami (biceps) 6kg
+
+*POŚLADKI A*
+1. Hip thrust (pośladki)
+2. Rumuński martwy ciąg (pośladki + tył uda)
+3. Suwnica (przód uda + pośladki)
+4. Odwodzenie nóg na maszynie (pośladki: boczna część)
+5. Przywodzenie nóg na maszynie (wewnętrzna strona uda)
+
+*NOGI + POŚLADKI B*
+1. Suwnica (przód uda + pośladki) 70kg 
+2. Uginanie nóg siedząc/leżąc (tył uda) 20kg 
+3. Prostowanie nóg na maszynie (przód uda) 25kg
+4. Hip thrust (pośladki) 60kg
+5. Odwodzenie nóg na maszynie (pośladki: boczna część)
+6. Przywodzenie nóg na maszynie (wewnętrzna strona uda)
+7. Brzuch (mięśnie brzucha)
+
+*TYDZIEŃ (4 treningi)*
+Góra → Pośladki A → wolne → Góra → Nogi + pośladki B → wolne`, EXERCISES);
+    expect(d.sessions.map((s) => s.name)).toEqual(["Góra", "Pośladki A", "Nogi + pośladki B"]);
+    expect(d.sessions.map((s) => s.exercises.length)).toEqual([6, 5, 7]);
+    const [up, a, b] = d.sessions;
+    expect(up!.exercises.map((e) => e.match?.exerciseId)).toEqual(["lat_pulldown", "seated_cable_row", "machine_chest_press", "db_lateral_raise", "cable_pushdown", "db_curl"]);
+    expect(up!.exercises[0]!.weightKg).toBe(28.75);
+    expect(up!.exercises[1]!.weightKg).toBe(26.25);
+    expect(a!.exercises[1]!.match?.exerciseId).toMatch(/^romanian_deadlift/);
+    expect(a!.exercises.slice(3).map((e) => e.match?.exerciseId)).toEqual(["hip_abduction_machine", "hip_adduction_machine"]);
+    expect(b!.exercises[3]).toMatchObject({ weightKg: 60, match: { exerciseId: "hip_thrust_bb" } });
+    expect(d.unparsed).toHaveLength(1);
+  });
 });

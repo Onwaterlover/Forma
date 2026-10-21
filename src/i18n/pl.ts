@@ -63,13 +63,13 @@ export const pl = {
     low_bar: "Niski drążek", rings: "Kółka gimnastyczne", bands: "Gumy oporowe", cable: "Wyciąg", smith: "Suwnica Smitha", leg_press: "Suwnica do nóg",
     leg_curl: "Maszyna do uginania nóg", leg_extension: "Maszyna do prostowania nóg", chest_press: "Maszyna do wyciskania (klatka)",
     shoulder_press_machine: "Maszyna do wyciskania (barki)", row_machine: "Maszyna do wiosłowania", pec_deck: "Maszyna do rozpiętek (butterfly)", calf_machine: "Maszyna do łydek",
-    assisted_pullup: "Maszyna do podciągania z odciążeniem", back_extension: "Ławka rzymska", cardio_machine: "Rower / wioślarz / bieżnia", jump_rope: "Skakanka",
+    assisted_pullup: "Maszyna do podciągania z odciążeniem", glute_machines: "Maszyny do pośladków (hip thrust, odwodzenie, przywodzenie)", back_extension: "Ławka rzymska", cardio_machine: "Rower / wioślarz / bieżnia", jump_rope: "Skakanka",
   },
   kinds: { barbell: "Sztangi", dumbbell: "Hantle", kettlebell: "Kettlebell", machine: "Maszyny", cable: "Wyciągi", smith: "Suwnica Smitha", bodyweight: "Masa ciała", band: "Gumy", cardio: "Kardio" },
   muscles: {
     chest: "Klatka", lats: "Najszersze grzbietu", upper_back: "Górna część pleców", front_delts: "Przednie barki", side_delts: "Boczne barki",
     rear_delts: "Tylne barki", biceps: "Biceps", triceps: "Triceps", forearms: "Przedramiona", quads: "Czworogłowe uda", hamstrings: "Dwugłowe uda",
-    glutes: "Pośladki", calves: "Łydki", abs: "Brzuch", lower_back: "Dolna część pleców",
+    glutes: "Pośladki", adductors: "Przywodziciele", calves: "Łydki", abs: "Brzuch", lower_back: "Dolna część pleców",
   },
   patterns: {
     squat: "przysiad", hinge: "skłon w biodrach (martwy ciąg)", single_leg: "ćwiczenie na jedną nogę", knee_ext: "prostowanie kolan", knee_flex: "uginanie kolan",
@@ -199,7 +199,7 @@ export const pl = {
     pdfNote: "PDF i zdjęcia wymagają opcjonalnego asystenta AI (nie jest skonfigurowany). Skopiuj tekst i wklej go tutaj albo wpisz plan ręcznie.",
     parse: "Rozpoznaj", review: "Sprawdź, co rozpoznaliśmy", unparsed: "Nie rozpoznano tych linii", matched: "dopasowano", unmatched: "nie znaleziono — zostanie własnym ćwiczeniem",
     chooseMatch: "Dopasuj do ćwiczenia", saveAsIs: "Zapisz dokładnie tak", analyze: "Sprawdź mój plan", optimize: "Dopasuj do mojego czasu i sprzętu",
-    noSets: "Bez serii w notatkach – przyjęto typowe, popraw jeśli robisz inaczej.", found: "Rozpoznano ćwiczeń: {n}", nothing: "Nie znaleziono żadnych ćwiczeń z seriami (np. 3x10).", pattern: "Rodzaj ruchu (do szacowania czasu)", importedName: "Zaimportowany plan",
+    fromNotes: "w notatkach: {name}", weight: "Ciężar (kg)", ownExercise: "Własne ćwiczenie: {name}", similar: "Podobne", allExercises: "Wszystkie ćwiczenia", noSets: "Bez serii w notatkach – przyjęto typowe, popraw jeśli robisz inaczej.", found: "Rozpoznano ćwiczeń: {n}", nothing: "Nie znaleziono żadnych ćwiczeń z seriami (np. 3x10).", pattern: "Rodzaj ruchu (do szacowania czasu)", importedName: "Zaimportowany plan",
     analysisTitle: "Analiza planu", optimizeNote: "Utworzymy nową wersję. Oryginał zostaje w historii wersji.", noProfile: "Najpierw odpowiedz na kilka pytań o czas i sprzęt.",
   },
   nutrition: {

@@ -58,6 +58,9 @@ export function matchExercise(name: string, library: Exercise[]): { exerciseId: 
         score = union ? inter / union : 0;
         // Substring match, stronger when the lengths are similar ("pompki" vs "pompki na poreczach dipy").
         if (c.includes(q) || q.includes(c)) score = Math.max(score, 0.5 + 0.5 * (Math.min(c.length, q.length) / Math.max(c.length, q.length)));
+        // Every word of the note appears in this exercise, in any order ("Rumuński martwy ciąg" → the Romanian
+        // deadlift, not the plain deadlift whose name it merely contains).
+        if (qt.size > 1 && inter === qt.size) score = Math.max(score, 0.7 + 0.3 * (qt.size / ct.size));
       }
       if (!best || score > best.confidence) best = { exerciseId: ex.id, confidence: Math.round(score * 100) / 100 };
     }
@@ -95,16 +98,22 @@ export function guessPattern(name: string): Pattern | null {
 const SETS_REPS = /(\d{1,2})\s*(?:x|×|\*|sets? of|serie(?: po)?|satze? (?:a|à)?|sätze? (?:a|à)?)\s*(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?\s*(s|sek|sec|min)?\b|(\d{1,2})\s*(?:x|×)\s*(amrap|max)/i;
 const WEIGHT = /@?\s*(\d{1,3}(?:[.,]\d{1,2})?)\s*kg/i;
 
-export function parseLine(line: string, library: Exercise[]): DraftExercise | null {
-  const m = SETS_REPS.exec(line);
-  if (!m) return null;
-  const name = line
-    .replace(m[0], " ")
+/** Exercise name from a line: without numbering, bullets, markdown stars, weights and "(muscle notes)". */
+function cleanName(s: string): string {
+  return s
     .replace(WEIGHT, " ")
-    .replace(/^[\s\-–•*\d.)]+/, "")
+    .replace(/\([^)]*\)?/g, " ")
+    .replace(/\*+/g, " ")
+    .replace(/^[\s\-–•\d.)]+/, "")
     .replace(/[:;,|]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function parseLine(line: string, library: Exercise[]): DraftExercise | null {
+  const m = SETS_REPS.exec(line);
+  if (!m) return null;
+  const name = cleanName(line.replace(m[0], " "));
   if (!name) return null;
   let sets: number;
   let repMin = 0;
@@ -142,24 +151,41 @@ const ISOLATION: Pattern[] = ["elbow_flex", "elbow_ext", "lateral_raise", "rear_
  * `noSets` so the review asks the user to check them. Anything else stays in `unparsed`.
  */
 export function parseNameOnly(line: string, library: Exercise[]): DraftExercise | null {
-  const name = line.replace(WEIGHT, " ").replace(/^[\s\-–•*\d.)]+/, "").replace(/[:;,|]+/g, " ").replace(/\s+/g, " ").trim();
-  if (!name || name.length > 50 || name.split(" ").length > 6 || /[.!?]$/.test(name)) return null;
+  const name = cleanName(line);
+  if (!name || name.length > 60 || name.split(" ").length > 8 || /[.!?→]/.test(name)) return null;
   const match = matchExercise(name, library);
-  const pattern = (match && library.find((e) => e.id === match.exerciseId)?.pattern) || guessPattern(name);
+  const known = match ? library.find((e) => e.id === match.exerciseId) : undefined;
+  const pattern = known?.pattern || guessPattern(name);
   if (!match && !pattern) return null;
-  const iso = !!pattern && ISOLATION.includes(pattern);
-  return { raw: line.trim(), name, sets: 3, repMin: iso ? 10 : 8, repMax: iso ? 15 : 12, match, guessedPattern: guessPattern(name), noSets: true };
+  const iso = known ? known.mechanics === "isolation" : !!pattern && ISOLATION.includes(pattern);
+  const w = WEIGHT.exec(line);
+  return {
+    raw: line.trim(), name, sets: 3, repMin: iso ? 10 : 8, repMax: iso ? 15 : 12, match, guessedPattern: guessPattern(name), noSets: true,
+    weightKg: w ? Number(w[1]!.replace(",", ".")) : undefined,
+  };
 }
 
 const WEEKDAY_WORDS = /(poniedzialek|wtorek|sroda|czwartek|piatek|sobota|niedziela|monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|push|pull|legs|nogi|upper|lower|gora|dol|full ?body|fbw)/;
 
 function isHeader(line: string): boolean {
   const t = line.trim();
-  if (!t || t.length > 60 || SETS_REPS.test(t)) return false;
+  if (!t || t.length > 60 || SETS_REPS.test(t) || /^\d+[.)]/.test(t)) return false;
   const n = normalize(t);
   if (t.endsWith(":") || t.startsWith("#") || /^[A-Z]$/.test(t)) return true;
+  // Markdown/WhatsApp emphasis (*Pośladki A*, GÓRA**) or a short line in capitals marks a day.
+  if (/\*/.test(t) && !/\d\s*kg/i.test(t)) return true;
+  const letters = t.replace(/\([^)]*\)/g, "").replace(/[^\p{L}]/gu, "");
+  if (letters.length >= 3 && letters === letters.toUpperCase() && n.split(" ").length <= 5) return true;
   if (/^(day|dzien|tag|trening|training|workout|sesja|session)\b/.test(n)) return true;
   return WEEKDAY_WORDS.test(n) && n.split(" ").length <= 5;
+}
+
+/** "*NOGI + POŚLADKI B*" → "Nogi + pośladki B"; "GÓRA** (2× w tygodniu)" → "Góra". */
+function headerName(line: string): string {
+  const s = line.replace(/^#+\s*/, "").replace(/\([^)]*\)/g, " ").replace(/\*+/g, " ").replace(/:\s*$/, "").replace(/\s+/g, " ").trim() || line.trim();
+  if (s !== s.toUpperCase()) return s;
+  // Single letters/short codes (A, B, FBW) stay in capitals.
+  return s.toLowerCase().replace(/^\p{L}/u, (c) => c.toUpperCase()).replace(/(^|\s)(\p{L})(?=\s|$)/gu, (m) => m.toUpperCase());
 }
 
 function splitRow(line: string, delim: string): string[] {
@@ -232,7 +258,7 @@ export function parseImport(text: string, library: Exercise[]): ImportDraft {
       if (!current) sessions.push((current = { name: "1", exercises: [] }));
       current.exercises.push(ex);
     } else if (isHeader(line)) {
-      sessions.push((current = { name: line.trim().replace(/^#+\s*/, "").replace(/:$/, ""), exercises: [] }));
+      sessions.push((current = { name: headerName(line), exercises: [] }));
     } else {
       const bare = parseNameOnly(line, library);
       if (!bare) unparsed.push(line);

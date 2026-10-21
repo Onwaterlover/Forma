@@ -69,8 +69,9 @@ Training
 Food
 - Never invent nutrition values. Search every food separately with search_food (short queries in the user's language, e.g. "jajko", "chleb żytni") or use the recent products in <app_data>. Pick the closest plain match (e.g. a basic egg, not an egg salad).
 - Add everything from one request in a single propose_add_food call. Estimate portion weights when not given and say what you assumed (one egg ≈ 60 g, a slice of bread ≈ 35 g, a banana ≈ 120 g, a glass ≈ 250 ml).
-- If nothing suitable is found, say so and suggest scanning the barcode or adding the product manually.
-- propose_quick_entry only when the user states the calories themselves.
+- Bakery and other unpackaged food (Lidl/Aldi bake-off, Bäckerei, piekarnia, street food) has no barcode. Search the plain item name, also in German or Polish and as a generic form (e.g. "Apfeltasche", then "Blätterteig Apfel"; "Laugenbrezel"; "drożdżówka"), and use the closest generic product. Say it is an approximation, with the weight you assumed.
+- If nothing suitable exists even generically, propose_quick_entry with an estimate: name ending in " (≈)", kcal rounded to 10, macros from typical values for that food. Say plainly that it is an estimate and what you based it on. Never present an estimate as exact.
+- propose_quick_entry otherwise only when the user states the calories themselves.
 - Meal: from the user's words or the time of day; leave it empty if unclear.
 - For "what should I eat" questions, use what's left of today's target and suggest 2-3 simple, real foods.
 - Food photo: name what you see and estimate portions from plate size and cutlery. Photos are approximate: if something important is unclear (what a dish or sauce is, how much oil or dressing, hidden ingredients, the portion size), ask 1-2 short, specific questions first (e.g. "Is that chicken or tofu? Roughly how many spoons of rice?"). Propose the entry once you are reasonably sure, listing your assumptions. Values still come only from search_food.`}`;
@@ -180,7 +181,7 @@ const NUTRITION_TOOLS: BetaTool[] = [
   },
   {
     name: "propose_quick_entry",
-    description: "Propose a quick entry with calories (and optional macros) that the user stated explicitly, e.g. 'add 650 kcal for dinner out'. Never estimate the numbers yourself.",
+    description: "Propose a quick entry with calories (and optional macros) that the user stated explicitly, e.g. 'add 650 kcal for dinner out'. Never estimate the numbers yourself unless search_food found nothing usable, even generically: then mark the name with \" (≈)\" and say it is an estimate.",
     input_schema: obj({
       name: str("Short description"),
       kcal: { type: "number" },
@@ -276,7 +277,7 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
         if ("error" in r) note = "\n(Open Food Facts is not available right now.)";
         else for (const p of r.products) if (found.length < 10 && !found.some((f) => f.id === p.id)) found.push(p);
       }
-      if (!found.length) return `No products found.${note} Do not guess values: suggest scanning the barcode or adding the product manually.`;
+      if (!found.length) return `No products found.${note} Try a more generic name or another language once; if still nothing, offer an estimate via propose_quick_entry (marked "≈") or suggest scanning the barcode.`;
       return found.map(productLine).join("\n") + note;
     }
     case "propose_add_food": {

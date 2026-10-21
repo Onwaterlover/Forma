@@ -5,7 +5,8 @@ import { z } from "zod";
 import { isLocale } from "@/i18n";
 import { createInvite, destroySession, hashPassword, requireUser, verifyPassword } from "@/lib/auth";
 import { isIsoDate } from "@/lib/ctx";
-import { addWeight, changePassword, deleteUser, deleteWeight, passwordHash, saveSettings, setLocale, type Settings } from "@/lib/data";
+import { addWeight, changePassword, deleteUser, deleteWeight, passwordHash, saveMeasurement, saveSettings, setLocale, type Settings } from "@/lib/data";
+import { MEASUREMENT_MAX_CM, MEASUREMENT_MIN_CM, MEASUREMENT_SITES, type MeasurementSite } from "@/lib/measurements";
 import { parseDecimal } from "@/nutrition/calc";
 
 export async function chooseStart(path: "plan" | "have" | "food") {
@@ -59,6 +60,19 @@ export async function removeWeight(date: string) {
   const user = await requireUser();
   if (isIsoDate(date)) await deleteWeight(user.id, date);
   revalidatePath("/progress");
+}
+
+const cm = z.number().gt(MEASUREMENT_MIN_CM).lt(MEASUREMENT_MAX_CM).nullable().transform((v) => (v === null ? null : Math.round(v * 10) / 10));
+const measurementSchema = z.object(Object.fromEntries(MEASUREMENT_SITES.map((s) => [s, cm])) as Record<MeasurementSite, typeof cm>);
+
+/** Saves the given day's circumferences as entered; clearing every field removes that day. */
+export async function logMeasurements(date: string, values: Record<MeasurementSite, number | null>): Promise<{ error?: string; deleted?: boolean }> {
+  const user = await requireUser();
+  const p = measurementSchema.safeParse(values);
+  if (!isIsoDate(date) || !p.success) return { error: "invalid" };
+  const r = await saveMeasurement(user.id, { date, ...p.data });
+  revalidatePath("/progress");
+  return r === "deleted" ? { deleted: true } : {};
 }
 
 export async function makeInvite(note: string): Promise<{ code?: string }> {

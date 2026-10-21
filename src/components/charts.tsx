@@ -41,6 +41,29 @@ export function TrendChart({
   );
 }
 
+/** A small axis-free line of readings over time, for compact rows (e.g. body measurements). */
+export function Sparkline({ points, label }: { points: { x: string; y: number }[]; label: string }) {
+  if (points.length < 2) return null;
+  const W = 96;
+  const H = 28;
+  const pad = 3;
+  const ys = points.map((p) => p.y);
+  const min = Math.min(...ys);
+  const max = Math.max(...ys);
+  const t0 = Date.parse(points[0]!.x);
+  const span = Math.max(1, Date.parse(points.at(-1)!.x) - t0);
+  const X = (d: string) => pad + ((Date.parse(d) - t0) / span) * (W - 2 * pad);
+  const Y = (v: number) => (max === min ? H / 2 : pad + (1 - (v - min) / (max - min)) * (H - 2 * pad));
+  const line = points.map((p, i) => `${i ? "L" : "M"}${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)}`).join(" ");
+  const last = points.at(-1)!;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-7 w-24 shrink-0" role="img" aria-label={label}>
+      <path d={line} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={X(last.x)} cy={Y(last.y)} r="2.5" fill="var(--accent)" />
+    </svg>
+  );
+}
+
 export function Bars({ data, label, refLine, height = 120 }: { data: { label: string; value: number }[]; label: string; refLine?: number | null; height?: number }) {
   const W = 640;
   const H = height;

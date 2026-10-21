@@ -13,7 +13,7 @@ export const TABLES = [
   "users", "sessions", "invites", "user_settings", "training_profiles", "exercise_prefs", "custom_exercises", "plans",
   "plan_versions", "workouts", "workout_exercises", "workout_sets", "food_products", "food_search_cache", "food_favorites",
   "recipes", "diary_entries", "diary_days", "calorie_targets", "bodyweight", "ai_suggestions", "login_attempts", "undo_buffer",
-  "progress_photos",
+  "progress_photos", "body_measurements",
 ];
 
 export async function connect() {

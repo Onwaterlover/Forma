@@ -244,6 +244,25 @@ CREATE INDEX progress_photos_user ON progress_photos(user_id, date);
 ALTER TABLE progress_photos ENABLE ROW LEVEL SECURITY
 `,
   },
+  {
+    version: 3,
+    sql: `
+CREATE TABLE body_measurements (
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  date text NOT NULL,
+  waist_cm double precision CHECK (waist_cm > 10 AND waist_cm < 300),
+  hips_cm double precision CHECK (hips_cm > 10 AND hips_cm < 300),
+  chest_cm double precision CHECK (chest_cm > 10 AND chest_cm < 300),
+  arm_cm double precision CHECK (arm_cm > 10 AND arm_cm < 300),
+  thigh_cm double precision CHECK (thigh_cm > 10 AND thigh_cm < 300),
+  created_at text NOT NULL,
+  updated_at text NOT NULL,
+  PRIMARY KEY (user_id, date),
+  CHECK (coalesce(waist_cm, hips_cm, chest_cm, arm_cm, thigh_cm) IS NOT NULL)
+);
+ALTER TABLE body_measurements ENABLE ROW LEVEL SECURITY
+`,
+  },
 ];
 // Row Level Security is enabled with no policies: Supabase's public API keys can read nothing.
 // The app connects as the database owner on the server and enforces per-user access in src/lib/data.ts.

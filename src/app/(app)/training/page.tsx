@@ -1,3 +1,4 @@
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, Empty, LinkButton, PageHeader, SectionTitle } from "@/components/ui";
 import { validatePlan } from "@/engine/validate";
@@ -28,6 +29,7 @@ export default async function TrainingPage() {
         action={
           <div className="flex gap-2">
             {aiProvider() && <Assistant scope="training" date={todayIso()} enabled={settings.ai} provider={aiProvider()!} />}
+            {plan && <LinkButton href={`/training/plan/${plan.id}`} variant="secondary" size="sm"><Pencil size={16} aria-hidden />{t("common.edit")}</LinkButton>}
             <PlanMenu planId={plan?.id ?? null} exercises={exercises} library={library} feedback={!!profile} logging={settings.logWorkouts} hasProfile={!!profile} />
           </div>
         } />

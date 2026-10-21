@@ -1,5 +1,5 @@
 "use client";
-import { BookOpen, ChevronRight, CircleHelp, FileInput, History, MoreHorizontal, Pencil, Printer, SlidersHorizontal, ThumbsDown, Trash2 } from "lucide-react";
+import { BookOpen, ChevronRight, CircleHelp, FileInput, History, MoreHorizontal, Printer, SlidersHorizontal, ThumbsDown, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition, type ReactNode } from "react";
 import { deletePlanAction, regenerateWithFeedback, type PlanFeedback } from "@/app/actions/training";
@@ -45,7 +45,6 @@ export function PlanMenu({ planId, exercises, library, feedback, logging, hasPro
 
       <Sheet open={sheet === "menu"} onClose={() => setSheet(null)} title={t("plan.title")}>
         <ul className="-mx-2 divide-y divide-border">
-          {planId && item(<Pencil size={18} aria-hidden />, t("plan.edit"), { href: `/training/plan/${planId}` })}
           {planId && feedback && item(<ThumbsDown size={18} aria-hidden />, t("plan.dislike"), { onClick: () => setSheet("feedback") })}
           {item(<CircleHelp size={18} aria-hidden />, t("plan.howToAny"), { onClick: () => setSheet("howto") })}
           {planId && item(<Printer size={18} aria-hidden />, t("plan.print"), { onClick: () => { setSheet(null); setTimeout(() => window.print(), 150); } })}

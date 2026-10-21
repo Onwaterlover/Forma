@@ -1,10 +1,10 @@
 "use client";
-import { ArrowDown, ArrowUp, Check, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, CircleHelp, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { applyWorkoutToPlan } from "@/app/actions/training";
 import { BackButton } from "@/components/back-button";
-import { HowTo } from "@/components/how-to";
+import { HowToPicker } from "@/components/how-to";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, Card, cx, Notice } from "@/components/ui";
 import { shortenSession } from "@/engine/adapt";
@@ -35,7 +35,7 @@ function newSet(w: WorkoutPayload, ei: number, j: number, weightKg: number | nul
 }
 
 export function WorkoutLogger({
-  initial, info, profile, prefs, custom, settings, originalIds,
+  initial, info, profile, prefs, custom, settings, originalIds, summary,
 }: {
   initial: WorkoutPayload;
   info: Record<string, ExerciseInfo>;
@@ -44,6 +44,8 @@ export function WorkoutLogger({
   custom: Exercise[];
   settings: Settings;
   originalIds: string[] | null;
+  /** Recap card rendered by the server once the workout is finished. */
+  summary?: ReactNode;
 }) {
   const { t, locale } = useI18n();
   const toast = useToast();
@@ -53,7 +55,7 @@ export function WorkoutLogger({
 
   const [w, setW] = useState<WorkoutPayload>(initial);
   const [sync, setSync] = useState<"saved" | "saving" | "offline">("saved");
-  const [sheet, setSheet] = useState<null | { kind: "swap"; index: number } | { kind: "shorten" } | { kind: "location" } | { kind: "finish" } | { kind: "apply" } | { kind: "delete" } | { kind: "abandon" } | { kind: "more" } | { kind: "exercise"; index: number }>(null);
+  const [sheet, setSheet] = useState<null | { kind: "swap"; index: number } | { kind: "shorten" } | { kind: "location" } | { kind: "finish" } | { kind: "apply" } | { kind: "delete" } | { kind: "abandon" } | { kind: "more" } | { kind: "howto" } | { kind: "exercise"; index: number }>(null);
   const [rest, setRest] = useState<{ endsAt: number; total: number } | null>(null);
   const [tick, setTick] = useState(Date.now());
   const [notesOpen, setNotesOpen] = useState<number | null>(null);
@@ -194,8 +196,9 @@ export function WorkoutLogger({
     if (timer.current) clearTimeout(timer.current);
     const ok = await push();
     toast({ text: ok ? t("workout.completed") : t("workout.offline") });
+    window.scrollTo({ top: 0 });
+    router.refresh();
     if (status === "completed" && changed && ok) setSheet({ kind: "apply" });
-    else router.push("/training/history");
   };
 
   const suggestionText = (s: Suggestion | null) => {
@@ -253,10 +256,13 @@ export function WorkoutLogger({
                 </button>
               ))}
             </div>
-            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSheet({ kind: "more" })} aria-label={t("common.more")}><MoreHorizontal size={18} aria-hidden /></Button>
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSheet({ kind: "howto" })}><CircleHelp size={16} aria-hidden />{t("plan.howToShort")}</Button>
+            <Button variant="ghost" size="sm" onClick={() => setSheet({ kind: "more" })} aria-label={t("common.more")}><MoreHorizontal size={18} aria-hidden /></Button>
           </div>
         )}
       </div>
+
+      {readOnly && summary}
 
       {w.mode === "simple" && !readOnly && <Notice>{t("workout.simpleNote")}</Notice>}
 
@@ -297,10 +303,7 @@ export function WorkoutLogger({
                 </p>
                 {sug && sug.kind !== "insufficient_data" && <p className="font-medium text-accent">{suggestionText(sug)}</p>}
                 {tg && <p className="text-xs text-muted">{t(`effort.${tg.effort}`)}</p>}
-                <div className="flex flex-wrap items-center gap-x-3">
-                  {tg?.grip && <span className="text-xs text-muted">{t("plan.grip")}: {t(`plan.grips.${tg.grip}`)}</span>}
-                  {ex && <HowTo exercise={ex} compact grip={tg?.grip} onGripChange={tg ? (grip) => editEx(i, (x) => ({ ...x, target: x.target && { ...x.target, grip } })) : undefined} />}
-                </div>
+                {tg?.grip && <p className="text-xs text-muted">{t("plan.grip")}: {t(`plan.grips.${tg.grip}`)}</p>}
               </div>
             )}
 
@@ -371,7 +374,7 @@ export function WorkoutLogger({
             {notesOpen === i || e.notes ? (
               <textarea aria-label={t("workout.notes")} disabled={readOnly} maxLength={1000} value={e.notes ?? ""} placeholder={t("workout.notes")}
                 onChange={(ev) => editEx(i, (x) => ({ ...x, notes: ev.target.value || null }))}
-                className="min-h-16 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none" />
+                className="min-h-16 w-full rounded-xl border border-border bg-surface px-3 py-2 text-base sm:text-sm focus:border-accent focus:outline-none" />
             ) : null}
 
             {!readOnly && (
@@ -438,6 +441,8 @@ export function WorkoutLogger({
         )}
       </Sheet>
 
+      <HowToPicker open={sheet?.kind === "howto"} onClose={() => setSheet(null)} ids={w.exercises.map((e) => e.exerciseId)} library={library} />
+
       <Sheet open={sheet?.kind === "more"} onClose={() => setSheet(null)} title={w.name}>
         <div className="space-y-2">
           {profile && <Button full variant="secondary" onClick={() => setSheet({ kind: "shorten" })}><Zap size={16} aria-hidden />{t("workout.shorten")}</Button>}
@@ -491,10 +496,10 @@ export function WorkoutLogger({
         <Button full variant="danger" onClick={() => finish("abandoned")}>{t("workout.abandon")}</Button>
       </Sheet>
 
-      <Sheet open={sheet?.kind === "apply"} onClose={() => router.push("/training/history")} title={t("workout.applyToPlan")}>
+      <Sheet open={sheet?.kind === "apply"} onClose={() => setSheet(null)} title={t("workout.applyToPlan")}>
         <div className="flex flex-col gap-2">
-          <Button full onClick={async () => { await applyWorkoutToPlan(w.id); toast({ text: t("common.saved") }); router.push("/training"); }}>{t("workout.applyYes")}</Button>
-          <Button full variant="secondary" onClick={() => router.push("/training/history")}>{t("workout.applyNo")}</Button>
+          <Button full onClick={async () => { await applyWorkoutToPlan(w.id); toast({ text: t("common.saved") }); setSheet(null); }}>{t("workout.applyYes")}</Button>
+          <Button full variant="secondary" onClick={() => setSheet(null)}>{t("workout.applyNo")}</Button>
         </div>
       </Sheet>
 

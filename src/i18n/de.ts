@@ -117,6 +117,8 @@ export const de: Dict = {
     dislikeExercises: "Übungen, die ich nicht will", regenerateFeedback: "Neuen Plan erstellen", feedbackDone: "Neuer Plan fertig.", feedbackEmpty: "Kreuze mindestens einen Grund an.",
     grip: "Griff", grips: { narrow: "eng", wide: "breit", neutral: "neutral" },
     gripHint: { narrow: "Ellbogen nah am Körper — mehr Latissimus.", wide: "Ellbogen weit — mehr oberer Rücken und hintere Schulter.", neutral: "Handflächen zueinander — schonend für Schultern und Handgelenke." },
+    print: "Drucken / PDF", detailsToggle: "Wochenvolumen und Begründung des Plans",
+    howToAny: "Wie geht eine Übung?", howToShort: "Wie geht's?",
     howTo: "Wie geht das?", video: "Technik-Video ansehen (YouTube)", back: "Zurück",
     empty: "Keine Übungen", addSession: "Einheit hinzufügen", sessionName: "Name der Einheit",
   },
@@ -259,6 +261,7 @@ export const de: Dict = {
   },
   today: {
     skipTitle: "Was ist los?", optShorter: "Ich habe weniger Zeit", optShorterHint: "Kürzere Version — die wichtigsten Übungen bleiben.", optPlace: "Heute kein Studio oder keine Ausrüstung", optPlaceHint: "Ich baue dieselbe Einheit aus dem, was du hast — trotzdem vollwertig.", noEquipment: "ohne Ausrüstung", noEquipmentPlace: "Ohne Ausrüstung (Zuhause, Hotel, Park)", optPostpone: "Auf nächstes Mal verschieben", optPostponeHint: "Diese Einheit wartet — nichts geht verloren.", optSkip: "Diese Einheit überspringen", optSkipHint: "Weiter zur nächsten im Plan.", postponed: "Verschoben. Diese Einheit wartet auf das nächste Mal.", postponedToday: "Heute verschoben — wartet auf das nächste Mal.", wherePlace: "Wo trainierst du heute?", howLong: "Wie viel Zeit hast du?", fullTime: "Wie geplant",
+    inPlanToday: "Heute im Plan", restDayPlanOnly: "Laut Plan heute Ruhetag.",
     clock: "Jetzt", scheduledToday: "Heute", scheduledOn: "Nächster Trainingstag: {day}", tomorrow: "Morgen", anytime: "Wann du Zeit hast", shorter: "Kürzer", skipToday: "Überspringen", skipped: "Übersprungen. Die nächste Einheit wartet.", shorterTitle: "Wie viel Zeit hast du heute?",
     greeting: "Hallo, {name}", nextWorkout: "Nächste Einheit", noPlan: "Du hast noch keinen Trainingsplan.", restDay: "Laut Plan heute Ruhetag. Wenn du Lust hast, kannst du diese Einheit auch heute machen.",
     food: "Essen heute", logFood: "Essen hinzufügen", weight: "Gewicht heute", quickWeight: "Speichern", modules: "In den Einstellungen einschalten: {module}",
@@ -273,9 +276,15 @@ export const de: Dict = {
     passwordChanged: "Passwort geändert. Bitte erneut anmelden.", wrongPassword: "Aktuelles Passwort ist falsch.", about: "Über die App",
     disclaimer: "Diese App ist kein Medizinprodukt und ersetzt keine Beratung durch Ärztinnen/Ärzte, Physiotherapie oder Ernährungsberatung. Bei Schmerzen oder gesundheitlichen Fragen wende dich an Fachleute.",
     ai: "KI-Assistent", used: "verwendet", expires: "gültig bis",
+    logWorkouts: "Ich protokolliere Trainings in der App", logWorkoutsHint: "Ausschalten, wenn du nur den Plan ansehen möchtest, ohne Starten und Überspringen. Jederzeit änderbar.",
     aiSwitch: "KI-Assistent einschalten", aiHint: "Deine Frage und die dafür nötigen Daten (Trainingsplan oder Ernährungstagebuch des Tages, Kalorienziel, letztes Gewicht) werden an {provider} gesendet. Körperfotos und Passwörter nie, ein Essensfoto nur, wenn du es anhängst. Änderungen an Plan oder Tagebuch bestätigst du immer zuerst.",
     aiGeminiNote: "Kostenloser Gemini-Tarif: Google kann gesendete Nachrichten zur Verbesserung seiner Dienste nutzen. Schreib dem Assistenten nichts, was du nicht teilen möchtest.",
     aiNotConfigured: "Der Assistent ist noch nicht verbunden: Der Admin muss GEMINI_API_KEY (kostenlos) oder ANTHROPIC_API_KEY in den Vercel-Einstellungen hinterlegen (siehe README). Alle Kernfunktionen funktionieren ohne KI.",
+  },
+  summary: {
+    done: "Training beendet", abandoned: "Training abgebrochen", time: "Zeit", sets: "Sätze", exercises: "Übungen", reps: "Wdh.",
+    progress: "Im Vergleich zum letzten Mal", muscles: "Muskelgruppen (Sätze)", record: "Rekord", first: "erstes Mal", same: "wie zuletzt", lower: "weniger als zuletzt",
+    week: "Trainings diese Woche: {n} von {planned}.", weekNoPlan: "Trainings diese Woche: {n}.", close: "Fertig", empty: "Keine Sätze erfasst.",
   },
   assistant: {
     open: "Assistent", title: "Assistent", placeholder: "Was soll ich ändern oder was möchtest du wissen…", placeholderFood: "z. B. 2 Eier und eine Scheibe Brot zum Frühstück", placeholderPhoto: "Antworte oder ergänze Details…", send: "Senden", thinking: "Denke nach…", newChat: "Neues Gespräch", photo: "Essensfoto", takePhoto: "Foto machen", describe: "Mahlzeit beschreiben", photoPrompt: "Was ist auf diesem Foto? Trag es ins Tagebuch ein.", photoSent: "📷 Foto",

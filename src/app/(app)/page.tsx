@@ -17,24 +17,30 @@ export const dynamic = "force-dynamic";
 export default async function TodayPage() {
   const { user, locale, t, settings } = await pageCtx();
   const today = todayIso();
-  const plan = settings.modules.training ? await getActivePlan(user.id) : null;
-  const running = await inProgressWorkout(user.id);
-  const day = await diaryDay(user.id, today);
-  const target = await currentTarget(user.id);
-  const weights = await listWeights(user.id, today);
-  const library = await libraryFor(user.id);
+  const [plan, running, day, target, weights, library, profile] = await Promise.all([
+    settings.modules.training ? getActivePlan(user.id) : null,
+    inProgressWorkout(user.id),
+    diaryDay(user.id, today),
+    currentTarget(user.id),
+    listWeights(user.id, today),
+    libraryFor(user.id),
+    getProfile(user.id),
+  ]);
   const lookup = (id: string) => library.find((e) => e.id === id);
+  const [lastKey, postponed] = plan ? await Promise.all([lastCompletedSessionKey(user.id, plan.id), postponedSince(user.id, `${today}T00:00`)]) : [null, []];
 
-  const next = plan ? nextSession(plan.data.sessions, weekdayOf(today) as never, await lastCompletedSessionKey(user.id, plan.id)) : null;
   const wd = weekdayOf(today);
+  const logging = settings.logWorkouts;
+  // Plan-only mode has no rotation to follow: show today's session, else the next one in the week.
+  const byCalendar = (ss: NonNullable<typeof plan>["data"]["sessions"]) =>
+    [0, 1, 2, 3, 4, 5, 6].map((k) => ss.find((s) => s.day === (wd + k) % 7)).find(Boolean) ?? ss[0] ?? null;
+  const next = plan ? (logging ? nextSession(plan.data.sessions, wd as never, lastKey) : byCalendar(plan.data.sessions)) : null;
   const scheduledToday = plan?.data.sessions.some((s) => s.day === wd);
   // The next session follows the rotation (a missed one comes first), but it is labelled with the
   // nearest training day from today on, not the weekday it was originally planned for.
   const planDays = new Set<number>(plan?.data.sessions.flatMap((s) => (s.day === null ? [] : [s.day])) ?? []);
   const daysAhead = next?.day === wd ? 0 : [1, 2, 3, 4, 5, 6, 7].find((k) => planDays.has((wd + k) % 7));
   const showStart = !settings.onboarded && !plan && day.entries.length === 0;
-  const profile = await getProfile(user.id);
-  const postponed = plan ? await postponedSince(user.id, `${today}T00:00`) : [];
   const locName = (id: string) => profile?.locations.find((l) => l.id === id)?.name ?? "";
 
   return (
@@ -46,7 +52,7 @@ export default async function TodayPage() {
       {settings.modules.training && (
         <>
           <SectionTitle>{t("today.nextWorkout")}</SectionTitle>
-          {running ? (
+          {running && logging ? (
             <Card className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-medium">{running.name}</p>
@@ -59,20 +65,20 @@ export default async function TodayPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-                    {daysAhead === 0 ? t("today.scheduledToday") : daysAhead === 1 ? t("today.tomorrow") : daysAhead ? t("today.scheduledOn", { day: DICTS[locale].days.long[(wd + daysAhead) % 7]! }) : t("today.anytime")}
+                    {daysAhead === 0 ? t(logging ? "today.scheduledToday" : "today.inPlanToday") : daysAhead === 1 ? t("today.tomorrow") : daysAhead ? t("today.scheduledOn", { day: DICTS[locale].days.long[(wd + daysAhead) % 7]! }) : t("today.anytime")}
                   </p>
                   <p className="text-lg font-medium">{next.name ?? t(`template.${next.template}`)}</p>
                   <p className="text-sm text-muted">
                     {t("plan.estimated", { n: next.estimatedMinutes })}
                     {locName(next.locationId) ? ` · ${locName(next.locationId)}` : ""}
                   </p>
-                  {!scheduledToday && planDays.size > 0 && <p className="mt-1 text-sm text-muted">{t("today.restDay")}</p>}
+                  {!scheduledToday && planDays.size > 0 && <p className="mt-1 text-sm text-muted">{t(logging ? "today.restDay" : "today.restDayPlanOnly")}</p>}
                 </div>
-                <form action={startWorkout.bind(null, plan.id, next.key, undefined, undefined)}>
+                {logging && <form action={startWorkout.bind(null, plan.id, next.key, undefined, undefined)}>
                   <button type="submit" className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-hover">
                     <Play size={18} aria-hidden />{t("plan.start")}
                   </button>
-                </form>
+                </form>}
               </div>
               <ul className="mt-3 space-y-1 text-sm">
                 {next.exercises.map((e) => (
@@ -82,7 +88,7 @@ export default async function TodayPage() {
                   </li>
                 ))}
               </ul>
-              <TodayWorkoutActions planId={plan.id} sessionKey={next.key} places={profile?.locations.map((l) => ({ id: l.id, name: l.name })) ?? []} currentPlace={next.locationId} />
+              {logging && <TodayWorkoutActions planId={plan.id} sessionKey={next.key} places={profile?.locations.map((l) => ({ id: l.id, name: l.name })) ?? []} currentPlace={next.locationId} />}
               {postponed.includes(next.key) && <p className="mt-2 text-sm text-muted">{t("today.postponedToday")}</p>}
             </Card>
           ) : (

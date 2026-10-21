@@ -116,6 +116,8 @@ export const pl = {
     dislikeExercises: "Ćwiczenia, których nie chcę", regenerateFeedback: "Ułóż nowy plan", feedbackDone: "Nowy plan gotowy.", feedbackEmpty: "Zaznacz przynajmniej jeden powód.",
     grip: "Chwyt", grips: { narrow: "wąski", wide: "szeroki", neutral: "neutralny" },
     gripHint: { narrow: "Łokcie blisko tułowia — więcej pracy najszerszych grzbietu.", wide: "Łokcie odwiedzone szeroko — więcej górnej części pleców i tylnych barków.", neutral: "Dłonie zwrócone do siebie — wygodne dla barków i nadgarstków." },
+    print: "Drukuj / PDF", detailsToggle: "Objętość tygodniowa i uzasadnienie planu",
+    howToAny: "Jak wykonać ćwiczenie?", howToShort: "Jak wykonać?",
     howTo: "Jak to zrobić?", video: "Zobacz wideo z techniką (YouTube)", back: "Wstecz",
     empty: "Brak ćwiczeń", addSession: "Dodaj trening", sessionName: "Nazwa treningu",
   },
@@ -258,6 +260,7 @@ export const pl = {
   },
   today: {
     skipTitle: "Co się dzieje?", optShorter: "Mam mniej czasu", optShorterHint: "Krótsza wersja — najważniejsze ćwiczenia zostają.", optPlace: "Nie mam dziś siłowni lub sprzętu", optPlaceHint: "Ułożę ten sam trening z tego, co masz pod ręką — dalej pełnowartościowy.", noEquipment: "bez sprzętu", noEquipmentPlace: "Bez sprzętu (dom, hotel, park)", optPostpone: "Przełóż na następny raz", optPostponeHint: "Ten trening poczeka — nic nie przepada.", optSkip: "Pomiń ten trening", optSkipHint: "Przejdę do kolejnego w planie.", postponed: "Przełożone. Ten trening poczeka na następny raz.", postponedToday: "Dziś przełożony — czeka na następną okazję.", wherePlace: "Gdzie dziś trenujesz?", howLong: "Ile masz czasu?", fullTime: "Normalnie",
+    inPlanToday: "Dziś w planie", restDayPlanOnly: "Dziś wolne według planu.",
     clock: "Teraz", scheduledToday: "Na dziś", scheduledOn: "Najbliższy termin: {day}", tomorrow: "Jutro", anytime: "Kiedy masz czas", shorter: "Krótszy", skipToday: "Pomiń", skipped: "Pominięto. Następny trening czeka.", shorterTitle: "Ile masz dziś czasu?",
     greeting: "Cześć, {name}", nextWorkout: "Następny trening", noPlan: "Nie masz jeszcze planu treningowego.", restDay: "Dziś wolne według planu. Jeśli masz ochotę, możesz zrobić ten trening już dziś.",
     food: "Jedzenie dziś", logFood: "Dodaj jedzenie", weight: "Waga dziś", quickWeight: "Zapisz", modules: "Włącz w ustawieniach: {module}",
@@ -272,9 +275,15 @@ export const pl = {
     passwordChanged: "Hasło zmienione. Zaloguj się ponownie.", wrongPassword: "Nieprawidłowe obecne hasło.", about: "O aplikacji",
     disclaimer: "Aplikacja nie jest wyrobem medycznym i nie zastępuje porady lekarza, fizjoterapeuty ani dietetyka. Przy bólu lub problemach zdrowotnych skonsultuj się ze specjalistą.",
     ai: "Asystent AI", used: "wykorzystane", expires: "ważne do",
+    logWorkouts: "Zapisuję treningi w aplikacji", logWorkoutsHint: "Wyłącz, jeśli chcesz mieć tylko plan do wglądu, bez przycisków Zacznij i Pomiń. Możesz to zmienić w każdej chwili.",
     aiSwitch: "Włącz asystenta AI", aiHint: "Twoje pytanie i potrzebne do niego dane (plan treningowy albo dziennik z danego dnia, cel kalorii, ostatnia waga) są wysyłane do {provider}. Zdjęć sylwetki i haseł asystent nigdy nie dostaje, a zdjęcie jedzenia tylko wtedy, gdy sam je dołączysz. Zmiany w planie i dzienniku zawsze najpierw zatwierdzasz.",
     aiGeminiNote: "Darmowy plan Gemini: Google może wykorzystywać wysłane wiadomości do ulepszania swoich usług. Nie pisz asystentowi niczego, czego nie chcesz udostępniać.",
     aiNotConfigured: "Asystent nie jest jeszcze podłączony: administrator musi dodać klucz GEMINI_API_KEY (darmowy) albo ANTHROPIC_API_KEY w ustawieniach Vercela (instrukcja w README). Wszystkie podstawowe funkcje działają bez AI.",
+  },
+  summary: {
+    done: "Trening zakończony", abandoned: "Trening przerwany", time: "Czas", sets: "Serie", exercises: "Ćwiczenia", reps: "powt.",
+    progress: "W porównaniu z poprzednim razem", muscles: "Partie ciała (serie)", record: "Rekord", first: "pierwszy raz", same: "jak ostatnio", lower: "mniej niż ostatnio",
+    week: "Treningi w tym tygodniu: {n} z {planned}.", weekNoPlan: "Treningi w tym tygodniu: {n}.", close: "Gotowe", empty: "Nie zapisano żadnej serii.",
   },
   assistant: {
     open: "Asystent", title: "Asystent", placeholder: "Napisz, co zmienić albo o co zapytać…", placeholderFood: "Np. 2 jajka i kromka chleba na śniadanie", placeholderPhoto: "Odpowiedz albo dopisz szczegóły…", send: "Wyślij", thinking: "Myślę…", newChat: "Nowa rozmowa", photo: "Zdjęcie jedzenia", takePhoto: "Zrób zdjęcie", describe: "Opisz posiłek", photoPrompt: "Co jest na tym zdjęciu? Dodaj to do dziennika.", photoSent: "📷 Zdjęcie",

@@ -36,11 +36,11 @@ export function PageHeader({ title, subtitle, action, back }: { title: string; s
   return (
     <header className="mb-5 flex items-start justify-between gap-3">
       <div className="min-w-0">
-        {back && <BackButton href={back.href} label={back.label} />}
+        {back && <div className="print:hidden"><BackButton href={back.href} label={back.label} /></div>}
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="shrink-0 print:hidden">{action}</div>}
     </header>
   );
 }
@@ -66,7 +66,8 @@ export function Field({ label, hint, error, children, htmlFor }: { label: ReactN
 }
 
 export const inputClass =
-  "h-11 w-full rounded-xl border border-border bg-surface px-3 text-[15px] text-text placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25";
+  // 16 px on phones: iOS zooms the page into any smaller field when it gets focus.
+  "h-11 w-full rounded-xl border border-border bg-surface px-3 text-base sm:text-[15px] text-text placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25";
 
 export function Input({ className, ...rest }: ComponentProps<"input">) {
   return <input {...rest} className={cx(inputClass, className)} />;
@@ -77,7 +78,7 @@ export function Select({ className, ...rest }: ComponentProps<"select">) {
 }
 
 export function Textarea({ className, ...rest }: ComponentProps<"textarea">) {
-  return <textarea {...rest} className={cx(inputClass, "h-auto min-h-32 py-2.5 font-mono text-sm", className)} />;
+  return <textarea {...rest} className={cx(inputClass, "h-auto min-h-32 py-2.5 font-mono text-base sm:text-sm", className)} />;
 }
 
 export function Badge({ tone = "neutral", children }: { tone?: "neutral" | "accent" | "warning" | "danger"; children: ReactNode }) {

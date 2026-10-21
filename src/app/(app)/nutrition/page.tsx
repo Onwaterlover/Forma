@@ -10,8 +10,9 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
   const { date: raw } = await searchParams;
   const { user, settings } = await pageCtx();
   const date = isIsoDate(raw) ? raw : todayIso();
-  const day = await diaryDay(user.id, date);
-  const target = await currentTarget(user.id);
+  const [day, target, recents, favorites, recipes] = await Promise.all([
+    diaryDay(user.id, date), currentTarget(user.id), recentProducts(user.id, 15), favoriteProducts(user.id), listRecipes(user.id),
+  ]);
   return (
     <Diary
       date={date}
@@ -20,9 +21,9 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
       totals={day.totals}
       complete={day.complete}
       target={target ? { kcal: target.kcal, protein: target.protein_g } : null}
-      recents={await recentProducts(user.id, 15)}
-      favorites={await favoriteProducts(user.id)}
-      recipes={(await listRecipes(user.id)).map((r) => ({ id: r.id, name: r.name, isMeal: r.isMeal, servings: r.servings, finalWeight: r.calc.finalWeight, perServingKcal: r.calc.perServing.kcal, totalKcal: r.calc.total.kcal }))}
+      recents={recents}
+      favorites={favorites}
+      recipes={recipes.map((r) => ({ id: r.id, name: r.name, isMeal: r.isMeal, servings: r.servings, finalWeight: r.calc.finalWeight, perServingKcal: r.calc.perServing.kcal, totalKcal: r.calc.total.kcal }))}
       showFiber={settings.showFiber}
       assistant={aiProvider() ? <Assistant scope="nutrition" date={date} enabled={settings.ai} provider={aiProvider()!} /> : null}
     />

@@ -9,6 +9,8 @@ Prywatna aplikacja do treningu i liczenia jedzenia dla Ciebie i kilku zaufanych 
 
   Jeśli plan Ci się nie podoba, zaznaczasz powody, a aplikacja układa nowy.
 - **Trening.** Czas całego treningu leci na górze ekranu, a przerwę włączasz jednym kliknięciem. Jest tryb prosty i szczegółowy, zamiana ćwiczeń, wybór chwytu (wąski lub szeroki) i okno „Jak to zrobić?” z linkiem do filmu z techniką. Zapisane serie nie giną przy chwilowym braku internetu.
+- **Plan jak ładny dokument.** Czytelny widok dni i ćwiczeń z przyciskiem **Drukuj / PDF**. W Ustawieniach można wyłączyć zapisywanie treningów i mieć sam plan do wglądu.
+- **Podsumowanie po treningu.** Czas, serie, partie ciała i postęp względem poprzedniego razu, z rekordami.
 - **„Pomiń” z głową.** Zamiast przepadać, trening można zrobić krócej (20/30/45 min, najważniejsze ćwiczenia zostają), w innym miejscu albo w wersji bez sprzętu z tym samym celem (np. wiosłowanie pod stołem zamiast wiosłowania hantlami). Można go też przełożyć na następny raz albo pominąć, a kolejność w planie przesunie się dalej.
 - **Jedzenie.** Kody kreskowe (Open Food Facts), ostatnie produkty i ulubione, posiłki, przepisy oraz szybkie wpisy samych kalorii. Brakujące wartości są oznaczane jako brak, nigdy nie są liczone jako zero.
 - **Postępy.** Trend wagi, ostrożne szacowanie zapotrzebowania, rekordy i **prywatne zdjęcia sylwetki** (przód, bok, tył, porównywanie dat).

@@ -54,6 +54,7 @@ export function SettingsForm({
 
       <SectionTitle>{t("nav.training")}</SectionTitle>
       <Card className="space-y-3">
+        <Switch checked={settings.logWorkouts} label={t("settings.logWorkouts")} hint={t("settings.logWorkoutsHint")} onChange={(v) => set({ logWorkouts: v })} />
         <div>
           <p className="mb-2 text-sm font-medium">{t("settings.logging")}</p>
           <Choices name={t("settings.logging")} columns={2} value={settings.logMode} onChange={(logMode) => set({ logMode })}

@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { analyzePlan, optimizePlan, planAction, savePlanEdit } from "@/app/actions/training";
 import { Sheet, useToast } from "@/components/client";
-import { HowTo } from "@/components/how-to";
 import { Button, Card, cx, Input, Notice, Select } from "@/components/ui";
 import { moveSession } from "@/engine/adapt";
 import { estimateMinutes } from "@/engine/duration";
@@ -211,7 +210,6 @@ export function PlanEditor({
                         {ex.grips.map((g) => <option key={g} value={g}>{t("plan.grip")}: {t(`plan.grips.${g}`)}</option>)}
                       </Select>
                     )}
-                    {ex && <HowTo exercise={ex} grip={e.grip} compact onGripChange={ex.grips ? (grip) => editEx(s.key, i, { grip }) : undefined} />}
                     <Select aria-label={t("plan.rest")} className="h-9 w-28" value={e.restSec} onChange={(ev) => editEx(s.key, i, { restSec: Number(ev.target.value) })}>
                       {[...new Set([...REST_OPTIONS, e.restSec])].sort((a, b) => a - b).map((r) => <option key={r} value={r}>{t("plan.rest")} {fmtRest(r)}</option>)}
                     </Select>

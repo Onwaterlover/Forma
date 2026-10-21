@@ -117,6 +117,8 @@ export const en: Dict = {
     dislikeExercises: "Exercises I don't want", regenerateFeedback: "Build a new plan", feedbackDone: "New plan ready.", feedbackEmpty: "Tick at least one reason.",
     grip: "Grip", grips: { narrow: "narrow", wide: "wide", neutral: "neutral" },
     gripHint: { narrow: "Elbows close to your body — more lat work.", wide: "Elbows flared wide — more upper back and rear delts.", neutral: "Palms facing each other — easy on shoulders and wrists." },
+    print: "Print / PDF", detailsToggle: "Weekly volume and why this plan",
+    howToAny: "How to do an exercise", howToShort: "How to",
     howTo: "How do I do it?", video: "Watch a technique video (YouTube)", back: "Back",
     empty: "No exercises", addSession: "Add workout", sessionName: "Workout name",
   },
@@ -259,6 +261,7 @@ export const en: Dict = {
   },
   today: {
     skipTitle: "What's up?", optShorter: "I have less time", optShorterHint: "A shorter version — the most important exercises stay.", optPlace: "No gym or equipment today", optPlaceHint: "I'll rebuild the same workout from what you have — still a proper session.", noEquipment: "no equipment", noEquipmentPlace: "No equipment (home, hotel, park)", optPostpone: "Postpone to next time", optPostponeHint: "This workout will wait — nothing is lost.", optSkip: "Skip this workout", optSkipHint: "Move on to the next one in the plan.", postponed: "Postponed. This workout will wait for next time.", postponedToday: "Postponed today — it's waiting for next time.", wherePlace: "Where are you training today?", howLong: "How much time do you have?", fullTime: "As planned",
+    inPlanToday: "Today in your plan", restDayPlanOnly: "Rest day according to your plan.",
     clock: "Now", scheduledToday: "Today", scheduledOn: "Next training day: {day}", tomorrow: "Tomorrow", anytime: "Whenever you have time", shorter: "Shorter", skipToday: "Skip", skipped: "Skipped. The next workout is waiting.", shorterTitle: "How much time do you have today?",
     greeting: "Hi, {name}", nextWorkout: "Next workout", noPlan: "You don't have a workout plan yet.", restDay: "Rest day according to your plan. You can do this workout today if you feel like it.",
     food: "Food today", logFood: "Add food", weight: "Weight today", quickWeight: "Save", modules: "Turn on in settings: {module}",
@@ -273,9 +276,15 @@ export const en: Dict = {
     passwordChanged: "Password changed. Please log in again.", wrongPassword: "Current password is wrong.", about: "About",
     disclaimer: "This app is not a medical device and doesn't replace advice from a doctor, physiotherapist or dietitian. If you have pain or health concerns, see a professional.",
     ai: "AI assistant", used: "used", expires: "valid until",
+    logWorkouts: "I log my workouts in the app", logWorkoutsHint: "Turn off to keep just the plan to look at, without Start and Skip. You can change this anytime.",
     aiSwitch: "Turn on the AI assistant", aiHint: "Your question and the data it needs (your training plan or that day's food diary, calorie target, latest weight) are sent to {provider}. Body photos and passwords are never sent; a food photo only when you attach one. You always confirm changes to your plan or diary first.",
     aiGeminiNote: "Gemini free tier: Google may use the messages you send to improve its services. Don't tell the assistant anything you don't want to share.",
     aiNotConfigured: "The assistant isn't connected yet: the admin needs to add GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in the Vercel settings (see the README). All core features work without AI.",
+  },
+  summary: {
+    done: "Workout finished", abandoned: "Workout stopped", time: "Time", sets: "Sets", exercises: "Exercises", reps: "reps",
+    progress: "Compared with last time", muscles: "Muscle groups (sets)", record: "Record", first: "first time", same: "same as last time", lower: "less than last time",
+    week: "Workouts this week: {n} of {planned}.", weekNoPlan: "Workouts this week: {n}.", close: "Done", empty: "No sets were logged.",
   },
   assistant: {
     open: "Assistant", title: "Assistant", placeholder: "Say what to change or ask a question…", placeholderFood: "e.g. 2 eggs and a slice of bread for breakfast", placeholderPhoto: "Reply or add details…", send: "Send", thinking: "Thinking…", newChat: "New chat", photo: "Food photo", takePhoto: "Take photo", describe: "Describe meal", photoPrompt: "What's in this photo? Add it to my diary.", photoSent: "📷 Photo",

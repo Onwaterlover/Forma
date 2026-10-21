@@ -22,11 +22,13 @@ export interface Settings {
   onboarded: boolean;
   /** The user agreed to send the data a question needs to the AI provider. */
   ai: boolean;
+  /** Off = "plan only": the plan is shown for reading, without starting or logging workouts. */
+  logWorkouts: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
   theme: "system", modules: { training: true, nutrition: true }, logMode: "detailed", restTimer: true, autoTimer: false,
-  showEffort: false, showFiber: false, weightGoal: null, onboarded: false, ai: false,
+  showEffort: false, showFiber: false, weightGoal: null, onboarded: false, ai: false, logWorkouts: true,
 };
 
 export async function getSettings(userId: string): Promise<Settings> {

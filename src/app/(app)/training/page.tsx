@@ -15,18 +15,17 @@ export const dynamic = "force-dynamic";
 
 export default async function TrainingPage() {
   const { user, locale, t, settings } = await pageCtx();
-  const plan = await getActivePlan(user.id);
-  const profile = await getProfile(user.id);
-  const library = await libraryFor(user.id);
-  const plans = (await listPlans(user.id)).filter((p) => p.id !== plan?.id && p.status !== "archived");
-  const running = await inProgressWorkout(user.id);
-  const issues = plan && profile && plan.source !== "imported" ? validatePlan({ plan: plan.data, profile, prefs: await getPrefs(user.id), library }) : [];
+  const [plan, profile, library, allPlans, running, prefs] = await Promise.all([
+    getActivePlan(user.id), getProfile(user.id), libraryFor(user.id), listPlans(user.id), inProgressWorkout(user.id), getPrefs(user.id),
+  ]);
+  const plans = allPlans.filter((p) => p.id !== plan?.id && p.status !== "archived");
+  const issues = plan && profile && plan.source !== "imported" ? validatePlan({ plan: plan.data, profile, prefs, library }) : [];
 
   const links = [
     { href: "/training/setup", icon: SlidersHorizontal, label: profile ? t("plan.profile") : t("plan.create") },
     { href: "/training/import", icon: FileInput, label: t("plan.import") },
     { href: "/training/exercises", icon: BookOpen, label: t("library.title") },
-    { href: "/training/history", icon: History, label: t("workout.history") },
+    ...(settings.logWorkouts ? [{ href: "/training/history", icon: History, label: t("workout.history") }] : []),
   ];
 
   return (
@@ -34,15 +33,15 @@ export default async function TrainingPage() {
       <PageHeader title={plan?.name ?? t("plan.title")} subtitle={plan ? `${t(`split.${plan.data.split}`, {})} · ${t("plan.perWeek", { n: plan.data.sessions.length })}` : undefined}
         action={<div className="flex gap-2">{aiProvider() && <Assistant scope="training" date={todayIso()} enabled={settings.ai} provider={aiProvider()!} />}{plan && <LinkButton href={`/training/plan/${plan.id}`} variant="secondary" size="sm"><Pencil size={16} aria-hidden />{t("plan.edit")}</LinkButton>}</div>} />
 
-      {running && (
-        <Card className="mb-4 flex items-center justify-between gap-3">
+      {running && settings.logWorkouts && (
+        <Card className="mb-4 print:hidden flex items-center justify-between gap-3">
           <p className="font-medium">{running.name} <Badge tone="accent">{t("workout.inProgress")}</Badge></p>
           <LinkButton href={`/workout/${running.id}`} size="sm">{t("workout.resume")}</LinkButton>
         </Card>
       )}
 
       {plan && (
-        <div className="mb-4">
+        <div className="mb-4 print:hidden">
           <PlanActions
             planId={plan.id}
             feedback={!!profile}
@@ -52,14 +51,14 @@ export default async function TrainingPage() {
       )}
 
       {plan ? (
-        <PlanView plan={plan.data} planId={plan.id} profile={profile} library={library} issues={issues} t={t} locale={locale} startable={!running} />
+        <PlanView plan={plan.data} planId={plan.id} profile={profile} library={library} issues={issues} t={t} locale={locale} startable={!running && settings.logWorkouts} />
       ) : (
         <Empty action={<div className="flex flex-wrap justify-center gap-2"><LinkButton href="/training/setup">{t("plan.create")}</LinkButton><LinkButton href="/training/import" variant="secondary">{t("plan.import")}</LinkButton></div>}>
           {t("plan.noPlan")}
         </Empty>
       )}
 
-      <nav className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label={t("nav.training")}>
+      <nav className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 print:hidden" aria-label={t("nav.training")}>
         {links.map(({ href, icon: Icon, label }) => (
           <Link key={href} href={href} className="flex min-h-14 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-sm font-medium hover:bg-surface-2">
             <Icon size={18} className="text-accent" aria-hidden />{label}
@@ -68,7 +67,7 @@ export default async function TrainingPage() {
       </nav>
 
       {plans.length > 0 && (
-        <>
+        <div className="print:hidden">
           <SectionTitle>{t("plan.plans")}</SectionTitle>
           <ul className="space-y-2">
             {plans.map((p) => (
@@ -80,7 +79,7 @@ export default async function TrainingPage() {
               </li>
             ))}
           </ul>
-        </>
+        </div>
       )}
     </>
   );

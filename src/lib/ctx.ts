@@ -22,10 +22,8 @@ export async function maybeUserLocale(): Promise<{ locale: Locale; theme: string
   return { locale: isLocale(u.locale) ? u.locale : "pl", theme: (await getSettings(u.id)).theme };
 }
 
-export const todayIso = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+/** The servers run in UTC, so "today" is taken in the users' time zone (APP_TIME_ZONE, default Europe/Warsaw). */
+export const todayIso = () => new Intl.DateTimeFormat("en-CA", { timeZone: process.env.APP_TIME_ZONE || "Europe/Warsaw" }).format(new Date());
 
 export const shiftDate = (iso: string, days: number) => {
   const d = new Date(`${iso}T12:00:00`);

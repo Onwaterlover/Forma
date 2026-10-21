@@ -312,7 +312,7 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
                   </ul>
                 )}
                 <p className="pt-2 text-sm font-medium">{t("onb.notesQ")}</p>
-                <Textarea rows={3} maxLength={500} value={p.notes ?? ""} onChange={(e) => up({ notes: e.target.value || undefined })} placeholder={t("onb.notesPlaceholder")} aria-label={t("onb.notesQ")} />
+                <Textarea rows={3} className="min-h-24 font-sans" maxLength={500} value={p.notes ?? ""} onChange={(e) => up({ notes: e.target.value || undefined })} placeholder={t("onb.notesPlaceholder")} aria-label={t("onb.notesQ")} />
                 <p className="text-xs text-muted">{t("onb.notesHint")}</p>
               </Card>
 

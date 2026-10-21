@@ -4,7 +4,8 @@ import { energyMismatch, kjToKcal, sanitize, type Nutrients } from "./calc";
 // Data © Open Food Facts contributors, ODbL — attribution is shown wherever products are displayed.
 
 export const OFF_FIELDS = [
-  "code", "product_name", "product_name_pl", "product_name_de", "product_name_en", "brands", "quantity",
+  "code", "product_name", "product_name_pl", "product_name_de", "product_name_en", "product_name_cs", "product_name_sk", "product_name_it",
+  "product_name_fr", "product_name_es", "product_name_uk", "generic_name", "generic_name_pl", "abbreviated_product_name", "brands", "quantity",
   "product_quantity_unit", "serving_size", "serving_quantity", "nutriments", "nutrition_data_per",
 ].join(",");
 
@@ -26,7 +27,11 @@ export function mapOffProduct(raw: unknown, lang: "pl" | "de" | "en" = "pl"): Pr
   if (!raw || typeof raw !== "object") return null;
   const p = raw as Record<string, unknown>;
   const barcode = str(p.code);
-  const name = str(p[`product_name_${lang}`]) ?? str(p.product_name) ?? str(p.product_name_en) ?? str(p.product_name_pl) ?? str(p.product_name_de);
+  // Imported products often carry only a foreign or generic name; any name beats "not found".
+  const names = [`product_name_${lang}`, "product_name", "product_name_pl", "product_name_en", "product_name_de", "abbreviated_product_name",
+    `generic_name_${lang}`, "generic_name", "product_name_cs", "product_name_sk", "product_name_it", "product_name_fr", "product_name_es", "product_name_uk"];
+  const brand = str(p.brands)?.split(",")[0]?.trim() ?? null;
+  const name = names.map((k) => str(p[k])).find(Boolean) ?? (brand ? [brand, str(p.quantity)].filter(Boolean).join(" ") : null);
   if (!barcode || !name) return null;
 
   const n = (p.nutriments && typeof p.nutriments === "object" ? p.nutriments : {}) as OffNutriments;
@@ -59,5 +64,5 @@ export function mapOffProduct(raw: unknown, lang: "pl" | "de" | "en" = "pl"): Pr
   else if (nutrients.kcal === null) warnings.push("no_energy");
   if (energyMismatch(nutrients)) warnings.push("energy_mismatch");
 
-  return { barcode, name, brand: str(p.brands)?.split(",")[0]?.trim() ?? null, basis, nutrients, servings, warnings };
+  return { barcode, name, brand, basis, nutrients, servings, warnings };
 }

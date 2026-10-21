@@ -210,7 +210,7 @@ export const de: Dict = {
     dayComplete: "Alles eingetragen", dayIncomplete: "Unvollständiger Tag", completeHint: "Optional. Hilft bei der Bedarfsschätzung — unvollständige Tage werden ausgelassen.",
     empty: "Noch nichts eingetragen.", amount: "Menge", per100: "pro 100 {basis}", serving: "Portion", portion: "Portion", missing: "keine Angabe", incompleteValue: "bei manchen Einträgen fehlt dieser Wert",
     energyMismatch: "Die Kalorien auf dem Etikett passen nicht zu den Makros — bitte die Packung prüfen.", offAttribution: "Produktdaten: Open Food Facts (ODbL-Lizenz).",
-    notFound: "Kein Produkt zu diesem Barcode gefunden.", rateLimited: "Die Produktdatenbank ist gerade ausgelastet. Gleich nochmal versuchen oder Produkt manuell anlegen.",
+    notFound: "Kein Produkt zu diesem Barcode gefunden.", noValues: "Das Produkt ist in der Datenbank, aber ohne Nährwerte. Übertrag sie vom Etikett, dann ist es beim nächsten Mal da.", rateLimited: "Die Produktdatenbank ist gerade ausgelastet. Gleich nochmal versuchen oder Produkt manuell anlegen.",
     unavailable: "Die Produktdatenbank ist nicht erreichbar. Durchsuche deine gespeicherten Produkte oder lege eins manuell an.", searchRemote: "In Open Food Facts suchen", localResults: "Deine und gespeicherte Produkte",
     remoteResults: "Open Food Facts", noResults: "Keine Ergebnisse.", createProduct: "Produkt anlegen", fromLabel: "Werte vom Etikett (pro 100 g / 100 ml)", barcode: "Barcode",
     manualBarcode: "Code eintippen", cameraDenied: "Kein Kamerazugriff. Tippe den Code ein oder suche das Produkt.", cameraInsecure: "Die Kamera braucht eine HTTPS-Verbindung. Siehe README oder tippe den Code ein.",

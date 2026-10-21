@@ -209,7 +209,7 @@ export const pl = {
     dayComplete: "Wpisałem/am wszystko", dayIncomplete: "Niepełny dzień", completeHint: "Opcjonalne. Pomaga szacunkom zapotrzebowania — niepełne dni są pomijane.",
     empty: "Nic jeszcze nie wpisano.", amount: "Ilość", per100: "na 100 {basis}", serving: "Porcja", portion: "porcja", missing: "brak danych", incompleteValue: "część produktów nie ma tej wartości",
     energyMismatch: "Kalorie na etykiecie nie zgadzają się z makroskładnikami — sprawdź opakowanie.", offAttribution: "Dane produktów: Open Food Facts (licencja ODbL).",
-    notFound: "Nie znaleziono produktu o tym kodzie.", rateLimited: "Baza produktów jest chwilowo przeciążona. Spróbuj za chwilę albo dodaj produkt ręcznie.",
+    notFound: "Nie znaleziono produktu o tym kodzie.", noValues: "Produkt jest w bazie, ale bez wartości odżywczych. Przepisz je z etykiety, a następnym razem będzie od razu.", rateLimited: "Baza produktów jest chwilowo przeciążona. Spróbuj za chwilę albo dodaj produkt ręcznie.",
     unavailable: "Baza produktów jest niedostępna. Możesz wyszukać wśród zapisanych lub dodać produkt ręcznie.", searchRemote: "Szukaj w Open Food Facts", localResults: "Twoje i zapisane produkty",
     remoteResults: "Open Food Facts", noResults: "Brak wyników.", createProduct: "Dodaj produkt", fromLabel: "Wartości z etykiety (na 100 g / 100 ml)", barcode: "Kod kreskowy",
     manualBarcode: "Wpisz kod ręcznie", cameraDenied: "Brak dostępu do aparatu. Wpisz kod ręcznie lub wyszukaj produkt.", cameraInsecure: "Aparat wymaga połączenia HTTPS. Zobacz instrukcję w README lub wpisz kod ręcznie.",

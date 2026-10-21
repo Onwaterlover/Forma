@@ -171,6 +171,19 @@ describe("data integrity", () => {
   });
 });
 
+describe("family products", () => {
+  it("copies another member's product definition by barcode, never their diary", async () => {
+    const nutrients = { ...emptyNutrients(), kcal: 99, protein: 10 };
+    await data.saveCustomProduct(B, { name: "Serek domowy B", brand: null, barcode: "5901234123457", basis: "g", state: null, nutrients, servings: [] });
+    expect(await data.productByBarcode(A, "5901234123457")).toBeNull();
+    const copy = await data.copyFamilyProduct(A, "5901234123457");
+    expect(copy).toMatchObject({ name: "Serek domowy B", mine: true, barcode: "5901234123457" });
+    expect(copy!.nutrients.kcal).toBe(99);
+    expect((await data.productByBarcode(A, "5901234123457"))!.id).toBe(copy!.id);
+    expect(await data.copyFamilyProduct(A, "0000000000000")).toBeNull();
+  });
+});
+
 describe("backup and restore", () => {
   it("backs up a database to JSON and restores it into another", async () => {
     const make = async () => {

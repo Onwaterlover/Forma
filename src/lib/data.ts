@@ -404,6 +404,22 @@ export async function saveCustomProduct(
   return id;
 }
 
+/**
+ * A barcode another family member saved as their own product. Only the product definition (name and
+ * values per 100 g) is copied into this user's own products; nobody's diary is shared.
+ */
+export async function copyFamilyProduct(userId: string, barcode: string): Promise<Product | null> {
+  const r = await (await db()).get<ProductRow>(
+    "SELECT * FROM food_products WHERE barcode = ? AND source = 'custom' AND owner_user_id IS NOT NULL AND owner_user_id <> ? ORDER BY updated_at DESC LIMIT 1",
+    [barcode, userId],
+  );
+  if (!r) return null;
+  const id = await saveCustomProduct(userId, {
+    name: r.name, brand: r.brand, barcode, basis: r.basis, state: r.state, nutrients: json(r.nutrients, emptyNutrients()), servings: json(r.servings, []),
+  });
+  return getProduct(userId, id);
+}
+
 export async function searchProducts(userId: string, q: string, limit = 25): Promise<Product[]> {
   const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 5);
   if (!terms.length) return [];

@@ -1,6 +1,6 @@
 import "server-only";
 import { mapOffProduct, OFF_FIELDS, type ProductDraft } from "@/nutrition/off";
-import { cachedSearch, productByBarcode, productsByBarcodes, storeSearch, upsertOffProduct, type Product } from "./data";
+import { cachedSearch, copyFamilyProduct, productByBarcode, productsByBarcodes, storeSearch, upsertOffProduct, type Product } from "./data";
 
 // Open Food Facts access. All users share this server's IP, so we stay well under the documented limits
 // (product reads 15/min, search 10/min per IP), cache everything, and never search on keystrokes.
@@ -26,6 +26,7 @@ const g = globalThis as unknown as { __offBuckets?: { product: Bucket; search: B
 const buckets = (g.__offBuckets ??= { product: new Bucket(12), search: new Bucket(8) });
 
 export type OffError = "rate_limited" | "unavailable" | "not_found";
+export type OffPartial = { name: string; brand: string | null };
 
 async function get(url: string): Promise<unknown> {
   const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "application/json" }, signal: AbortSignal.timeout(8000), cache: "no-store" });
@@ -35,7 +36,15 @@ async function get(url: string): Promise<unknown> {
   return res.json();
 }
 
-export async function lookupBarcode(userId: string, barcode: string, lang: "pl" | "de" | "en"): Promise<{ product: Product; warnings: ProductDraft["warnings"] } | { error: OffError }> {
+export async function lookupBarcode(userId: string, barcode: string, lang: "pl" | "de" | "en"): Promise<{ product: Product; warnings: ProductDraft["warnings"] } | { error: OffError; partial?: OffPartial }> {
+  const r = await lookupOff(userId, barcode, lang);
+  if (!("error" in r) || r.error !== "not_found") return r;
+  // Not in Open Food Facts: someone in the family may already have added it as their own product.
+  const copy = await copyFamilyProduct(userId, barcode);
+  return copy ? { product: copy, warnings: [] } : r;
+}
+
+async function lookupOff(userId: string, barcode: string, lang: "pl" | "de" | "en"): Promise<{ product: Product; warnings: ProductDraft["warnings"] } | { error: OffError; partial?: OffPartial }> {
   const cached = await productByBarcode(userId, barcode);
   if (cached && (cached.source === "custom" || (cached.fetched_at && Date.now() - Date.parse(cached.fetched_at) < PRODUCT_TTL))) {
     return { product: cached, warnings: [] };
@@ -46,6 +55,8 @@ export async function lookupBarcode(userId: string, barcode: string, lang: "pl" 
     if (!data || data.status !== 1) return cached ? { product: cached, warnings: [] } : { error: "not_found" };
     const draft = mapOffProduct({ ...(data.product as object), code: barcode }, lang);
     if (!draft) return { error: "not_found" };
+    // Known product without nutrition values: let the user type them from the label, name prefilled.
+    if (draft.warnings.includes("no_nutrition")) return { error: "not_found", partial: { name: draft.name, brand: draft.brand } };
     await upsertOffProduct(draft);
     return { product: (await productByBarcode(userId, barcode))!, warnings: draft.warnings };
   } catch (e) {

@@ -86,6 +86,13 @@ describe("Open Food Facts mapping", () => {
     expect(p.nutrients).toMatchObject({ kcal: 61, protein: 4.3, fiber: null });
     expect(p.warnings).toEqual([]);
   });
+  it("finds a name for imported products and falls back to brand and size", () => {
+    expect(mapOffProduct({ code: "8594000000000", product_name_cs: "Jogurt bílý", nutriments: { "energy-kcal_100g": 60 } }, "pl")!.name).toBe("Jogurt bílý");
+    expect(mapOffProduct({ code: "5900000000000", generic_name: "Twaróg półtłusty", nutriments: { "energy-kcal_100g": 130 } }, "pl")!.name).toBe("Twaróg półtłusty");
+    expect(mapOffProduct({ code: "5900000000001", brands: "Mlekovita, Inne", quantity: "200 g", nutriments: {} }, "pl")!.name).toBe("Mlekovita 200 g");
+    expect(mapOffProduct({ code: "5900000000002", nutriments: {} }, "pl")).toBeNull();
+  });
+
   it("derives kcal from kJ and detects liquids", () => {
     const p = mapOffProduct({ code: "4000000000000", product_name: "Saft", quantity: "1 l", nutriments: { "energy-kj_100g": 184, carbohydrates_100g: 10 } }, "de")!;
     expect(p.nutrients.kcal).toBeCloseTo(44, 0);

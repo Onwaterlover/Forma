@@ -40,6 +40,7 @@ export function AddFood({
   const [meal, setMeal] = useState<string | null>(null);
   const [picked, setPicked] = useState<Product | null>(null);
   const [barcodeForNew, setBarcodeForNew] = useState<string | null>(null);
+  const [prefill, setPrefill] = useState<{ name: string; brand: string | null } | null>(null);
   const [scanned, setScanned] = useState(false);
   const [pending, start] = useTransition();
 
@@ -71,7 +72,8 @@ export function AddFood({
       setScanned(true);
       if (data.warnings?.includes("energy_mismatch")) toast({ text: t("nutrition.energyMismatch") });
     } else if (data.error === "not_found") {
-      toast({ text: t("nutrition.notFound") });
+      toast({ text: t(data.partial ? "nutrition.noValues" : "nutrition.notFound") });
+      setPrefill(data.partial ?? null);
       setBarcodeForNew(data.barcode ?? code);
       setView("custom");
     } else if (data.error === "invalid_barcode") toast({ text: t("nutrition.invalidBarcode") });
@@ -114,7 +116,7 @@ export function AddFood({
             const res = await addRecipeEntry({ recipeId: r.id, amount, mode, date, meal });
             toast({ text: res.error ? t("common.error") : `${t("common.saved")}: ${r.name}` });
           })} />}
-          {view === "custom" && <CustomFood barcode={barcodeForNew} onSaved={async (id) => {
+          {view === "custom" && <CustomFood barcode={barcodeForNew} prefill={prefill} onSaved={async (id) => {
             const prod = await productFor(id);
             if (prod) setPicked(prod);
           }} />}
@@ -306,10 +308,10 @@ function MealsTab({ recipes, onLog, pending }: { recipes: RecipeLite[]; onLog: (
   );
 }
 
-function CustomFood({ barcode, onSaved }: { barcode: string | null; onSaved: (id: string) => void }) {
+function CustomFood({ barcode, prefill, onSaved }: { barcode: string | null; prefill?: { name: string; brand: string | null } | null; onSaved: (id: string) => void }) {
   const { t } = useI18n();
   const toast = useToast();
-  const [f, setF] = useState({ name: "", brand: "", basis: "g" as "g" | "ml", state: "" as "" | "raw" | "cooked", barcode: barcode ?? "", serving: null as number | null });
+  const [f, setF] = useState({ name: prefill?.name ?? "", brand: prefill?.brand ?? "", basis: "g" as "g" | "ml", state: "" as "" | "raw" | "cooked", barcode: barcode ?? "", serving: null as number | null });
   const [n, setN] = useState<Record<NutrientKey, number | null>>(Object.fromEntries(NUTRIENT_KEYS.map((k) => [k, null])) as Record<NutrientKey, number | null>);
   const [pending, start] = useTransition();
   useEffect(() => setF((x) => ({ ...x, barcode: barcode ?? x.barcode })), [barcode]);

@@ -753,6 +753,11 @@ export async function listInvites() {
   );
 }
 
+/** Unused invites only; identified by creation time so the code hash never leaves the server. */
+export async function deleteInvite(createdAt: string) {
+  await (await db()).run("DELETE FROM invites WHERE created_at = ? AND used_by IS NULL", [createdAt]);
+}
+
 export async function changePassword(userId: string, hash: string) {
   await (await db()).tx(async (q) => {
     await q.run("UPDATE users SET password_hash = ? WHERE id = ?", [hash, userId]);

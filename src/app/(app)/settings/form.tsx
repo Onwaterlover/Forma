@@ -2,7 +2,7 @@
 import { Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deleteAccount, makeInvite, updateLocale, updatePassword, updateSettings } from "@/app/actions/general";
+import { deleteAccount, makeInvite, removeInvite, updateLocale, updatePassword, updateSettings } from "@/app/actions/general";
 import { Choices, Switch, useToast } from "@/components/client";
 import { Button, Card, Field, Input, Notice, SectionTitle } from "@/components/ui";
 import { fmtDate, LOCALES, type Locale } from "@/i18n";
@@ -81,7 +81,15 @@ export function SettingsForm({
             {invites.length > 0 && (
               <ul className="space-y-1 text-sm text-muted">
                 {invites.map((i, k) => (
-                  <li key={k}>{i.note ?? "—"} · {i.used_at ? `${t("settings.used")} ${fmtDate(locale, i.used_at)}` : `${t("settings.expires")} ${fmtDate(locale, i.expires_at)}`}</li>
+                  <li key={k} className="flex min-h-9 items-center justify-between gap-2">
+                    <span className="min-w-0">{i.note ?? "—"} · {i.used_at ? `${t("settings.used")} ${fmtDate(locale, i.used_at)}` : `${t("settings.expires")} ${fmtDate(locale, i.expires_at)}`}</span>
+                    {!i.used_at && (
+                      <Button size="sm" variant="ghost" className="shrink-0 text-danger!" disabled={pending}
+                        onClick={() => confirm(t("settings.deleteInviteConfirm")) && start(async () => { await removeInvite(i.created_at); router.refresh(); })}>
+                        {t("common.delete")}
+                      </Button>
+                    )}
+                  </li>
                 ))}
               </ul>
             )}

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { analyzePlan, optimizePlan, planAction, savePlanEdit } from "@/app/actions/training";
 import { Sheet, useToast } from "@/components/client";
+import { FilterRow } from "@/components/filter-row";
 import { Button, Card, cx, Input, Notice, Select } from "@/components/ui";
 import { moveSession } from "@/engine/adapt";
 import { estimateMinutes } from "@/engine/duration";
@@ -11,6 +12,7 @@ import { isPossible } from "@/engine/equipment";
 import { EXERCISES } from "@/engine/exercises";
 import { prescribe } from "@/engine/prescribe";
 import { defaultProfile } from "@/engine/profile";
+import { matchesQuery, REGIONS, regionsOf, type Region } from "@/engine/regions";
 import { substitutes } from "@/engine/select";
 import type { Exercise, ExercisePref, Grip, Plan, PlannedExercise, PlannedSession, TrainingProfile, Weekday } from "@/engine/types";
 import { validatePlan } from "@/engine/validate";
@@ -42,6 +44,7 @@ export function PlanEditor({
   const [pending, start] = useTransition();
   const [sheet, setSheet] = useState<{ mode: "swap" | "add"; session: string; index?: number } | null>(null);
   const [query, setQuery] = useState("");
+  const [region, setRegion] = useState<Region | null>(null);
   const days = DICTS[locale].days.long;
   const effProfile = profile ?? defaultProfile();
   const ctx = { profile: effProfile, prefs, library };
@@ -94,13 +97,12 @@ export function PlanEditor({
     if (sheet.mode === "swap" && sheetOriginal) {
       return substitutes(sheetOriginal, { ...ctx, equipment: sheetEquipment ?? [], excludeIds: used }).slice(0, 15).map((e) => ({ e, ok: true }));
     }
-    const q = query.trim().toLowerCase();
+    // Whole library, narrowed by body part and/or search; no cap, so nothing late in the alphabet goes missing.
     return library
-      .filter((e) => !used.has(e.id) && (!q || exName(e, locale).toLowerCase().includes(q) || e.name.en.toLowerCase().includes(q)))
+      .filter((e) => !used.has(e.id) && (!region || regionsOf(e).includes(region)) && matchesQuery(e, query))
       .map((e) => ({ e, ok: sheetEquipment ? isPossible(e, sheetEquipment, effProfile.excludedKinds) : true }))
-      .sort((a, b) => Number(b.ok) - Number(a.ok) || exName(a.e, locale).localeCompare(exName(b.e, locale)))
-      .slice(0, 40);
-  }, [sheet, query, plan]);
+      .sort((a, b) => Number(b.ok) - Number(a.ok) || exName(a.e, locale).localeCompare(exName(b.e, locale)));
+  }, [sheet, query, region, plan]);
 
   const pick = (ex: Exercise) => {
     if (!sheet) return;
@@ -238,8 +240,13 @@ export function PlanEditor({
         </div>
       </div>
 
-      <Sheet open={!!sheet} onClose={() => { setSheet(null); setQuery(""); }} title={sheet?.mode === "swap" ? t("plan.alternatives") : t("plan.addExercise")}>
-        {sheet?.mode === "add" && <Input autoFocus placeholder={t("library.search")} value={query} onChange={(e) => setQuery(e.target.value)} className="mb-3" />}
+      <Sheet open={!!sheet} onClose={() => { setSheet(null); setQuery(""); setRegion(null); }} title={sheet?.mode === "swap" ? t("plan.alternatives") : t("plan.addExercise")}>
+        {sheet?.mode === "add" && (
+          <div className="mb-3 space-y-2">
+            <Input type="search" placeholder={t("library.search")} value={query} onChange={(e) => setQuery(e.target.value)} aria-label={t("library.search")} />
+            <FilterRow label={t("library.regionFilter")} value={region} onChange={setRegion} options={REGIONS.map((r) => ({ value: r, label: t(`library.region.${r}`) }))} allLabel={t("library.all")} />
+          </div>
+        )}
         {sheet?.mode === "swap" && sheetOriginal && prefs[sheetOriginal.id] === "pain" && <Notice tone="warning" className="mb-3">{t("plan.painCaution")}</Notice>}
         {options.length === 0 ? (
           <p className="text-sm text-muted">{t("plan.noAlternatives")}</p>

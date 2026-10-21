@@ -5,9 +5,11 @@ import { createCustomExercise, setExercisePref } from "@/app/actions/training";
 import { Sheet, useToast } from "@/components/client";
 import { HowTo } from "@/components/how-to";
 import { Badge, Button, Card, cx, Field, Input, Notice, Select } from "@/components/ui";
+import { FilterRow } from "@/components/filter-row";
 import { EXERCISES } from "@/engine/exercises";
+import { matchesQuery, REGIONS, regionsOf, type Region } from "@/engine/regions";
 import { PATTERN_MUSCLES } from "@/engine/templates";
-import { PATTERNS, type Exercise, type ExercisePref, type Loading, type Muscle, type Pattern } from "@/engine/types";
+import { PATTERNS, type Exercise, type ExercisePref, type Loading, type Pattern } from "@/engine/types";
 import { exName } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 
@@ -24,39 +26,11 @@ const equipGroupOf = (e: Exercise): EquipGroup =>
   : e.kind === "cardio" ? "cardio"
   : "free";
 
-const REGIONS = ["chest", "back", "shoulders", "arms", "legs", "glutes", "core", "conditioning"] as const;
-type Region = (typeof REGIONS)[number];
-const REGION_MUSCLES: Record<Exclude<Region, "conditioning">, Muscle[]> = {
-  chest: ["chest"], back: ["lats", "upper_back", "lower_back"], shoulders: ["front_delts", "side_delts", "rear_delts"],
-  arms: ["biceps", "triceps", "forearms"], legs: ["quads", "hamstrings", "adductors", "calves"], glutes: ["glutes"], core: ["abs"],
-};
-const regionsOf = (e: Exercise): Region[] =>
-  e.pattern === "conditioning"
-    ? ["conditioning"]
-    : (Object.keys(REGION_MUSCLES) as Exclude<Region, "conditioning">[]).filter((r) => e.primary.some((m) => REGION_MUSCLES[r].includes(m)));
-
 // Upper body push -> pull -> arms, then lower body, then core and conditioning.
 const PATTERN_ORDER: Pattern[] = [
   "h_push", "chest_fly", "v_push", "lateral_raise", "rear_delt", "h_pull", "v_pull", "elbow_flex", "elbow_ext",
   "squat", "single_leg", "knee_ext", "hinge", "knee_flex", "hip_ext", "calf", "core", "conditioning",
 ];
-
-function FilterRow<V extends string>({ label, value, onChange, options, allLabel }: {
-  label: string; value: V | null; onChange: (v: V | null) => void; options: { value: V; label: string }[]; allLabel: string;
-}) {
-  const chip = (on: boolean) => cx("h-9 shrink-0 rounded-full border px-3.5 text-sm", on ? "border-accent bg-accent text-accent-contrast" : "border-border bg-surface hover:bg-surface-2");
-  return (
-    <div role="group" aria-label={label} className="flex items-center gap-2">
-      <span className="w-20 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
-      <div className="no-scrollbar -mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1">
-        <button type="button" aria-pressed={value === null} onClick={() => onChange(null)} className={chip(value === null)}>{allLabel}</button>
-        {options.map((o) => (
-          <button key={o.value} type="button" aria-pressed={value === o.value} onClick={() => onChange(value === o.value ? null : o.value)} className={chip(value === o.value)}>{o.label}</button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function Library({ prefs: initialPrefs, custom }: { prefs: Record<string, ExercisePref>; custom: Exercise[] }) {
   const { t, locale } = useI18n();
@@ -75,9 +49,7 @@ export function Library({ prefs: initialPrefs, custom }: { prefs: Record<string,
   const list = all.filter((e) => {
     if (equip && equipGroupOf(e) !== equip) return false;
     if (region && !regionsOf(e).includes(region)) return false;
-    if (!q.trim()) return true;
-    const s = q.trim().toLowerCase();
-    return [e.name.pl, e.name.en, e.name.de, ...(e.aliases ?? [])].some((n) => n.toLowerCase().includes(s));
+    return matchesQuery(e, q);
   });
 
   // Equipment group -> movement (with its main muscles) -> exercises, in a fixed, logical order.

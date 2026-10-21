@@ -64,7 +64,7 @@ export const en: Dict = {
     low_bar: "Low bar", rings: "Gymnastic rings", bands: "Resistance bands", cable: "Cable station", smith: "Smith machine", leg_press: "Leg press",
     leg_curl: "Leg curl machine", leg_extension: "Leg extension machine", chest_press: "Chest press machine",
     shoulder_press_machine: "Shoulder press machine", row_machine: "Row machine", pec_deck: "Pec deck (fly machine)", calf_machine: "Calf machine",
-    assisted_pullup: "Assisted pull-up machine", glute_machines: "Glute machines (hip thrust, abduction, adduction)", back_extension: "Back extension bench", cardio_machine: "Bike / rower / treadmill", jump_rope: "Jump rope",
+    assisted_pullup: "Assisted pull-up machine", ab_machine: "Ab crunch machine", glute_machines: "Glute machines (hip thrust, abduction, adduction)", back_extension: "Back extension bench", cardio_machine: "Bike / rower / treadmill", jump_rope: "Jump rope",
   },
   kinds: { barbell: "Barbells", dumbbell: "Dumbbells", kettlebell: "Kettlebells", machine: "Machines", cable: "Cables", smith: "Smith machine", bodyweight: "Bodyweight", band: "Bands", cardio: "Cardio" },
   muscles: {

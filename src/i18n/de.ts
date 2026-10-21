@@ -64,7 +64,7 @@ export const de: Dict = {
     low_bar: "Niedrige Stange", rings: "Turnringe", bands: "Widerstandsbänder", cable: "Kabelzug", smith: "Multipresse", leg_press: "Beinpresse",
     leg_curl: "Beinbeuger-Maschine", leg_extension: "Beinstrecker-Maschine", chest_press: "Brustpresse",
     shoulder_press_machine: "Schulterpresse", row_machine: "Rudermaschine", pec_deck: "Butterfly-Maschine", calf_machine: "Wadenmaschine",
-    assisted_pullup: "Klimmzugmaschine mit Unterstützung", glute_machines: "Gesäßmaschinen (Hip Thrust, Abduktoren, Adduktoren)", back_extension: "Rückenstrecker-Bank", cardio_machine: "Rad / Rudergerät / Laufband", jump_rope: "Springseil",
+    assisted_pullup: "Klimmzugmaschine mit Unterstützung", ab_machine: "Bauchmaschine", glute_machines: "Gesäßmaschinen (Hip Thrust, Abduktoren, Adduktoren)", back_extension: "Rückenstrecker-Bank", cardio_machine: "Rad / Rudergerät / Laufband", jump_rope: "Springseil",
   },
   kinds: { barbell: "Langhanteln", dumbbell: "Kurzhanteln", kettlebell: "Kettlebells", machine: "Maschinen", cable: "Kabelzüge", smith: "Multipresse", bodyweight: "Körpergewicht", band: "Bänder", cardio: "Cardio" },
   muscles: {

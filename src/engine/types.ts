@@ -20,7 +20,7 @@ export const EQUIPMENT = [
   "barbell", "plates", "adjustable_dumbbells", "fixed_dumbbells", "kettlebell", "bench", "incline_bench",
   "rack", "pullup_bar", "dip_bars", "low_bar", "rings", "bands", "cable", "smith",
   "leg_press", "leg_curl", "leg_extension", "chest_press", "shoulder_press_machine", "row_machine",
-  "pec_deck", "calf_machine", "assisted_pullup", "back_extension", "glute_machines", "cardio_machine", "jump_rope",
+  "pec_deck", "calf_machine", "assisted_pullup", "back_extension", "glute_machines", "ab_machine", "cardio_machine", "jump_rope",
 ] as const;
 export type Equipment = (typeof EQUIPMENT)[number];
 /** Virtual capability satisfied by either dumbbell type. */

@@ -63,7 +63,7 @@ export const pl = {
     low_bar: "Niski drążek", rings: "Kółka gimnastyczne", bands: "Gumy oporowe", cable: "Wyciąg", smith: "Suwnica Smitha", leg_press: "Suwnica do nóg",
     leg_curl: "Maszyna do uginania nóg", leg_extension: "Maszyna do prostowania nóg", chest_press: "Maszyna do wyciskania (klatka)",
     shoulder_press_machine: "Maszyna do wyciskania (barki)", row_machine: "Maszyna do wiosłowania", pec_deck: "Maszyna do rozpiętek (butterfly)", calf_machine: "Maszyna do łydek",
-    assisted_pullup: "Maszyna do podciągania z odciążeniem", glute_machines: "Maszyny do pośladków (hip thrust, odwodzenie, przywodzenie)", back_extension: "Ławka rzymska", cardio_machine: "Rower / wioślarz / bieżnia", jump_rope: "Skakanka",
+    assisted_pullup: "Maszyna do podciągania z odciążeniem", ab_machine: "Maszyna do brzuszków", glute_machines: "Maszyny do pośladków (hip thrust, odwodzenie, przywodzenie)", back_extension: "Ławka rzymska", cardio_machine: "Rower / wioślarz / bieżnia", jump_rope: "Skakanka",
   },
   kinds: { barbell: "Sztangi", dumbbell: "Hantle", kettlebell: "Kettlebell", machine: "Maszyny", cable: "Wyciągi", smith: "Suwnica Smitha", bodyweight: "Masa ciała", band: "Gumy", cardio: "Kardio" },
   muscles: {

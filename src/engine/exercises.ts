@@ -574,10 +574,23 @@ export const EXERCISES: Exercise[] = [
     cuePl: "Bez bujania, podwijaj miednicę na górze.", cueEn: "No swinging, curl the pelvis at the top.",
   }),
   ex("cable_crunch", {
-    pl: "Spięcia brzucha na wyciągu", en: "Cable crunch", de: "Kabel-Crunch",
+    pl: "Spięcia brzucha na wyciągu", en: "Cable crunch", de: "Kabel-Crunch", aliases: ["brzuszki na wyciągu", "allahy", "kabelcrunch"],
     primary: ["abs"], secondary: [], pattern: "core", equipment: ["cable"], kind: "cable", mechanics: "isolation", skill: 1, fatigue: "low",
     stable: true, loading: "total",
     cuePl: "Klęcząc, zwijaj tułów, biodra nieruchomo.", cueEn: "Kneeling, curl the torso, hips still.",
+  }),
+  ex("machine_crunch", {
+    pl: "Brzuszki na maszynie", en: "Machine crunch", de: "Crunch an der Maschine",
+    aliases: ["maszyna do brzuszków", "spięcia brzucha na maszynie", "ab crunch machine", "ab machine", "bauchmaschine", "crunch maschine", "brzuch maszyna"],
+    primary: ["abs"], secondary: [], pattern: "core", equipment: ["ab_machine"], kind: "machine", machineType: "selectorized",
+    mechanics: "isolation", skill: 1, fatigue: "low", stable: true, loading: "total",
+    cuePl: "Zwijaj tułów brzuchem, nie ciągnij rękami; wolno w górę.", cueEn: "Curl the torso with the abs, don't pull with the arms; slow on the way up.",
+  }),
+  ex("crunch", {
+    pl: "Brzuszki", en: "Crunch", de: "Crunches", aliases: ["spięcia brzucha", "brzuszki na macie", "crunches", "sit up", "bauchpresse"],
+    primary: ["abs"], secondary: [], pattern: "core", equipment: [], kind: "bodyweight", mechanics: "isolation", skill: 1, fatigue: "low",
+    stable: true, loading: "bodyweight_plus",
+    cuePl: "Lędźwie przy podłodze, unoś łopatki zwijając tułów, broda lekko przy klatce.", cueEn: "Lower back on the floor, curl the shoulder blades up, chin slightly tucked.",
   }),
   ex("pallof_press", {
     pl: "Pallof press", en: "Pallof press", de: "Pallof Press",

@@ -90,7 +90,8 @@ export function Switch({ checked, onChange, label, hint, name }: { checked: bool
 }
 
 // ── Native dialog as a bottom sheet on mobile, centered on desktop ──────
-export function Sheet({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean }) {
+/** `full`: takes the whole screen on phones (long flows such as adding food); desktop keeps the dialog. */
+export function Sheet({ open, onClose, title, children, wide, full }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean; full?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -117,17 +118,18 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
       className={cx(
         "m-0 mt-auto w-full max-w-none rounded-t-3xl border border-border bg-surface p-0 text-text sm:m-auto sm:rounded-3xl",
         wide ? "sm:max-w-2xl" : "sm:max-w-lg",
+        full && "max-sm:mt-0 max-sm:h-dvh max-sm:max-h-none max-sm:rounded-none max-sm:border-0",
       )}
     >
-      <div className="flex max-h-[88dvh] flex-col">
-        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+      <div className={cx("flex flex-col", full ? "h-full sm:max-h-[88dvh]" : "max-h-[88dvh]")}>
+        <div className={cx("flex items-center justify-between gap-3 border-b border-border px-5 py-3.5", full && "max-sm:pt-[calc(0.875rem_+_env(safe-area-inset-top))]")}>
           <h2 className="text-base font-semibold">{title}</h2>
           <button type="button" onClick={onClose} className="-mr-2 grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface-2" aria-label="Close">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>
         {/* Closed sheets render nothing, so cameras, timers and forms inside them really stop. */}
-        <div className="safe-bottom overflow-y-auto overscroll-contain px-5 py-4">{open ? children : null}</div>
+        <div className={cx("safe-bottom overflow-y-auto overscroll-contain px-5 py-4", full && "flex-1")}>{open ? children : null}</div>
       </div>
     </dialog>
   );

@@ -83,7 +83,7 @@ export function AddFood({
   const title = picked ? picked.name : view === "scan" ? t("nutrition.scan") : view === "meals" ? t("nutrition.meals") : view === "custom" ? t("nutrition.custom") : view === "quick" ? t("nutrition.quick") : t("nutrition.add");
 
   return (
-    <Sheet open={open} onClose={onClose} title={title} wide>
+    <Sheet open={open} onClose={onClose} title={title} wide full>
       {picked ? (
         // From "Recent" on the diary page the sheet only exists for this product, so adding closes it.
         <AmountPicker product={picked} pending={pending} onBack={() => (product ? onClose() : setPicked(null))} onAdd={(amount) => add(picked, amount, !!product)}
@@ -243,9 +243,9 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
         <div className="flex items-center justify-between gap-3 rounded-xl bg-accent-soft px-3 py-2.5 text-sm">
           <span className="min-w-0">
             <span className="block font-medium text-accent">{t("nutrition.scannedCheck")}</span>
-            <span className="block truncate text-muted">{product.name}{product.brand ? ` · ${product.brand}` : ""}{product.barcode ? ` · ${product.barcode}` : ""}</span>
+            <span className="line-clamp-2 text-muted">{product.name}</span>
           </span>
-          <Button size="sm" variant="ghost" onClick={onRescan}>{t("nutrition.rescan")}</Button>
+          <Button size="sm" variant="ghost" className="shrink-0 whitespace-nowrap" onClick={onRescan}>{t("nutrition.rescan")}</Button>
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">

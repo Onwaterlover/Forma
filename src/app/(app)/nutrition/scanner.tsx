@@ -34,8 +34,9 @@ function toCanvas(src: CanvasImageSource & { width: number; height: number }, w:
 /** The middle band of the frame (where the guide box is): less to search, so decoding is faster. */
 function centerBand(v: HTMLVideoElement) {
   const w = v.videoWidth, h = v.videoHeight;
-  const cw = Math.round(w * 0.9), ch = Math.round(h * 0.45);
-  const k = Math.min(1, 1000 / cw);
+  // Full width: long codes (and codes on curved cups) often reach past the guide box.
+  const cw = w, ch = Math.round(h * 0.5);
+  const k = Math.min(1, 1280 / cw);
   const c = document.createElement("canvas");
   c.width = Math.round(cw * k);
   c.height = Math.round(ch * k);
@@ -49,17 +50,20 @@ function centerBand(v: HTMLVideoElement) {
  * the app goes to the background, or a code is found. "Photo of the barcode" uses the phone's camera app,
  * which focuses better on small codes; manual entry always works.
  */
-export function Scanner({ onCode }: { onCode: (code: string, format?: string) => void }) {
+export function Scanner({ onCode }: { onCode: (code: string, format?: string) => unknown }) {
   const { t } = useI18n();
   const video = useRef<HTMLVideoElement>(null);
   const photo = useRef<HTMLInputElement>(null);
-  const [state, setState] = useState<"starting" | "scanning" | "paused" | "denied" | "insecure" | "error">("starting");
+  const [state, setState] = useState<"starting" | "scanning" | "found" | "paused" | "denied" | "insecure" | "error">("starting");
+  const [frozen, setFrozen] = useState<string | null>(null);
   const [run, setRun] = useState(0);
   const [manual, setManual] = useState("");
   const [invalid, setInvalid] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
   const found = useRef(onCode);
   found.current = onCode;
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   useEffect(() => {
     if (state === "paused") return;
@@ -72,10 +76,16 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
       stream?.getTracks().forEach((tr) => tr.stop());
       if (video.current) video.current.srcObject = null;
     };
-    const hit = (code: string, format?: string) => {
+    // The last frame stays on screen while the product loads, instead of a black box.
+    const hit = async (code: string, format?: string) => {
+      const v = video.current;
+      try { if (v?.videoWidth) setFrozen(toCanvas(v, v.videoWidth, v.videoHeight, 800).toDataURL("image/jpeg", 0.7)); } catch {}
       stop();
+      setState("found");
       try { navigator.vibrate?.(60); } catch {}
-      found.current(code, format);
+      try { await found.current(code, format); } catch {}
+      // Still here (code not usable, lookup failed): scan again.
+      if (mounted.current) { setFrozen(null); setState("starting"); setRun((n) => n + 1); }
     };
     // Leaving the app (or locking the phone) releases the camera; scanning resumes on request.
     const onHide = () => { if (document.visibilityState === "hidden") { stop(); setState("paused"); } };
@@ -91,6 +101,9 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
         if (stopped || !video.current) return stop();
         const track = stream.getVideoTracks()[0];
         try { await track?.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] }); } catch {}
+        // Phone cameras can't focus up close: a 2× zoom lets the code be sharp from ~20 cm, where long codes fit the frame.
+        const zoom = (track?.getCapabilities?.() as { zoom?: { max: number } } | undefined)?.zoom;
+        if (zoom && zoom.max >= 1.5) try { await track!.applyConstraints({ advanced: [{ zoom: Math.min(2, zoom.max) } as MediaTrackConstraintSet] }); } catch {}
         video.current.srcObject = stream;
         await video.current.play().catch(() => {});
         setState("scanning");
@@ -107,8 +120,8 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
                 const r = (await native.detect(v))[0];
                 if (r) return hit(r.rawValue, r.format.toUpperCase());
               } else if (z) {
-                // Mostly the band behind the guide box; every fourth try the whole frame.
-                const src = ++n % 4 === 0 ? toCanvas(v, v.videoWidth, v.videoHeight, 1280) : centerBand(v);
+                // Mostly the band behind the guide box; every third try the whole frame.
+                const src = ++n % 3 === 0 ? toCanvas(v, v.videoWidth, v.videoHeight, 1280) : centerBand(v);
                 const r = z.reader.decodeFromCanvas(src);
                 return hit(r.getText(), z.BarcodeFormat[r.getBarcodeFormat()]);
               }
@@ -157,10 +170,17 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
 
   return (
     <div className="space-y-4">
+      {state === "found" && (
+        <div className="relative overflow-hidden rounded-2xl bg-black">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {frozen ? <img src={frozen} alt="" className="aspect-[4/3] w-full object-cover opacity-60" /> : <div className="aspect-[4/3] w-full" />}
+          <p className="absolute inset-0 flex items-center justify-center text-sm font-medium text-white" role="status">{t("nutrition.scanLooking")}</p>
+        </div>
+      )}
       {(state === "starting" || state === "scanning") && (
         <div className="relative overflow-hidden rounded-2xl bg-black">
           <video ref={video} className="aspect-[4/3] w-full object-cover" muted playsInline autoPlay />
-          <div aria-hidden className="pointer-events-none absolute inset-x-8 top-1/2 h-24 -translate-y-1/2 rounded-xl border-2 border-white/80" />
+          <div aria-hidden className="pointer-events-none absolute inset-x-4 top-1/2 h-28 -translate-y-1/2 rounded-xl border-2 border-white/80" />
           <p className="absolute inset-x-0 bottom-2 text-center text-sm text-white/90">{state === "starting" ? t("common.loading") : t("nutrition.scanning")}</p>
         </div>
       )}

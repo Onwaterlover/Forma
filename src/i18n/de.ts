@@ -101,7 +101,7 @@ export const de: Dict = {
     start: "Starten", edit: "Plan bearbeiten", regenerate: "Neu generieren", profile: "Antworten ändern", versions: "Versionsverlauf", restore: "Wiederherstellen",
     archive: "Archivieren", activate: "Aktivieren", duplicate: "Duplizieren", rename: "Umbenennen", saveVersion: "Änderungen speichern", plans: "Deine Pläne",
     weekly: "Wöchentliche Sätze (Näherung)", weeklyHint: "Ein Satz zählt 1 für den Hauptmuskel und 0,5 für Hilfsmuskeln. Eine Planungsheuristik, keine Messung.",
-    tradeoffs: "Kompromisse", notes: "Hinweise", issues: "Bitte prüfen", swap: "Tauschen", remove: "Entfernen", addExercise: "Übung hinzufügen",
+    weight: "Gewicht (kg)", tradeoffs: "Kompromisse", notes: "Hinweise", issues: "Bitte prüfen", swap: "Tauschen", remove: "Entfernen", addExercise: "Übung hinzufügen",
     moveDay: "Tag", location: "Ort", noDay: "Flexibel", superset: "Supersatz", why: "Warum dieser Plan?", flexibleDay: "beliebiger Tag",
     version: "Version {n}", current: "aktuell", status: { active: "Aktiv", inactive: "Inaktiv", archived: "Archiv" },
     source: { generated: "Generiert", manual: "Manuell", imported: "Importiert" }, newName: "Mein Plan", generatedName: "Plan {split}",
@@ -200,7 +200,7 @@ export const de: Dict = {
     pdfNote: "PDFs und Bilder brauchen den optionalen KI-Assistenten (nicht eingerichtet). Kopiere den Text und füge ihn hier ein oder gib den Plan manuell ein.",
     parse: "Erkennen", review: "Prüfe, was wir erkannt haben", unparsed: "Diese Zeilen wurden nicht erkannt", matched: "zugeordnet", unmatched: "nicht gefunden — wird eigene Übung",
     chooseMatch: "Übung zuordnen", saveAsIs: "Genau so speichern", analyze: "Plan prüfen", optimize: "An meine Zeit und Ausrüstung anpassen",
-    fromNotes: "in den Notizen: {name}", weight: "Gewicht (kg)", ownExercise: "Eigene Übung: {name}", similar: "Ähnlich", allExercises: "Alle Übungen", undo: "Import rückgängig", undoConfirm: "Diesen importierten Plan samt der beim Import angelegten Übungen löschen? Du kannst ihn gleich neu importieren.", done: "Plan importiert. Stimmt etwas nicht?", noSets: "Keine Sätze in den Notizen – übliche eingesetzt, bei Bedarf anpassen.", found: "Erkannte Übungen: {n}", nothing: "Keine Übungen mit Sätzen (z. B. 3x10) gefunden.", pattern: "Bewegungsart (für die Zeitschätzung)", importedName: "Importierter Plan",
+    fromNotes: "in den Notizen: {name}", weight: "Gewicht (kg)", ownExercise: "Eigene Übung: {name}", similar: "Ähnlich", allExercises: "Alle Übungen", undo: "Import rückgängig", undoConfirm: "Diesen importierten Plan samt der beim Import angelegten Übungen löschen? Du kannst ihn gleich neu importieren.", done: "Plan importiert. Stimmt etwas nicht?", noSets: "Keine Sätze in den Notizen – übliche eingesetzt, bei Bedarf anpassen.", found: "Erkannte Übungen: {n}", nothing: "Keine Übungen mit Sätzen (z. B. 3x10) gefunden.", pattern: "Bewegungsart (für die Zeitschätzung)", importedName: "Trainingsplan",
     analysisTitle: "Planprüfung", optimizeNote: "Es entsteht eine neue Version. Das Original bleibt im Versionsverlauf.", noProfile: "Beantworte zuerst ein paar Fragen zu Zeit und Ausrüstung.",
   },
   nutrition: {

@@ -157,8 +157,12 @@ export interface PlannedExercise {
   superset?: number;
   grip?: Grip;
   note?: string;
-  /** Working weight from an imported plan: prefills the first workout until there is history. */
+  /**
+   * Weight set in the plan (from an import or typed in the plan editor). Prefills the next workout when it is
+   * newer than the last logged session of this exercise; otherwise the logged history wins.
+   */
   startKg?: number;
+  startKgAt?: string;
 }
 
 export interface PlannedSession {

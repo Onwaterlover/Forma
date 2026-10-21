@@ -238,7 +238,7 @@ export async function saveImportedPlan(raw: unknown): Promise<{ error?: string; 
         exerciseId: id, sets: e.sets, repMin: e.seconds ? 0 : Math.min(e.repMin || 8, e.repMax || 12), repMax: e.seconds ? 0 : Math.max(e.repMin || 8, e.repMax || 12),
         ...(e.seconds ? { seconds: e.seconds } : {}), restSec: 90, effort: "leave_1_3" as const, progression: e.seconds ? ("time" as const) : ("double" as const),
         pattern: e.pattern as Pattern, priority: 2 as const,
-        ...(e.weightKg ? { startKg: e.weightKg } : {}),
+        ...(e.weightKg ? { startKg: e.weightKg, startKgAt: nowIso() } : {}),
       });
     }
     sessions.push({ key: String.fromCharCode(65 + i), template: "IMPORTED", name: s.name, day: null, locationId: profile?.locations[0]?.id ?? "", exercises, estimatedMinutes: 0 } as PlannedSession);
@@ -329,13 +329,15 @@ export async function startWorkout(planId: string | null, sessionKey: string | n
       const hist = histories[i]!;
       const sug = ex ? suggestNext(ex, pe, hist) : { kind: "insufficient_data" as const };
       const lastSets = hist[0]?.sets.filter((s) => s.type !== "warmup") ?? [];
+      // A weight typed into the plan after the last session of this exercise takes precedence over history.
+      const fromPlan = pe.startKg && (!hist.length || (pe.startKgAt ?? "") > hist[0]!.date) ? pe.startKg : null;
       const w = sug.kind === "increase_load" || sug.kind === "add_reps" ? sug.weightKg : sug.kind === "consider_reduce" ? null : lastSets[0]?.weightKg ?? null;
       return {
         id: `${id}:${i}`, exerciseId: pe.exerciseId, name: exName(ex, user.locale, pe.exerciseId), loading: ex?.loading ?? "total",
         target: { sets: pe.sets, repMin: pe.repMin, repMax: pe.repMax, seconds: pe.seconds, restSec: pe.restSec, effort: pe.effort, priority: pe.priority, grip: pe.grip },
         completed: false, skipped: false, notes: null,
         sets: Array.from({ length: pe.sets }, (_, j) => ({
-          id: `${id}:${i}:${j}`, type: "working" as const, reps: null, weightKg: w ?? lastSets[j]?.weightKg ?? (hist.length ? null : pe.startKg ?? null), rir: null, rpe: null, durationS: null, completed: false,
+          id: `${id}:${i}:${j}`, type: "working" as const, reps: null, weightKg: fromPlan ?? w ?? lastSets[j]?.weightKg ?? null, rir: null, rpe: null, durationS: null, completed: false,
         })),
       };
     }),

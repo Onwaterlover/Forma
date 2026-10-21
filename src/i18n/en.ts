@@ -101,7 +101,7 @@ export const en: Dict = {
     start: "Start", edit: "Edit plan", regenerate: "Regenerate", profile: "Change answers", versions: "Version history", restore: "Restore",
     archive: "Archive", activate: "Make active", duplicate: "Duplicate", rename: "Rename", saveVersion: "Save changes", plans: "Your plans",
     weekly: "Weekly sets (approximate)", weeklyHint: "A set counts 1 for the main muscle and 0.5 for helpers. A planning heuristic, not a measurement.",
-    tradeoffs: "Trade-offs", notes: "Notes", issues: "Worth checking", swap: "Swap", remove: "Remove", addExercise: "Add exercise",
+    weight: "Weight (kg)", tradeoffs: "Trade-offs", notes: "Notes", issues: "Worth checking", swap: "Swap", remove: "Remove", addExercise: "Add exercise",
     moveDay: "Day", location: "Place", noDay: "Flexible", superset: "Superset", why: "Why this plan?", flexibleDay: "any day",
     version: "Version {n}", current: "current", status: { active: "Active", inactive: "Inactive", archived: "Archived" },
     source: { generated: "Generated", manual: "Manual", imported: "Imported" }, newName: "My plan", generatedName: "{split} plan",
@@ -200,7 +200,7 @@ export const en: Dict = {
     pdfNote: "PDFs and images need the optional AI assistant (not configured). Copy the text and paste it here, or enter the plan manually.",
     parse: "Recognise", review: "Check what we recognised", unparsed: "These lines weren't recognised", matched: "matched", unmatched: "not found — will become a custom exercise",
     chooseMatch: "Match to an exercise", saveAsIs: "Save exactly as imported", analyze: "Analyse my plan", optimize: "Fit it to my time and equipment",
-    fromNotes: "in your notes: {name}", weight: "Weight (kg)", ownExercise: "Own exercise: {name}", similar: "Similar", allExercises: "All exercises", undo: "Undo import", undoConfirm: "Delete this imported plan together with the exercises the import added? You can import it again right away.", done: "Plan imported. Something wrong?", noSets: "No sets in your notes – typical ones filled in, adjust if you do it differently.", found: "Exercises recognised: {n}", nothing: "No exercises with sets (e.g. 3x10) found.", pattern: "Movement type (for time estimates)", importedName: "Imported plan",
+    fromNotes: "in your notes: {name}", weight: "Weight (kg)", ownExercise: "Own exercise: {name}", similar: "Similar", allExercises: "All exercises", undo: "Undo import", undoConfirm: "Delete this imported plan together with the exercises the import added? You can import it again right away.", done: "Plan imported. Something wrong?", noSets: "No sets in your notes – typical ones filled in, adjust if you do it differently.", found: "Exercises recognised: {n}", nothing: "No exercises with sets (e.g. 3x10) found.", pattern: "Movement type (for time estimates)", importedName: "Training plan",
     analysisTitle: "Plan analysis", optimizeNote: "This creates a new version. The original stays in the version history.", noProfile: "First answer a few questions about your time and equipment.",
   },
   nutrition: {

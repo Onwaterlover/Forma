@@ -100,7 +100,7 @@ export const pl = {
     start: "Zacznij", edit: "Edytuj plan", regenerate: "Wygeneruj ponownie", profile: "Zmień odpowiedzi", versions: "Historia wersji", restore: "Przywróć",
     archive: "Archiwizuj", activate: "Ustaw jako aktywny", duplicate: "Duplikuj", rename: "Zmień nazwę", saveVersion: "Zapisz zmiany", plans: "Twoje plany",
     weekly: "Tygodniowa liczba serii (przybliżenie)", weeklyHint: "Seria liczy się jako 1 dla mięśnia głównego i 0,5 dla pomocniczego. To heurystyka planistyczna, nie pomiar.",
-    tradeoffs: "Kompromisy", notes: "Uwagi", issues: "Do sprawdzenia", swap: "Zamień", remove: "Usuń", addExercise: "Dodaj ćwiczenie",
+    weight: "Ciężar (kg)", tradeoffs: "Kompromisy", notes: "Uwagi", issues: "Do sprawdzenia", swap: "Zamień", remove: "Usuń", addExercise: "Dodaj ćwiczenie",
     moveDay: "Dzień", location: "Miejsce", noDay: "Elastycznie", superset: "Superseria", why: "Dlaczego taki plan?", flexibleDay: "dowolny dzień",
     version: "Wersja {n}", current: "aktualna", status: { active: "Aktywny", inactive: "Nieaktywny", archived: "Archiwum" },
     source: { generated: "Wygenerowany", manual: "Ręczny", imported: "Zaimportowany" }, newName: "Mój plan", generatedName: "Plan {split}",
@@ -199,7 +199,7 @@ export const pl = {
     pdfNote: "PDF i zdjęcia wymagają opcjonalnego asystenta AI (nie jest skonfigurowany). Skopiuj tekst i wklej go tutaj albo wpisz plan ręcznie.",
     parse: "Rozpoznaj", review: "Sprawdź, co rozpoznaliśmy", unparsed: "Nie rozpoznano tych linii", matched: "dopasowano", unmatched: "nie znaleziono — zostanie własnym ćwiczeniem",
     chooseMatch: "Dopasuj do ćwiczenia", saveAsIs: "Zapisz dokładnie tak", analyze: "Sprawdź mój plan", optimize: "Dopasuj do mojego czasu i sprzętu",
-    fromNotes: "w notatkach: {name}", weight: "Ciężar (kg)", ownExercise: "Własne ćwiczenie: {name}", similar: "Podobne", allExercises: "Wszystkie ćwiczenia", undo: "Cofnij import", undoConfirm: "Usunąć ten zaimportowany plan razem z ćwiczeniami dodanymi przy imporcie? Możesz od razu zaimportować go jeszcze raz.", done: "Plan zaimportowany. Coś się nie zgadza?", noSets: "Bez serii w notatkach – przyjęto typowe, popraw jeśli robisz inaczej.", found: "Rozpoznano ćwiczeń: {n}", nothing: "Nie znaleziono żadnych ćwiczeń z seriami (np. 3x10).", pattern: "Rodzaj ruchu (do szacowania czasu)", importedName: "Zaimportowany plan",
+    fromNotes: "w notatkach: {name}", weight: "Ciężar (kg)", ownExercise: "Własne ćwiczenie: {name}", similar: "Podobne", allExercises: "Wszystkie ćwiczenia", undo: "Cofnij import", undoConfirm: "Usunąć ten zaimportowany plan razem z ćwiczeniami dodanymi przy imporcie? Możesz od razu zaimportować go jeszcze raz.", done: "Plan zaimportowany. Coś się nie zgadza?", noSets: "Bez serii w notatkach – przyjęto typowe, popraw jeśli robisz inaczej.", found: "Rozpoznano ćwiczeń: {n}", nothing: "Nie znaleziono żadnych ćwiczeń z seriami (np. 3x10).", pattern: "Rodzaj ruchu (do szacowania czasu)", importedName: "Plan treningowy",
     analysisTitle: "Analiza planu", optimizeNote: "Utworzymy nową wersję. Oryginał zostaje w historii wersji.", noProfile: "Najpierw odpowiedz na kilka pytań o czas i sprzęt.",
   },
   nutrition: {

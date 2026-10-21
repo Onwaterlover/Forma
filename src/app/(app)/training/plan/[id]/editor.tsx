@@ -22,7 +22,7 @@ import { useI18n } from "@/i18n/client";
 const REST_OPTIONS = [45, 60, 75, 90, 120, 150, 180, 240];
 
 export function PlanEditor({
-  planId, name, initial, profile, prefs, custom, source, then,
+  planId, name, initial, profile, prefs, custom, source, then, lastKg = {},
 }: {
   planId: string;
   name: string;
@@ -32,6 +32,7 @@ export function PlanEditor({
   custom: Exercise[];
   source: "generated" | "manual" | "imported";
   then: "analyze" | "optimize" | null;
+  lastKg?: Record<string, { kg: number; at: string }>;
 }) {
   const { t, locale } = useI18n();
   const toast = useToast();
@@ -73,6 +74,11 @@ export function PlanEditor({
       }),
     }));
     setDirty(true);
+  };
+  // Weight shown in the plan: one typed here after the last session, otherwise the last one actually lifted.
+  const shownKg = (e: PlannedExercise) => {
+    const last = lastKg[e.exerciseId];
+    return e.startKg && (!last || (e.startKgAt ?? "") > last.at) ? e.startKg : last?.kg;
   };
   const editEx = (key: string, i: number, patch: Partial<PlannedExercise>) =>
     update(key, (s) => ({ ...s, exercises: s.exercises.map((e, j) => (j === i ? { ...e, ...patch } : e)) }));
@@ -206,6 +212,17 @@ export function PlanEditor({
                         <Input type="number" inputMode="numeric" aria-label="max" className="h-9 w-16 text-center" value={e.repMax} min={1} max={50} onChange={(ev) => editEx(s.key, i, { repMax: Math.max(1, Number(ev.target.value) || 1) })} />
                         {t("plan.reps")}
                       </span>
+                    )}
+                    {!e.seconds && ex && ex.loading !== "bodyweight" && ex.loading !== "time" && (
+                      <label className="inline-flex items-center gap-1.5">
+                        <Input type="number" inputMode="decimal" step={0.25} min={0} max={500} aria-label={t("plan.weight")} placeholder="—" className="h-9 w-20 text-center"
+                          value={shownKg(e) ?? ""}
+                          onChange={(ev) => {
+                            const v = Number(ev.target.value.replace(",", "."));
+                            editEx(s.key, i, ev.target.value && v > 0 ? { startKg: Math.min(500, v), startKgAt: new Date().toISOString() } : { startKg: undefined, startKgAt: undefined });
+                          }} />
+                        kg
+                      </label>
                     )}
                     {ex?.grips && (
                       <Select aria-label={t("plan.grip")} className="h-9 w-32" value={e.grip ?? ex.grips[0]} onChange={(ev) => editEx(s.key, i, { grip: ev.target.value as Grip })}>

@@ -315,6 +315,22 @@ export async function exerciseHistory(userId: string, exerciseId: string, limit 
     .filter((h) => h.sets.some((s) => s.completed && (s.reps !== null || s.durationS !== null)));
 }
 
+/** Last completed working-set weight per exercise (for showing "kg" in the plan editor). */
+export async function lastWeights(userId: string, exerciseIds: string[]): Promise<Record<string, { kg: number; at: string }>> {
+  if (!exerciseIds.length) return {};
+  const rows = await (await db()).all<{ exercise_id: string; started_at: string; weight_kg: number }>(
+    `SELECT e.exercise_id, w.started_at, s.weight_kg FROM workout_sets s
+     JOIN workout_exercises e ON e.id = s.workout_exercise_id JOIN workouts w ON w.id = e.workout_id
+     WHERE w.user_id = ? AND w.status = 'completed' AND s.completed = 1 AND s.weight_kg IS NOT NULL AND s.set_type <> 'warmup'
+       AND e.exercise_id IN (${exerciseIds.map(() => "?").join(",")})
+     ORDER BY w.started_at DESC, s.position`,
+    [userId, ...exerciseIds],
+  );
+  const out: Record<string, { kg: number; at: string }> = {};
+  for (const r of rows) out[r.exercise_id] ??= { kg: Number(r.weight_kg), at: r.started_at };
+  return out;
+}
+
 export async function workoutDatesSince(userId: string, sinceIso: string): Promise<string[]> {
   const rows = await (await db()).all<{ started_at: string }>("SELECT started_at FROM workouts WHERE user_id = ? AND status = 'completed' AND started_at >= ? ORDER BY started_at", [userId, sinceIso]);
   return rows.map((r) => r.started_at);

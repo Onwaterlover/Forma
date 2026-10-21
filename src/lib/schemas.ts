@@ -17,6 +17,8 @@ const plannedExercise = z.object({
   superset: z.number().int().min(0).max(99).optional(),
   grip: z.enum(["narrow", "wide", "neutral"]).optional(),
   note: z.string().max(300).optional(),
+  startKg: z.number().min(0).max(500).optional(),
+  startKgAt: z.string().max(40).optional(),
 });
 
 const message = z.object({ code: z.string().max(60), params: z.record(z.string(), z.union([z.string().max(500), z.number()])).optional() });

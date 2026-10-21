@@ -244,8 +244,8 @@ export const pl = {
     noAuto: "Cel nigdy nie zmienia się automatycznie.", exerciseNote: "Nie dodajemy automatycznie kalorii z treningu — szacunek z Twoich danych już uwzględnia aktywność.",
   },
   progress: {
-    title: "Postępy", bodyweight: "Masa ciała", addWeight: "Dodaj ważenie", trend: "Trend", raw: "Pomiary", weeklyChange: "{kg} kg / tydzień (trend)",
-    noWeight: "Brak ważeń. Wystarczy kilka w tygodniu — pojedynczy pomiar niewiele mówi.", fluctuation: "Waga z dnia na dzień waha się o 1–2 kg (woda, jedzenie w żołądku, sól). Patrz na trend, nie na pojedyncze dni.",
+    title: "Postępy", bodyweight: "Masa ciała", addWeight: "Dodaj lub popraw ważenie", trend: "Trend", raw: "Pomiary", weeklyChange: "{kg} kg / tydzień (trend)",
+    chartSoon: "Wykres pojawi się od drugiego ważenia. Najlepiej waż się rano, kilka razy w tygodniu – na ekranie „Dziś”.", noWeight: "Brak ważeń. Wystarczy kilka w tygodniu — pojedynczy pomiar niewiele mówi.", fluctuation: "Waga z dnia na dzień waha się o 1–2 kg (woda, jedzenie w żołądku, sól). Patrz na trend, nie na pojedyncze dni.",
     training: "Trening", workoutsPerWeek: "Treningi w tygodniu", records: "Rekordy", maxLoad: "Największy ciężar", e1rm: "Szacowane 1RM", e1rmNote: "Szacunek ze wzoru Epleya, nie zmierzone maksimum.",
     repsAt: "{reps} powt. × {weight} kg", noRecords: "Rekordy pojawią się po zapisaniu serii w trybie szczegółowym.", calories: "Kalorie (ostatnie 14 dni)", avg: "średnio {n} kcal",
     weekly: "Podsumowanie tygodnia", weeklyNoChange: "Twój plan działa. Nie trzeba nic zmieniać.", weeklyLowData: "Za mało danych z tego tygodnia, by wyciągać wnioski.",

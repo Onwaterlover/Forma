@@ -109,7 +109,7 @@ export default async function ProgressPage() {
 
       <SectionTitle>{t("progress.bodyweight")}</SectionTitle>
       <Card className="space-y-4">
-        <WeightForm today={today} />
+        <WeightForm today={today} known={Object.fromEntries(weights.map((w) => [w.date, w.kg]))} />
         {trend.length === 0 ? (
           <p className="text-sm text-muted">{t("progress.noWeight")}</p>
         ) : (
@@ -118,11 +118,18 @@ export default async function ProgressPage() {
               <p className="text-3xl font-semibold tabular-nums">{fmt(locale, last!.trend, 1)} <span className="text-base font-normal text-muted">kg · {t("progress.trend").toLowerCase()}</span></p>
               {weeklyChange !== null && <p className="text-sm text-muted">{t("progress.weeklyChange", { kg: signed(weeklyChange, 2) })}</p>}
             </div>
-            <TrendChart label={t("progress.bodyweight")} points={trend.map((p) => ({ x: p.date, raw: p.kg, trend: p.trend }))} />
-            <p className="flex gap-4 text-xs text-muted">
-              <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-accent" />{t("progress.trend")}</span>
-              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-muted opacity-60" />{t("progress.raw")}</span>
-            </p>
+            {/* One point draws an empty frame; the chart appears from the second weigh-in. */}
+            {trend.length < 2 ? (
+              <p className="text-sm text-muted">{t("progress.chartSoon")}</p>
+            ) : (
+              <>
+                <TrendChart label={t("progress.bodyweight")} points={trend.map((p) => ({ x: p.date, raw: p.kg, trend: p.trend }))} />
+                <p className="flex gap-4 text-xs text-muted">
+                  <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-accent" />{t("progress.trend")}</span>
+                  <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-muted opacity-60" />{t("progress.raw")}</span>
+                </p>
+              </>
+            )}
             <Notice>{t("progress.fluctuation")}</Notice>
           </>
         )}

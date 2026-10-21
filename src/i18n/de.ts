@@ -245,8 +245,8 @@ export const de: Dict = {
     noAuto: "Dein Ziel ändert sich nie automatisch.", exerciseNote: "Trainingskalorien rechnen wir nicht automatisch hinzu — die Schätzung aus deinen Daten berücksichtigt deine Aktivität bereits.",
   },
   progress: {
-    title: "Fortschritt", bodyweight: "Körpergewicht", addWeight: "Wiegung hinzufügen", trend: "Trend", raw: "Messungen", weeklyChange: "{kg} kg / Woche (Trend)",
-    noWeight: "Noch keine Wiegungen. Ein paar pro Woche reichen — eine einzelne Messung sagt wenig.", fluctuation: "Das Gewicht schwankt von Tag zu Tag um 1–2 kg (Wasser, Mageninhalt, Salz). Achte auf den Trend, nicht auf einzelne Tage.",
+    title: "Fortschritt", bodyweight: "Körpergewicht", addWeight: "Wiegung eintragen oder korrigieren", trend: "Trend", raw: "Messungen", weeklyChange: "{kg} kg / Woche (Trend)",
+    chartSoon: "Die Kurve erscheint ab der zweiten Wiegung. Am besten morgens, ein paar Mal pro Woche – auf dem Bildschirm „Heute“.", noWeight: "Noch keine Wiegungen. Ein paar pro Woche reichen — eine einzelne Messung sagt wenig.", fluctuation: "Das Gewicht schwankt von Tag zu Tag um 1–2 kg (Wasser, Mageninhalt, Salz). Achte auf den Trend, nicht auf einzelne Tage.",
     training: "Training", workoutsPerWeek: "Einheiten pro Woche", records: "Rekorde", maxLoad: "Höchstes Gewicht", e1rm: "Geschätztes 1RM", e1rmNote: "Schätzung nach der Epley-Formel, kein gemessenes Maximum.",
     repsAt: "{reps} Wdh. × {weight} kg", noRecords: "Rekorde erscheinen, sobald du Sätze im Detailmodus einträgst.", calories: "Kalorien (letzte 14 Tage)", avg: "im Schnitt {n} kcal",
     weekly: "Wochenrückblick", weeklyNoChange: "Dein aktueller Plan funktioniert. Keine Änderung nötig.", weeklyLowData: "Zu wenige Daten diese Woche für Schlussfolgerungen.",

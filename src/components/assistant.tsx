@@ -1,5 +1,5 @@
 "use client";
-import { ArrowUp, Camera, Check, Sparkles, X } from "lucide-react";
+import { ArrowUp, Camera, Check, PenLine, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { applySuggestion, askAssistant, rejectSuggestion } from "@/app/actions/assistant";
@@ -23,7 +23,10 @@ async function shrink(file: File): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.75);
 }
 
-/** "Asystent" button + chat sheet. Changes only happen when the user taps "Apply" on a proposal card. */
+/**
+ * Training: one "Assistant" button. Food: two tiles, "Take photo" and "Describe meal", sharing one chat.
+ * Changes only happen when the user taps "Apply" on a proposal card.
+ */
 export function Assistant({ scope, date, enabled, provider }: { scope: "training" | "nutrition"; date: string; enabled: boolean; provider: "gemini" | "anthropic" }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -32,7 +35,7 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [mode, setMode] = useState<"chat" | "photo">("chat");
   const fileRef = useRef<HTMLInputElement>(null);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -50,14 +53,12 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
     text: [m.photo ? `${t("assistant.photoSent")} ${m.text}` : m.text, ...(m.proposals ?? []).map((p) => `[${p.title}: ${p.lines.join("; ")} — ${p.state ?? "pending"}]`)].join("\n"),
   });
 
-  const send = async (raw: string) => {
-    const q = raw.trim() || (photo ? t("assistant.photoPrompt") : "");
+  const send = async (raw: string, shot?: string) => {
+    const q = raw.trim() || (shot ? t("assistant.photoPrompt") : "");
     if (!q || busy) return;
-    const shot = photo;
-    const next: Msg[] = [...msgs, { role: "user", text: q, photo: shot ?? undefined }];
+    const next: Msg[] = [...msgs, { role: "user", text: q, photo: shot }];
     setMsgs(next);
     setText("");
-    setPhoto(null);
     setBusy(true);
     try {
       const r = await askAssistant({ scope, date, history: next.filter((m) => !m.error).slice(-20).map(asHistory), image: shot?.split(",")[1] });
@@ -91,11 +92,33 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
   };
 
   const examples = [1, 2, 3, 4].map((i) => t(`assistant.ex${scope === "training" ? "Training" : "Nutrition"}${i}`));
+  const photoMode = scope === "nutrition" && mode === "photo";
+  const title = scope === "training" ? t("assistant.title") : photoMode ? t("assistant.photo") : t("assistant.describe");
+  const takePhoto = () => fileRef.current?.click();
+  const placeholder = t(scope === "training" ? "assistant.placeholder" : photoMode ? "assistant.placeholderPhoto" : "assistant.placeholderFood");
 
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}><Sparkles size={16} aria-hidden />{t("assistant.open")}</Button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={t("assistant.title")} wide>
+      {scope === "training" ? (
+        <Button variant="secondary" size="sm" onClick={() => setOpen(true)}><Sparkles size={16} aria-hidden />{t("assistant.open")}</Button>
+      ) : (
+        <>
+          {/* Opens the camera straight away; the picked photo is sent at once. */}
+          <Button variant="secondary" size="tile" onClick={() => { setMode("photo"); if (on) takePhoto(); else setOpen(true); }}><Camera size={20} aria-hidden />{t("assistant.takePhoto")}</Button>
+          <Button variant="secondary" size="tile" onClick={() => { setMode("chat"); setOpen(true); }}><PenLine size={20} aria-hidden />{t("assistant.describe")}</Button>
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              const shot = f ? await shrink(f).catch(() => null) : null;
+              if (!shot) return;
+              setMode("photo");
+              setOpen(true);
+              send("", shot);
+            }} />
+        </>
+      )}
+      <Sheet open={open} onClose={() => setOpen(false)} title={title} wide>
         {!on ? (
           <div className="space-y-4">
             <p className="font-medium">{t("assistant.consentTitle")}</p>
@@ -109,10 +132,15 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
               {msgs.length > 0 && !busy && (
                 <button type="button" onClick={() => setMsgs([])} className="ml-auto block text-sm text-muted hover:text-text">{t("assistant.newChat")}</button>
               )}
-              {msgs.length === 0 && (
+              {msgs.length === 0 && photoMode && (
+                <>
+                  <p className="text-sm text-muted">{t("assistant.photoHint")}</p>
+                  <Button full size="lg" onClick={takePhoto}><Camera size={20} aria-hidden />{t("assistant.takePhoto")}</Button>
+                </>
+              )}
+              {msgs.length === 0 && !photoMode && (
                 <>
                   <p className="text-sm text-muted">{t(scope === "training" ? "assistant.introTraining" : "assistant.introNutrition")}</p>
-                  {scope === "nutrition" && <p className="text-sm text-muted">{t("assistant.photoHint")}</p>}
                   <div className="flex flex-wrap gap-2">
                     {examples.map((e) => (
                       <button key={e} type="button" onClick={() => send(e)} className="rounded-full border border-border px-3 py-1.5 text-left text-sm hover:bg-surface-2">{e}</button>
@@ -151,22 +179,11 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
               <div ref={end} />
             </div>
             <form className="sticky bottom-0 -mx-5 -mb-4 flex gap-2 border-t border-border bg-surface px-5 py-3" onSubmit={(e) => { e.preventDefault(); send(text); }}>
-              {scope === "nutrition" && (
-                <>
-                  <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
-                    onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setPhoto(await shrink(f).catch(() => null)); }} />
-                  {photo ? (
-                    <button type="button" onClick={() => setPhoto(null)} aria-label={t("assistant.photoRemove")} className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl">
-                      <img src={photo} alt="" className="h-full w-full object-cover" />
-                      <span className="absolute inset-0 grid place-items-center bg-black/40 text-white"><X size={16} aria-hidden /></span>
-                    </button>
-                  ) : (
-                    <Button type="button" variant="secondary" disabled={busy} onClick={() => fileRef.current?.click()} aria-label={t("assistant.photo")}><Camera size={18} aria-hidden /></Button>
-                  )}
-                </>
+              {photoMode && msgs.length > 0 && (
+                <Button type="button" variant="secondary" disabled={busy} onClick={takePhoto} aria-label={t("assistant.takePhoto")}><Camera size={18} aria-hidden /></Button>
               )}
-              <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={t("assistant.placeholder")} maxLength={4000} aria-label={t("assistant.placeholder")} />
-              <Button type="submit" disabled={busy || (!text.trim() && !photo)} aria-label={t("assistant.send")}><ArrowUp size={18} aria-hidden /></Button>
+              <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} maxLength={4000} aria-label={placeholder} />
+              <Button type="submit" disabled={busy || !text.trim()} aria-label={t("assistant.send")}><ArrowUp size={18} aria-hidden /></Button>
             </form>
           </div>
         )}

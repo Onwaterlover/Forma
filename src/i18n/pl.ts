@@ -201,7 +201,7 @@ export const pl = {
     analysisTitle: "Analiza planu", optimizeNote: "Utworzymy nową wersję. Oryginał zostaje w historii wersji.", noProfile: "Najpierw odpowiedz na kilka pytań o czas i sprzęt.",
   },
   nutrition: {
-    title: "Dziennik", add: "Dodaj jedzenie", scan: "Skanuj", search: "Szukaj", recent: "Ostatnie", favorites: "Ulubione", meals: "Posiłki", custom: "Własny produkt",
+    title: "Dziennik", add: "Dodaj jedzenie", addShort: "Dodaj produkt", scan: "Skanuj", search: "Szukaj", recent: "Ostatnie", favorites: "Ulubione", meals: "Posiłki", custom: "Własny produkt",
     quick: "Tylko kalorie", copyYesterday: "Kopiuj wczoraj", protein: "Białko", carbs: "Węglowodany", fat: "Tłuszcz", fiber: "Błonnik", sugar: "Cukry", satFat: "Kw. tłuszczowe nasycone", salt: "Sól",
     target: "Cel", remaining: "zostało {n}", over: "{n} ponad cel", noTarget: "Bez celu kalorycznego", setTarget: "Ustaw cel",
     dayComplete: "Wpisałem/am wszystko", dayIncomplete: "Niepełny dzień", completeHint: "Opcjonalne. Pomaga szacunkom zapotrzebowania — niepełne dni są pomijane.",
@@ -258,8 +258,8 @@ export const pl = {
   },
   today: {
     skipTitle: "Co się dzieje?", optShorter: "Mam mniej czasu", optShorterHint: "Krótsza wersja — najważniejsze ćwiczenia zostają.", optPlace: "Nie mam dziś siłowni lub sprzętu", optPlaceHint: "Ułożę ten sam trening z tego, co masz pod ręką — dalej pełnowartościowy.", noEquipment: "bez sprzętu", noEquipmentPlace: "Bez sprzętu (dom, hotel, park)", optPostpone: "Przełóż na następny raz", optPostponeHint: "Ten trening poczeka — nic nie przepada.", optSkip: "Pomiń ten trening", optSkipHint: "Przejdę do kolejnego w planie.", postponed: "Przełożone. Ten trening poczeka na następny raz.", postponedToday: "Dziś przełożony — czeka na następną okazję.", wherePlace: "Gdzie dziś trenujesz?", howLong: "Ile masz czasu?", fullTime: "Normalnie",
-    clock: "Teraz", scheduledToday: "Na dziś", scheduledOn: "Zaplanowany: {day}", anytime: "Kiedy masz czas", shorter: "Krótszy", skipToday: "Pomiń", skipped: "Pominięto. Następny trening czeka.", shorterTitle: "Ile masz dziś czasu?",
-    greeting: "Cześć, {name}", nextWorkout: "Następny trening", noPlan: "Nie masz jeszcze planu treningowego.", restDay: "Dziś wolne według planu. Możesz zrobić kolejny trening, jeśli chcesz.",
+    clock: "Teraz", scheduledToday: "Na dziś", scheduledOn: "Najbliższy termin: {day}", tomorrow: "Jutro", anytime: "Kiedy masz czas", shorter: "Krótszy", skipToday: "Pomiń", skipped: "Pominięto. Następny trening czeka.", shorterTitle: "Ile masz dziś czasu?",
+    greeting: "Cześć, {name}", nextWorkout: "Następny trening", noPlan: "Nie masz jeszcze planu treningowego.", restDay: "Dziś wolne według planu. Jeśli masz ochotę, możesz zrobić ten trening już dziś.",
     food: "Jedzenie dziś", logFood: "Dodaj jedzenie", weight: "Waga dziś", quickWeight: "Zapisz", modules: "Włącz w ustawieniach: {module}",
   },
   settings: {
@@ -277,12 +277,12 @@ export const pl = {
     aiNotConfigured: "Asystent nie jest jeszcze podłączony: administrator musi dodać klucz GEMINI_API_KEY (darmowy) albo ANTHROPIC_API_KEY w ustawieniach Vercela (instrukcja w README). Wszystkie podstawowe funkcje działają bez AI.",
   },
   assistant: {
-    open: "Asystent", title: "Asystent", placeholder: "Napisz, co zmienić albo o co zapytać…", send: "Wyślij", thinking: "Myślę…", newChat: "Nowa rozmowa", photo: "Zdjęcie jedzenia", photoRemove: "Usuń zdjęcie", photoPrompt: "Co jest na tym zdjęciu? Dodaj to do dziennika.", photoSent: "📷 Zdjęcie",
+    open: "Asystent", title: "Asystent", placeholder: "Napisz, co zmienić albo o co zapytać…", placeholderFood: "Np. 2 jajka i kromka chleba na śniadanie", placeholderPhoto: "Odpowiedz albo dopisz szczegóły…", send: "Wyślij", thinking: "Myślę…", newChat: "Nowa rozmowa", photo: "Zdjęcie jedzenia", takePhoto: "Zrób zdjęcie", describe: "Opisz posiłek", photoPrompt: "Co jest na tym zdjęciu? Dodaj to do dziennika.", photoSent: "📷 Zdjęcie",
     apply: "Zastosuj", reject: "Nie, dzięki", applied: "Zastosowano", rejected: "Odrzucono",
     introTraining: "Mogę zamienić ćwiczenie, ułożyć plan od nowa według Twoich uwag albo odpowiedzieć na pytanie o trening. Każdą zmianę najpierw pokazuję do zatwierdzenia.",
     introNutrition: "Dodam jedzenie do dziennika (wartości biorę z bazy produktów, nie zgaduję) albo odpowiem na pytanie o jedzenie. Każdy wpis najpierw pokazuję do zatwierdzenia.",
     exTraining1: "Zamień wyciskanie na ławce na coś na maszynie", exTraining2: "Treningi są za długie, skróć je", exTraining3: "Boli mnie bark przy wyciskaniu", exTraining4: "Ile serii na plecy w tygodniu to dobrze?",
-    exNutrition1: "Dodaj 2 jajka i kromkę chleba na śniadanie", exNutrition2: "Ile białka mi dziś brakuje?", exNutrition3: "Co zjeść wieczorem, żeby dobić białko?", exNutrition4: "Dodaj 650 kcal — obiad na mieście", photoHint: "Możesz też zrobić zdjęcie talerza. Rozpoznawanie ze zdjęcia jest przybliżone, więc asystent dopyta o to, czego nie widać.",
+    exNutrition1: "Dodaj 2 jajka i kromkę chleba na śniadanie", exNutrition2: "Ile białka mi dziś brakuje?", exNutrition3: "Co zjeść wieczorem, żeby dobić białko?", exNutrition4: "Dodaj 650 kcal — obiad na mieście", photoHint: "Zrób zdjęcie talerza. Rozpoznawanie ze zdjęcia jest przybliżone, więc dopytam o to, czego nie widać. Kalorie biorę z bazy produktów.",
     consentTitle: "Włączyć asystenta AI?", enable: "Włącz asystenta",
     swapTitle: "Zamiana ćwiczenia", planTitle: "Nowa wersja planu", prefTitle: "Oznaczenie ćwiczenia", foodTitle: "Dodaj do dziennika", quickTitle: "Szybki wpis",
     refused: "Na to pytanie nie odpowiem.", empty: "Nie mam na to dobrej odpowiedzi — spróbuj zapytać inaczej.",

@@ -202,7 +202,7 @@ export const en: Dict = {
     analysisTitle: "Plan analysis", optimizeNote: "This creates a new version. The original stays in the version history.", noProfile: "First answer a few questions about your time and equipment.",
   },
   nutrition: {
-    title: "Diary", add: "Add food", scan: "Scan", search: "Search", recent: "Recent", favorites: "Favourites", meals: "Meals", custom: "Custom food",
+    title: "Diary", add: "Add food", addShort: "Add food", scan: "Scan", search: "Search", recent: "Recent", favorites: "Favourites", meals: "Meals", custom: "Custom food",
     quick: "Calories only", copyYesterday: "Copy yesterday", protein: "Protein", carbs: "Carbs", fat: "Fat", fiber: "Fibre", sugar: "Sugars", satFat: "Saturated fat", salt: "Salt",
     target: "Target", remaining: "{n} left", over: "{n} over target", noTarget: "No calorie target", setTarget: "Set target",
     dayComplete: "I logged everything", dayIncomplete: "Incomplete day", completeHint: "Optional. Helps expenditure estimates — incomplete days are skipped.",
@@ -259,8 +259,8 @@ export const en: Dict = {
   },
   today: {
     skipTitle: "What's up?", optShorter: "I have less time", optShorterHint: "A shorter version — the most important exercises stay.", optPlace: "No gym or equipment today", optPlaceHint: "I'll rebuild the same workout from what you have — still a proper session.", noEquipment: "no equipment", noEquipmentPlace: "No equipment (home, hotel, park)", optPostpone: "Postpone to next time", optPostponeHint: "This workout will wait — nothing is lost.", optSkip: "Skip this workout", optSkipHint: "Move on to the next one in the plan.", postponed: "Postponed. This workout will wait for next time.", postponedToday: "Postponed today — it's waiting for next time.", wherePlace: "Where are you training today?", howLong: "How much time do you have?", fullTime: "As planned",
-    clock: "Now", scheduledToday: "Today", scheduledOn: "Planned: {day}", anytime: "Whenever you have time", shorter: "Shorter", skipToday: "Skip", skipped: "Skipped. The next workout is waiting.", shorterTitle: "How much time do you have today?",
-    greeting: "Hi, {name}", nextWorkout: "Next workout", noPlan: "You don't have a workout plan yet.", restDay: "Rest day according to your plan. You can still do the next workout if you like.",
+    clock: "Now", scheduledToday: "Today", scheduledOn: "Next training day: {day}", tomorrow: "Tomorrow", anytime: "Whenever you have time", shorter: "Shorter", skipToday: "Skip", skipped: "Skipped. The next workout is waiting.", shorterTitle: "How much time do you have today?",
+    greeting: "Hi, {name}", nextWorkout: "Next workout", noPlan: "You don't have a workout plan yet.", restDay: "Rest day according to your plan. You can do this workout today if you feel like it.",
     food: "Food today", logFood: "Add food", weight: "Weight today", quickWeight: "Save", modules: "Turn on in settings: {module}",
   },
   settings: {
@@ -278,12 +278,12 @@ export const en: Dict = {
     aiNotConfigured: "The assistant isn't connected yet: the admin needs to add GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in the Vercel settings (see the README). All core features work without AI.",
   },
   assistant: {
-    open: "Assistant", title: "Assistant", placeholder: "Say what to change or ask a question…", send: "Send", thinking: "Thinking…", newChat: "New chat", photo: "Food photo", photoRemove: "Remove photo", photoPrompt: "What's in this photo? Add it to my diary.", photoSent: "📷 Photo",
+    open: "Assistant", title: "Assistant", placeholder: "Say what to change or ask a question…", placeholderFood: "e.g. 2 eggs and a slice of bread for breakfast", placeholderPhoto: "Reply or add details…", send: "Send", thinking: "Thinking…", newChat: "New chat", photo: "Food photo", takePhoto: "Take photo", describe: "Describe meal", photoPrompt: "What's in this photo? Add it to my diary.", photoSent: "📷 Photo",
     apply: "Apply", reject: "No thanks", applied: "Applied", rejected: "Dismissed",
     introTraining: "I can swap an exercise, rebuild your plan from your feedback or answer a training question. I always show changes for you to confirm first.",
     introNutrition: "I can add food to your diary (values come from the product database, never guesses) or answer a food question. I always show entries for you to confirm first.",
     exTraining1: "Swap the bench press for something on a machine", exTraining2: "My workouts are too long, shorten them", exTraining3: "My shoulder hurts when I press", exTraining4: "How many sets for back per week is good?",
-    exNutrition1: "Add 2 eggs and a slice of bread for breakfast", exNutrition2: "How much protein am I missing today?", exNutrition3: "What could I eat tonight to hit my protein?", exNutrition4: "Add 650 kcal for dinner out", photoHint: "You can also take a photo of your plate. Photo recognition is approximate, so the assistant asks about what it can't see.",
+    exNutrition1: "Add 2 eggs and a slice of bread for breakfast", exNutrition2: "How much protein am I missing today?", exNutrition3: "What could I eat tonight to hit my protein?", exNutrition4: "Add 650 kcal for dinner out", photoHint: "Take a photo of your plate. Photo recognition is approximate, so I'll ask about what I can't see. Calories come from the product database.",
     consentTitle: "Turn on the AI assistant?", enable: "Turn on assistant",
     swapTitle: "Swap exercise", planTitle: "New plan version", prefTitle: "Mark exercise", foodTitle: "Add to diary", quickTitle: "Quick entry",
     refused: "I can't help with that one.", empty: "I don't have a good answer for that — try asking another way.",

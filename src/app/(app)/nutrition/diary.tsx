@@ -97,14 +97,16 @@ export function Diary({
         </div>
       </Card>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <Button onClick={() => setAdding(true)} className="flex-1 sm:flex-none"><Plus size={18} aria-hidden />{t("nutrition.add")}</Button>
-        <Button variant="secondary" disabled={pending} onClick={() => start(async () => { const r = await copyFromYesterday(date); toast({ text: r.n ? t("nutrition.copied", { n: r.n }) : t("nutrition.noEntriesYesterday") }); })}>
+      <div className={cx("mb-2 grid gap-2", assistant ? "grid-cols-3" : "grid-cols-1")}>
+        <Button size={assistant ? "tile" : "md"} onClick={() => setAdding(true)}><Plus size={20} aria-hidden />{t(assistant ? "nutrition.addShort" : "nutrition.add")}</Button>
+        {assistant}
+      </div>
+      <div className="mb-4 flex flex-wrap gap-1">
+        <Button variant="ghost" size="sm" disabled={pending} onClick={() => start(async () => { const r = await copyFromYesterday(date); toast({ text: r.n ? t("nutrition.copied", { n: r.n }) : t("nutrition.noEntriesYesterday") }); })}>
           <Copy size={16} aria-hidden />{t("nutrition.copyYesterday")}
         </Button>
-        {entries.length > 1 && <Button variant="secondary" onClick={() => { setSelected(entries.filter((e) => e.basis !== "portion").map((e) => e.id)); setSaving(true); }}><ListPlus size={16} aria-hidden />{t("nutrition.saveMeal")}</Button>}
-        <Link href="/nutrition/recipes" className="inline-flex h-11 items-center gap-2 rounded-xl px-3 text-[15px] font-medium hover:bg-surface-2"><Utensils size={16} aria-hidden />{t("nutrition.recipes")}</Link>
-        {assistant}
+        {entries.length > 1 && <Button variant="ghost" size="sm" onClick={() => { setSelected(entries.filter((e) => e.basis !== "portion").map((e) => e.id)); setSaving(true); }}><ListPlus size={16} aria-hidden />{t("nutrition.saveMeal")}</Button>}
+        <Link href="/nutrition/recipes" className="inline-flex h-9 items-center gap-2 rounded-xl px-3 text-sm font-medium hover:bg-surface-2"><Utensils size={16} aria-hidden />{t("nutrition.recipes")}</Link>
       </div>
 
       {entries.length === 0 ? (

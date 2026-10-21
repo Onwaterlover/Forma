@@ -26,7 +26,12 @@ export default async function TodayPage() {
   const lookup = (id: string) => library.find((e) => e.id === id);
 
   const next = plan ? nextSession(plan.data.sessions, weekdayOf(today) as never, await lastCompletedSessionKey(user.id, plan.id)) : null;
-  const scheduledToday = plan?.data.sessions.some((s) => s.day === weekdayOf(today));
+  const wd = weekdayOf(today);
+  const scheduledToday = plan?.data.sessions.some((s) => s.day === wd);
+  // The next session follows the rotation (a missed one comes first), but it is labelled with the
+  // nearest training day from today on, not the weekday it was originally planned for.
+  const planDays = new Set<number>(plan?.data.sessions.flatMap((s) => (s.day === null ? [] : [s.day])) ?? []);
+  const daysAhead = next?.day === wd ? 0 : [1, 2, 3, 4, 5, 6, 7].find((k) => planDays.has((wd + k) % 7));
   const showStart = !settings.onboarded && !plan && day.entries.length === 0;
   const profile = await getProfile(user.id);
   const postponed = plan ? await postponedSince(user.id, `${today}T00:00`) : [];
@@ -54,14 +59,14 @@ export default async function TodayPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-                    {next.day === weekdayOf(today) ? t("today.scheduledToday") : next.day !== null ? t("today.scheduledOn", { day: DICTS[locale].days.long[next.day]! }) : t("today.anytime")}
+                    {daysAhead === 0 ? t("today.scheduledToday") : daysAhead === 1 ? t("today.tomorrow") : daysAhead ? t("today.scheduledOn", { day: DICTS[locale].days.long[(wd + daysAhead) % 7]! }) : t("today.anytime")}
                   </p>
                   <p className="text-lg font-medium">{next.name ?? t(`template.${next.template}`)}</p>
                   <p className="text-sm text-muted">
                     {t("plan.estimated", { n: next.estimatedMinutes })}
                     {locName(next.locationId) ? ` · ${locName(next.locationId)}` : ""}
                   </p>
-                  {!scheduledToday && plan.data.sessions.some((s) => s.day !== null) && <p className="mt-1 text-sm text-muted">{t("today.restDay")}</p>}
+                  {!scheduledToday && planDays.size > 0 && <p className="mt-1 text-sm text-muted">{t("today.restDay")}</p>}
                 </div>
                 <form action={startWorkout.bind(null, plan.id, next.key, undefined, undefined)}>
                   <button type="submit" className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-hover">

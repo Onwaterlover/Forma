@@ -202,7 +202,7 @@ export const de: Dict = {
     analysisTitle: "Planprüfung", optimizeNote: "Es entsteht eine neue Version. Das Original bleibt im Versionsverlauf.", noProfile: "Beantworte zuerst ein paar Fragen zu Zeit und Ausrüstung.",
   },
   nutrition: {
-    title: "Tagebuch", add: "Essen hinzufügen", scan: "Scannen", search: "Suchen", recent: "Zuletzt", favorites: "Favoriten", meals: "Mahlzeiten", custom: "Eigenes Produkt",
+    title: "Tagebuch", add: "Essen hinzufügen", addShort: "Hinzufügen", scan: "Scannen", search: "Suchen", recent: "Zuletzt", favorites: "Favoriten", meals: "Mahlzeiten", custom: "Eigenes Produkt",
     quick: "Nur Kalorien", copyYesterday: "Gestern kopieren", protein: "Eiweiß", carbs: "Kohlenhydrate", fat: "Fett", fiber: "Ballaststoffe", sugar: "Zucker", satFat: "Gesättigte Fettsäuren", salt: "Salz",
     target: "Ziel", remaining: "noch {n}", over: "{n} über dem Ziel", noTarget: "Kein Kalorienziel", setTarget: "Ziel festlegen",
     dayComplete: "Alles eingetragen", dayIncomplete: "Unvollständiger Tag", completeHint: "Optional. Hilft bei der Bedarfsschätzung — unvollständige Tage werden ausgelassen.",
@@ -259,8 +259,8 @@ export const de: Dict = {
   },
   today: {
     skipTitle: "Was ist los?", optShorter: "Ich habe weniger Zeit", optShorterHint: "Kürzere Version — die wichtigsten Übungen bleiben.", optPlace: "Heute kein Studio oder keine Ausrüstung", optPlaceHint: "Ich baue dieselbe Einheit aus dem, was du hast — trotzdem vollwertig.", noEquipment: "ohne Ausrüstung", noEquipmentPlace: "Ohne Ausrüstung (Zuhause, Hotel, Park)", optPostpone: "Auf nächstes Mal verschieben", optPostponeHint: "Diese Einheit wartet — nichts geht verloren.", optSkip: "Diese Einheit überspringen", optSkipHint: "Weiter zur nächsten im Plan.", postponed: "Verschoben. Diese Einheit wartet auf das nächste Mal.", postponedToday: "Heute verschoben — wartet auf das nächste Mal.", wherePlace: "Wo trainierst du heute?", howLong: "Wie viel Zeit hast du?", fullTime: "Wie geplant",
-    clock: "Jetzt", scheduledToday: "Heute", scheduledOn: "Geplant: {day}", anytime: "Wann du Zeit hast", shorter: "Kürzer", skipToday: "Überspringen", skipped: "Übersprungen. Die nächste Einheit wartet.", shorterTitle: "Wie viel Zeit hast du heute?",
-    greeting: "Hallo, {name}", nextWorkout: "Nächste Einheit", noPlan: "Du hast noch keinen Trainingsplan.", restDay: "Laut Plan heute Ruhetag. Du kannst trotzdem die nächste Einheit machen.",
+    clock: "Jetzt", scheduledToday: "Heute", scheduledOn: "Nächster Trainingstag: {day}", tomorrow: "Morgen", anytime: "Wann du Zeit hast", shorter: "Kürzer", skipToday: "Überspringen", skipped: "Übersprungen. Die nächste Einheit wartet.", shorterTitle: "Wie viel Zeit hast du heute?",
+    greeting: "Hallo, {name}", nextWorkout: "Nächste Einheit", noPlan: "Du hast noch keinen Trainingsplan.", restDay: "Laut Plan heute Ruhetag. Wenn du Lust hast, kannst du diese Einheit auch heute machen.",
     food: "Essen heute", logFood: "Essen hinzufügen", weight: "Gewicht heute", quickWeight: "Speichern", modules: "In den Einstellungen einschalten: {module}",
   },
   settings: {
@@ -278,12 +278,12 @@ export const de: Dict = {
     aiNotConfigured: "Der Assistent ist noch nicht verbunden: Der Admin muss GEMINI_API_KEY (kostenlos) oder ANTHROPIC_API_KEY in den Vercel-Einstellungen hinterlegen (siehe README). Alle Kernfunktionen funktionieren ohne KI.",
   },
   assistant: {
-    open: "Assistent", title: "Assistent", placeholder: "Was soll ich ändern oder was möchtest du wissen…", send: "Senden", thinking: "Denke nach…", newChat: "Neues Gespräch", photo: "Essensfoto", photoRemove: "Foto entfernen", photoPrompt: "Was ist auf diesem Foto? Trag es ins Tagebuch ein.", photoSent: "📷 Foto",
+    open: "Assistent", title: "Assistent", placeholder: "Was soll ich ändern oder was möchtest du wissen…", placeholderFood: "z. B. 2 Eier und eine Scheibe Brot zum Frühstück", placeholderPhoto: "Antworte oder ergänze Details…", send: "Senden", thinking: "Denke nach…", newChat: "Neues Gespräch", photo: "Essensfoto", takePhoto: "Foto machen", describe: "Mahlzeit beschreiben", photoPrompt: "Was ist auf diesem Foto? Trag es ins Tagebuch ein.", photoSent: "📷 Foto",
     apply: "Übernehmen", reject: "Nein, danke", applied: "Übernommen", rejected: "Verworfen",
     introTraining: "Ich kann eine Übung tauschen, deinen Plan nach deinem Feedback neu erstellen oder Trainingsfragen beantworten. Änderungen zeige ich dir immer zuerst zur Bestätigung.",
     introNutrition: "Ich trage Essen ins Tagebuch ein (Werte aus der Produktdatenbank, nie geschätzt) oder beantworte Fragen zur Ernährung. Einträge zeige ich dir immer zuerst zur Bestätigung.",
     exTraining1: "Tausch das Bankdrücken gegen etwas an der Maschine", exTraining2: "Meine Trainings sind zu lang, kürz sie", exTraining3: "Meine Schulter tut beim Drücken weh", exTraining4: "Wie viele Sätze für den Rücken pro Woche sind gut?",
-    exNutrition1: "Trag 2 Eier und eine Scheibe Brot zum Frühstück ein", exNutrition2: "Wie viel Eiweiß fehlt mir heute?", exNutrition3: "Was kann ich abends essen, um mein Eiweiß zu schaffen?", exNutrition4: "Trag 650 kcal fürs Essen auswärts ein", photoHint: "Du kannst auch ein Foto vom Teller machen. Die Erkennung ist ungefähr, deshalb fragt der Assistent nach, was er nicht sieht.",
+    exNutrition1: "Trag 2 Eier und eine Scheibe Brot zum Frühstück ein", exNutrition2: "Wie viel Eiweiß fehlt mir heute?", exNutrition3: "Was kann ich abends essen, um mein Eiweiß zu schaffen?", exNutrition4: "Trag 650 kcal fürs Essen auswärts ein", photoHint: "Mach ein Foto vom Teller. Die Erkennung ist ungefähr, deshalb frage ich nach, was ich nicht sehe. Kalorien kommen aus der Produktdatenbank.",
     consentTitle: "KI-Assistent einschalten?", enable: "Assistent einschalten",
     swapTitle: "Übung tauschen", planTitle: "Neue Planversion", prefTitle: "Übung markieren", foodTitle: "Ins Tagebuch", quickTitle: "Schnelleintrag",
     refused: "Dabei kann ich nicht helfen.", empty: "Darauf habe ich keine gute Antwort — frag gern anders.",

@@ -230,7 +230,7 @@ export function PlanEditor({
         }}><Plus size={16} aria-hidden />{t("plan.addSession")}</Button>
       )}
 
-      <div className={cx("sticky bottom-20 z-30 flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3 shadow-lg md:bottom-4", !dirty && "hidden")}>
+      <div className={cx("sticky bottom-[calc(5rem_+_env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3 shadow-lg md:bottom-4", !dirty && "hidden")}>
         <span className="text-sm text-muted">{t("plan.unsaved")}</span>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={() => { setPlan(initial); setTitle(name); setDirty(false); }}>{t("plan.discard")}</Button>

@@ -45,7 +45,7 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
   const day = days[step];
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-4 pb-[calc(9rem_+_env(safe-area-inset-bottom))] md:pb-24">
       <div className="flex gap-1" aria-hidden>
         {[...days, null].map((_, i) => <span key={i} className={cx("h-1 flex-1 rounded-full", i <= step ? "bg-accent" : "bg-surface-2")} />)}
       </div>
@@ -118,14 +118,14 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
         </>
       )}
 
-      <div className="fixed inset-x-0 bottom-16 z-30 border-t border-border bg-bg/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-60">
+      <div className="fixed inset-x-0 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] z-30 border-t border-border bg-bg/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-60">
         <div className="mx-auto flex max-w-3xl gap-2">
-          {step > 0 && <Button variant="ghost" onClick={() => setStep(step - 1)}>{t("common.back")}</Button>}
+          {step > 0 && <Button variant="ghost" className="px-3" onClick={() => setStep(step - 1)}>{t("common.back")}</Button>}
           {summary ? (
             <Button full disabled={pending} onClick={confirm}>{t("review.confirm")}</Button>
           ) : (
             <>
-              <Button variant="secondary" disabled={pending} onClick={Object.keys(choice).length ? confirm : () => router.push("/training")}>{t("review.acceptAll")}</Button>
+              <Button variant="secondary" className="whitespace-nowrap" disabled={pending} onClick={Object.keys(choice).length ? confirm : () => router.push("/training")}>{t("review.acceptAll")}</Button>
               <Button full onClick={() => { setStep(step + 1); setOpen(null); window.scrollTo({ top: 0 }); }}>{t("common.next")}</Button>
             </>
           )}

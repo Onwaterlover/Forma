@@ -425,7 +425,7 @@ export function WorkoutLogger({
       )}
 
       {settings.restTimer && !finished && (
-        <div className="fixed inset-x-4 bottom-20 z-40 mx-auto max-w-md md:bottom-6">
+        <div className="fixed inset-x-4 bottom-[calc(5rem_+_env(safe-area-inset-bottom))] z-40 mx-auto max-w-md md:bottom-6">
           {rest ? (
             <div role="timer" aria-live="polite" className="overflow-hidden rounded-2xl bg-text text-bg shadow-xl">
               <div className="h-1 bg-bg/20"><div className="h-full bg-accent transition-[width] duration-1000 ease-linear" style={{ width: `${Math.max(0, Math.min(100, (restLeft / rest.total) * 100))}%` }} /></div>

@@ -5,6 +5,7 @@ import type { Exercise, ExercisePref, Grip, Plan, TrainingProfile } from "@/engi
 import { emptyNutrients, recipe as recipeCalc, scale, sum, type Ingredient, type Nutrients } from "@/nutrition/calc";
 import type { ProductDraft } from "@/nutrition/off";
 import { db, json, newId, nowIso, type Q } from "./db";
+import { MEASUREMENT_SITES, type Measurement } from "./measurements";
 
 // Every function takes the acting user's id and scopes all reads/writes to it.
 // UI visibility is never the security boundary; these queries are.
@@ -687,10 +688,40 @@ export async function deleteWeight(userId: string, date: string) {
   await (await db()).run("DELETE FROM bodyweight WHERE user_id = ? AND date = ?", [userId, date]);
 }
 
+// ── Body measurements (optional circumferences, one row per day) ─────────
+const SITE_COLS = MEASUREMENT_SITES.map((s) => `${s}_cm`);
+
+export async function listMeasurements(userId: string, fromDate = "0000"): Promise<Measurement[]> {
+  return (await db()).all<Measurement>(
+    `SELECT date, ${MEASUREMENT_SITES.map((s) => `${s}_cm AS ${s}`).join(", ")} FROM body_measurements WHERE user_id = ? AND date >= ? ORDER BY date`,
+    [userId, fromDate],
+  );
+}
+
+/** Writes the day's row exactly as given; a row with no values left is removed. */
+export async function saveMeasurement(userId: string, m: Measurement): Promise<"saved" | "deleted"> {
+  const values = MEASUREMENT_SITES.map((s) => m[s]);
+  if (values.every((v) => v === null)) {
+    await deleteMeasurement(userId, m.date);
+    return "deleted";
+  }
+  const now = nowIso();
+  await (await db()).run(
+    `INSERT INTO body_measurements (user_id, date, ${SITE_COLS.join(", ")}, created_at, updated_at) VALUES (?, ?, ${SITE_COLS.map(() => "?").join(", ")}, ?, ?)
+     ON CONFLICT (user_id, date) DO UPDATE SET ${SITE_COLS.map((c) => `${c} = excluded.${c}`).join(", ")}, updated_at = excluded.updated_at`,
+    [userId, m.date, ...values, now, now],
+  );
+  return "saved";
+}
+
+export async function deleteMeasurement(userId: string, date: string) {
+  await (await db()).run("DELETE FROM body_measurements WHERE user_id = ? AND date = ?", [userId, date]);
+}
+
 // ── Account ──────────────────────────────────────────────────────────────
 const USER_TABLES = [
   "user_settings", "training_profiles", "exercise_prefs", "custom_exercises", "plans", "workouts", "food_favorites",
-  "recipes", "diary_entries", "diary_days", "calorie_targets", "bodyweight", "ai_suggestions",
+  "recipes", "diary_entries", "diary_days", "calorie_targets", "bodyweight", "body_measurements", "ai_suggestions",
 ] as const;
 
 export async function exportUser(userId: string) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EXERCISE_BY_ID } from "./exercises";
-import { estimated1RM, personalRecords, suggestNext, type ExerciseSession } from "./progression";
+import { bestPoint, estimated1RM, exerciseTrend, personalRecords, suggestNext, type ExerciseSession } from "./progression";
 
 const ex = (id: string) => EXERCISE_BY_ID.get(id)!;
 const sess = (date: string, sets: [number, number][]): ExerciseSession => ({
@@ -54,5 +54,35 @@ describe("records", () => {
   });
   it("no load records for assisted exercises (higher assistance = easier)", () => {
     expect(personalRecords(ex("assisted_pull_up_machine"), [sess("a", [[40, 10]])]).maxLoad).toBeUndefined();
+  });
+});
+
+describe("exercise trend", () => {
+  it("tracks the best set by estimated 1RM, oldest first, ignoring warm-ups", () => {
+    const warm = { weightKg: 100, reps: 10, type: "warmup" as const, completed: true };
+    const h = [sess("2026-10-08", [[100, 3], [90, 8]]), { ...sess("2026-10-01", [[80, 10]]), sets: [warm, ...sess("x", [[80, 10]]).sets] }];
+    const r = exerciseTrend(ex("bench_press_bb"), h);
+    expect(r.metric).toBe("e1rm");
+    expect(r.points.map((p) => [p.date, p.weightKg, p.reps, p.value])).toEqual([["2026-10-01", 80, 10, 106.7], ["2026-10-08", 90, 8, 114]]);
+    expect(bestPoint(r)!.date).toBe("2026-10-08");
+  });
+
+  it("keeps sessions outside the 1–12 rep range without inventing an estimate", () => {
+    const r = exerciseTrend(ex("bench_press_bb"), [sess("b", [[60, 15], [50, 20]]), sess("a", [[70, 8]])]);
+    expect(r.points.map((p) => [p.weightKg, p.reps, p.value])).toEqual([[70, 8, 88.7], [60, 15, null]]);
+    expect(exerciseTrend(ex("bench_press_bb"), [sess("a", [[60, 15]]), sess("b", [[62.5, 15]])])).toMatchObject({ metric: "load", points: [{ value: 60 }, { value: 62.5 }] });
+    // Mostly high-rep sessions: one estimate would leave a one-point chart, so the heaviest set is tracked instead.
+    const raises = exerciseTrend(ex("db_lateral_raise"), [sess("c", [[10, 12]]), sess("b", [[8, 15]]), sess("a", [[8, 15]])]);
+    expect(raises).toMatchObject({ metric: "load", points: [{ value: 8 }, { value: 8 }, { value: 10, e1rm: 14 }] });
+  });
+
+  it("uses reps, seconds or assistance where load doesn't apply", () => {
+    expect(exerciseTrend(ex("inverted_row"), [sess("a", [[0, 10], [0, 12]])])).toMatchObject({ metric: "reps", points: [{ value: 12 }] });
+    const hold = exerciseTrend(ex("plank"), [{ date: "a", sets: [{ weightKg: null, reps: null, durationS: 45, type: "working", completed: true }, { weightKg: null, reps: null, durationS: 60, type: "working", completed: false }] }]);
+    expect(hold).toMatchObject({ metric: "time", points: [{ value: 45 }] });
+    const assisted = exerciseTrend(ex("assisted_pull_up_machine"), [sess("b", [[25, 6], [30, 10]]), sess("a", [[35, 10]])]);
+    expect(assisted).toMatchObject({ metric: "assistance", points: [{ value: 35 }, { value: 25, reps: 6 }] });
+    expect(bestPoint(assisted)!.value).toBe(25);
+    expect(exerciseTrend(ex("bench_press_bb"), [])).toEqual({ metric: "reps", points: [] });
   });
 });

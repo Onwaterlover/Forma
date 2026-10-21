@@ -211,6 +211,30 @@ describe("backup and restore", () => {
   }, 120_000);
 });
 
+describe("body measurements", () => {
+  const day = (date: string, waist: number | null, hips: number | null = null) => ({ date, waist, hips, chest: null, arm: null, thigh: null });
+
+  it("are private to their owner and in their export only", async () => {
+    expect(await data.saveMeasurement(A, day("2026-10-12", 81.5, 97))).toBe("saved");
+    expect(await data.listMeasurements(B)).toEqual([]);
+    await data.deleteMeasurement(B, "2026-10-12");
+    expect(await data.saveMeasurement(B, day("2026-10-12", 70))).toBe("saved");
+    expect(await data.listMeasurements(A)).toEqual([day("2026-10-12", 81.5, 97)]);
+    expect(await data.listMeasurements(B)).toEqual([day("2026-10-12", 70)]);
+    const e = (await data.exportUser(B)) as Record<string, { waist_cm: number }[]>;
+    expect(e.body_measurements!.map((r) => r.waist_cm)).toEqual([70]);
+  });
+
+  it("keep one row per day, written as entered; an emptied day is removed", async () => {
+    await data.saveMeasurement(A, day("2026-10-19", 81, 96.5));
+    await data.saveMeasurement(A, day("2026-10-19", 80.5));
+    expect((await data.listMeasurements(A, "2026-10-19"))).toEqual([day("2026-10-19", 80.5)]);
+    expect(await data.saveMeasurement(A, day("2026-10-19", null))).toBe("deleted");
+    expect(await data.listMeasurements(A, "2026-10-19")).toEqual([]);
+    await expect(data.saveMeasurement(A, day("2026-10-20", 5))).rejects.toThrow();
+  });
+});
+
 describe("progress photos", () => {
   it("are private to their owner", async () => {
     const id = await data.addPhoto(A, { date: "2026-10-10", pose: "front", note: null, mime: "image/jpeg", data: new Uint8Array([0xff, 0xd8, 0xff, 1, 2, 3]), width: 10, height: 10 });

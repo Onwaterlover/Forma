@@ -108,6 +108,67 @@ export interface Records {
   repsAtLoad: Record<string, { reps: number; date: string }>;
 }
 
+export type TrendMetric = "e1rm" | "load" | "reps" | "time" | "assistance";
+
+export interface BestSetPoint {
+  date: string;
+  /** In the trend's metric; null only for an "e1rm" session whose best set is outside 1–12 reps. */
+  value: number | null;
+  weightKg: number | null;
+  reps: number | null;
+  durationS: number | null;
+  e1rm: number | null;
+}
+
+const LOADED = ["total", "per_dumbbell", "per_side", "bodyweight_plus"];
+
+/**
+ * The best set of each logged session, oldest first, in the measure that suits the exercise: loaded lifts use
+ * the estimated 1RM (an estimate, labelled as one) or, when most sessions are outside the 1–12 rep range, the
+ * heaviest set; bodyweight lifts use reps; holds use seconds; assisted lifts use the assistance (less is better).
+ */
+export function exerciseTrend(ex: Exercise, history: ExerciseSession[]): { metric: TrendMetric; points: BestSetPoint[] } {
+  const sessions = [...history].sort((a, b) => a.date.localeCompare(b.date));
+  const point = (date: string, s: SetLog, value: number | null): BestSetPoint => ({
+    date, value, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS ?? null, e1rm: estimated1RM(s.weightKg ?? 0, s.reps ?? 0),
+  });
+  const best = (sets: SetLog[], better: (a: SetLog, b: SetLog) => boolean) => sets.reduce<SetLog | null>((b, s) => (!b || better(s, b) ? s : b), null);
+  const each = (metric: TrendMetric, fn: (h: ExerciseSession) => BestSetPoint | null) => ({ metric, points: sessions.map(fn).filter((p): p is BestSetPoint => p !== null) });
+
+  if (ex.loading === "time") {
+    return each("time", (h) => {
+      const b = best(h.sets.filter((s) => s.completed && s.type !== "warmup" && (s.durationS ?? 0) > 0), (a, c) => a.durationS! > c.durationS!);
+      return b && point(h.date, b, b.durationS!);
+    });
+  }
+  if (ex.loading === "assisted") {
+    return each("assistance", (h) => {
+      const b = best(working(h).filter((s) => s.weightKg !== null), (a, c) => a.weightKg! < c.weightKg! || (a.weightKg === c.weightKg && a.reps! > c.reps!));
+      return b && point(h.date, b, b.weightKg);
+    });
+  }
+  const heaviest = (a: SetLog, c: SetLog) => a.weightKg! > c.weightKg! || (a.weightKg === c.weightKg && a.reps! > c.reps!);
+  if (LOADED.includes(ex.loading) && sessions.some((h) => working(h).some((s) => (s.weightKg ?? 0) > 0))) {
+    // Highest estimate first; sets without one (13+ reps) rank by load, so a session of only those keeps its heaviest set.
+    const e1 = (s: SetLog) => estimated1RM(s.weightKg!, s.reps!) ?? -1;
+    const bests = sessions.flatMap((h) => {
+      const b = best(working(h).filter((s) => (s.weightKg ?? 0) > 0), (a, c) => e1(a) > e1(c) || (e1(a) === e1(c) && heaviest(a, c)));
+      return b ? [point(h.date, b, null)] : [];
+    });
+    const byE1rm = bests.filter((p) => p.e1rm !== null).length * 2 >= bests.length;
+    return { metric: byE1rm ? "e1rm" : "load", points: bests.map((p) => ({ ...p, value: byE1rm ? p.e1rm : p.weightKg })) };
+  }
+  return each("reps", (h) => {
+    const b = best(working(h), (a, c) => a.reps! > c.reps!);
+    return b && point(h.date, b, b.reps);
+  });
+}
+
+/** The best session of a trend: the highest value, or the lowest for assistance. */
+export function bestPoint({ metric, points }: { metric: TrendMetric; points: BestSetPoint[] }): BestSetPoint | null {
+  return points.reduce<BestSetPoint | null>((b, p) => (p.value === null ? b : !b || (metric === "assistance" ? p.value < b.value! : p.value > b.value!) ? p : b), null);
+}
+
 export function personalRecords(ex: Exercise, history: ExerciseSession[]): Records {
   const rec: Records = { repsAtLoad: {} };
   if (!["total", "per_dumbbell", "per_side", "bodyweight_plus"].includes(ex.loading)) return rec;

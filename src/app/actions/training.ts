@@ -8,6 +8,7 @@ import { ENGINE_VERSION, generatePlan, rebuildSession } from "@/engine/generator
 import { prescribe } from "@/engine/prescribe";
 import { parseProfile } from "@/engine/profile";
 import { suggestNext } from "@/engine/progression";
+import { substitutes } from "@/engine/select";
 import { PATTERN_MUSCLES } from "@/engine/templates";
 import { PATTERNS, type Exercise, type ExercisePref, type Pattern, type Plan, type PlannedSession } from "@/engine/types";
 import { validatePlan } from "@/engine/validate";
@@ -50,9 +51,54 @@ export async function saveProfileAndGenerate(raw: unknown, exclude?: string[]): 
   const plan = generatePlan({ profile, prefs: await getPrefs(user.id), library });
   const active = await getActivePlan(user.id);
   // Regenerating a generated plan adds a version; a manual/imported plan is never overwritten.
-  if (active && active.source === "generated") await savePlanVersion(user.id, active.id, plan, "regenerated");
-  else await createPlan(user.id, generatedName(user.locale, plan.split), "generated", plan, null, true);
+  let planId: string;
+  if (active && active.source === "generated") {
+    await savePlanVersion(user.id, active.id, plan, "regenerated");
+    planId = active.id;
+  } else planId = await createPlan(user.id, generatedName(user.locale, plan.split), "generated", plan, null, true);
   await saveSettings(user.id, { onboarded: true, modules: { training: true, nutrition: true } });
+  revalidatePath("/", "layout");
+  // The plan is saved already; the review lets the user swap exercises before using it.
+  redirect(`/training/review/${planId}`);
+}
+
+const reviewSchema = z.array(z.object({
+  sessionKey: z.string().max(64), index: z.number().int().min(0).max(30),
+  from: z.string().regex(/^[a-z0-9_-]{1,80}$/), to: z.string().regex(/^[a-z0-9_-]{1,80}$/),
+})).max(60);
+
+/**
+ * Applies the choices from the plan review. Each swap is checked against the same substitutes the
+ * review offered (equipment at that session's location, preferences, pain rules). Chosen
+ * alternatives become favourites so a later regeneration keeps them.
+ */
+export async function applyReview(planId: string, raw: unknown): Promise<{ error?: string }> {
+  const user = await requireUser();
+  const swaps = reviewSchema.safeParse(raw);
+  if (!swaps.success) return { error: "invalid" };
+  const [plan, profile, prefs, library] = await Promise.all([getPlan(user.id, planId), getProfile(user.id), getPrefs(user.id), libraryFor(user.id)]);
+  if (!plan || !profile) return { error: "not_found" };
+  const data = plan.data;
+  const chosen = new Set<string>();
+  for (const sw of swaps.data) {
+    const session = data.sessions.find((x) => x.key === sw.sessionKey);
+    const slot = session?.exercises[sw.index];
+    const original = library.find((e) => e.id === sw.from);
+    if (!session || !slot || slot.exerciseId !== sw.from || !original) continue;
+    const equipment = profile.locations.find((l) => l.id === session.locationId)?.equipment ?? [];
+    const allowed = substitutes(original, { profile, prefs, library, equipment, excludeIds: new Set(session.exercises.map((e) => e.exerciseId)) });
+    const to = allowed.find((e) => e.id === sw.to);
+    if (!to) continue;
+    session.exercises[sw.index] = { ...prescribe(profile, to, slot.priority), sets: slot.sets, superset: slot.superset };
+    chosen.add(to.id);
+  }
+  if (chosen.size) {
+    const lookup = (id: string) => library.find((e) => e.id === id);
+    for (const s of data.sessions) s.estimatedMinutes = estimateMinutes(s.exercises, lookup);
+    data.weeklySets = weeklySets(data.sessions, lookup);
+    await savePlanVersion(user.id, planId, data, "review");
+    for (const id of chosen) if (prefs[id] !== "favorite") await setPref(user.id, id, "favorite");
+  }
   revalidatePath("/", "layout");
   redirect("/training");
 }

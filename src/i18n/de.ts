@@ -281,6 +281,11 @@ export const de: Dict = {
     aiGeminiNote: "Kostenloser Gemini-Tarif: Google kann gesendete Nachrichten zur Verbesserung seiner Dienste nutzen. Schreib dem Assistenten nichts, was du nicht teilen möchtest.",
     aiNotConfigured: "Der Assistent ist noch nicht verbunden: Der Admin muss GEMINI_API_KEY (kostenlos) oder ANTHROPIC_API_KEY in den Vercel-Einstellungen hinterlegen (siehe README). Alle Kernfunktionen funktionieren ohne KI.",
   },
+  review: {
+    title: "Übungen auswählen", hint: "Die Empfehlungen sind schon ausgewählt. Ändere nur, was du willst.", dayOf: "Training {n} von {total}", recommended: "Empfohlen",
+    everywhere: "Eine Änderung gilt für diese Übung in allen Trainings des Plans.", acceptAll: "Alles übernehmen", summary: "Deine Woche", confirm: "Plan bestätigen",
+    trait: { favorite: "dein Favorit", unilateral: "eine Seite nach der anderen – dauert länger", machine: "geführte Bewegung, einfache Technik", bodyweight: "mit Körpergewicht", loadable: "Gewicht leicht steigerbar", stable: "stabil, sicher für harte Sätze", easy: "leicht zu lernen", technical: "braucht gute Technik", compound: "mehrere Muskeln zugleich", isolation: "zielt auf einen Muskel" },
+  },
   checkin: {
     title: "Woche {range}", stats: "Durchschnittlich {kcal} kcal pro Tag aus {days} erfassten Tagen.",
     question: "Ist das Tagebuch dieser Woche vollständig: jede Mahlzeit, jeder Snack, jedes Getränk, Öl und jede Soße?",

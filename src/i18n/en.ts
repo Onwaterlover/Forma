@@ -281,6 +281,11 @@ export const en: Dict = {
     aiGeminiNote: "Gemini free tier: Google may use the messages you send to improve its services. Don't tell the assistant anything you don't want to share.",
     aiNotConfigured: "The assistant isn't connected yet: the admin needs to add GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in the Vercel settings (see the README). All core features work without AI.",
   },
+  review: {
+    title: "Choose your exercises", hint: "The recommended ones are already selected. Change only what you want.", dayOf: "Workout {n} of {total}", recommended: "Recommended",
+    everywhere: "A change applies to that exercise in every workout of the plan.", acceptAll: "Accept all", summary: "Your week", confirm: "Confirm plan",
+    trait: { favorite: "your favourite", unilateral: "one side at a time – takes longer", machine: "guided movement, simple technique", bodyweight: "bodyweight", loadable: "easy to add weight", stable: "stable, safe for hard sets", easy: "easy to learn", technical: "needs good technique", compound: "several muscles at once", isolation: "targets one muscle" },
+  },
   checkin: {
     title: "Week {range}", stats: "Average {kcal} kcal a day from {days} logged days.",
     question: "Is this week's diary complete: every meal, snack, drink, oil and sauce?",

@@ -280,6 +280,11 @@ export const pl = {
     aiGeminiNote: "Darmowy plan Gemini: Google może wykorzystywać wysłane wiadomości do ulepszania swoich usług. Nie pisz asystentowi niczego, czego nie chcesz udostępniać.",
     aiNotConfigured: "Asystent nie jest jeszcze podłączony: administrator musi dodać klucz GEMINI_API_KEY (darmowy) albo ANTHROPIC_API_KEY w ustawieniach Vercela (instrukcja w README). Wszystkie podstawowe funkcje działają bez AI.",
   },
+  review: {
+    title: "Wybierz ćwiczenia", hint: "Polecane są już zaznaczone. Zmień tylko to, co chcesz.", dayOf: "Trening {n} z {total}", recommended: "Polecane",
+    everywhere: "Zmiana obowiązuje dla tego ćwiczenia we wszystkich treningach planu.", acceptAll: "Akceptuj wszystko", summary: "Twój tydzień", confirm: "Zatwierdź plan",
+    trait: { favorite: "Twoje ulubione", unilateral: "jedna strona naraz – trwa dłużej", machine: "prowadzony ruch, prosta technika", bodyweight: "z masą ciała", loadable: "łatwo dokładać ciężar", stable: "stabilne, bezpieczne do mocnych serii", easy: "łatwe do nauczenia", technical: "wymaga dobrej techniki", compound: "kilka mięśni naraz", isolation: "celuje w jeden mięsień" },
+  },
   checkin: {
     title: "Tydzień {range}", stats: "Średnio {kcal} kcal dziennie z {days} dni w dzienniku.",
     question: "Czy dziennik z tego tygodnia jest kompletny: każdy posiłek, przekąska, napój, olej i sos?",

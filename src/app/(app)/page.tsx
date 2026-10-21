@@ -94,7 +94,7 @@ export default async function TodayPage() {
           ) : (
             <Card className="flex items-center justify-between gap-3">
               <p className="text-sm text-muted">{t("today.noPlan")}</p>
-              <LinkButton href="/training/setup" size="sm">{t("plan.create")}</LinkButton>
+              <LinkButton href="/training/setup" size="sm" className="shrink-0 whitespace-nowrap">{t("plan.create")}</LinkButton>
             </Card>
           )}
         </>

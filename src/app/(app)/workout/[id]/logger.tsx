@@ -274,7 +274,7 @@ export function WorkoutLogger({
                 </button>
               ))}
             </div>
-            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSheet({ kind: "howto" })}><CircleHelp size={16} aria-hidden />{t("plan.howToShort")}</Button>
+            <Button variant="ghost" size="sm" className="ml-auto whitespace-nowrap" aria-label={t("plan.howToShort")} onClick={() => setSheet({ kind: "howto" })}><CircleHelp size={16} aria-hidden /><span className="max-[370px]:hidden">{t("plan.howToShort")}</span></Button>
             <Button variant="ghost" size="sm" onClick={() => setSheet({ kind: "more" })} aria-label={t("common.more")}><MoreHorizontal size={18} aria-hidden /></Button>
           </div>
         )}

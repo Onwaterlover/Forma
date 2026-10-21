@@ -363,17 +363,21 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
         </>
       )}
 
-      <div className="flex items-center justify-between gap-3 pt-1">
-        <Button variant="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>{t("common.back")}</Button>
-        {step < total - 1 ? (
+      {step < total - 1 ? (
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <Button variant="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>{t("common.back")}</Button>
           <Button onClick={() => setStep((s) => s + 1)} disabled={!canNext}>{t("common.next")}</Button>
-        ) : (
-          <div className="flex gap-2">
-            {initial && <Button variant="secondary" onClick={() => submit(false)} disabled={pending}>{t("onb.saveOnly")}</Button>}
-            <Button onClick={() => submit(true)} disabled={pending || p.locations.length === 0}>{pending ? t("onb.generating") : t("onb.generate")}</Button>
+        </div>
+      ) : (
+        // Last step: the main action gets the full width, so nothing overflows on narrow phones.
+        <div className="space-y-2 pt-1">
+          <Button full onClick={() => submit(true)} disabled={pending || p.locations.length === 0}>{pending ? t("onb.generating") : t("onb.generate")}</Button>
+          <div className="flex items-center justify-between gap-2">
+            <Button variant="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))}>{t("common.back")}</Button>
+            {initial && <Button variant="ghost" onClick={() => submit(false)} disabled={pending}>{t("onb.saveOnly")}</Button>}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

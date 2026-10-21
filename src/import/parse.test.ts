@@ -109,15 +109,16 @@ Martwy ciąg 3x5`, EXERCISES);
 
 *TYDZIEŃ (4 treningi)*
 Góra → Pośladki A → wolne → Góra → Nogi + pośladki B → wolne`, EXERCISES);
-    expect(d.sessions.map((s) => s.name)).toEqual(["Góra", "Pośladki A", "Nogi + pośladki B"]);
-    expect(d.sessions.map((s) => s.exercises.length)).toEqual([6, 5, 7]);
-    const [up, a, b] = d.sessions;
+    // The week line "Góra → Pośladki A → wolne → Góra → Nogi + pośladki B → wolne" makes it 4 sessions, Upper twice.
+    expect(d.sessions.map((s) => s.name)).toEqual(["Góra", "Pośladki A", "Góra", "Nogi + pośladki B"]);
+    expect(d.sessions.map((s) => s.exercises.length)).toEqual([6, 5, 6, 7]);
+    const [up, a, , b] = d.sessions;
     expect(up!.exercises.map((e) => e.match?.exerciseId)).toEqual(["lat_pulldown", "seated_cable_row", "machine_chest_press", "db_lateral_raise", "cable_pushdown", "db_curl"]);
     expect(up!.exercises[0]!.weightKg).toBe(28.75);
     expect(up!.exercises[1]!.weightKg).toBe(26.25);
     expect(a!.exercises[1]!.match?.exerciseId).toMatch(/^romanian_deadlift/);
     expect(a!.exercises.slice(3).map((e) => e.match?.exerciseId)).toEqual(["hip_abduction_machine", "hip_adduction_machine"]);
     expect(b!.exercises[3]).toMatchObject({ weightKg: 60, match: { exerciseId: "hip_thrust_bb" } });
-    expect(d.unparsed).toHaveLength(1);
+    expect(d.unparsed).toHaveLength(0);
   });
 });

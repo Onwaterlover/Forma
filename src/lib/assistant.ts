@@ -2,8 +2,12 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import type { BetaMessageParam, BetaTool, BetaToolResultBlockParam, BetaToolUseBlock } from "@anthropic-ai/sdk/resources/beta/messages";
 import { z } from "zod";
+import { applyPlanEdits, EDIT_OPS, type EditLine } from "@/engine/plan-edit";
+import { defaultProfile } from "@/engine/profile";
+import { matchesQuery, REGIONS, regionsOf } from "@/engine/regions";
 import { substitutes } from "@/engine/select";
-import type { Exercise, Kind, PlannedSession } from "@/engine/types";
+import { EQUIPMENT, type Exercise, type Kind, type PlannedSession } from "@/engine/types";
+import { planSchema } from "./schemas";
 import { DICTS, exName, fmt, translator, type Locale } from "@/i18n";
 import { scale, type Nutrients } from "@/nutrition/calc";
 import { todayIso, weekdayOf } from "./ctx";
@@ -62,7 +66,9 @@ ${scope === "training"
     ? `
 Training
 - Swap an exercise: call find_substitutes (add style if the user wants machines, free weights or bodyweight), pick the best fit, then call propose_swap. Prefer simple, stable options that match the user's level.
-- Bigger changes (shorter or longer sessions, fewer or more days, more upper or lower body, easier, more machines/free weights/bodyweight, exercises they hate) go through propose_plan_change.
+- Changes to the current plan go through propose_plan_edit, all in ONE call with every change listed: training more or fewer times a week, doing a session twice (e.g. "4x a week, upper twice" with sessions Upper, Glutes A, Legs B: duplicate_session of Upper, placed where the user wants it in the rotation), removing or renaming a session, setting weekdays, adding/removing exercises (find ids with find_exercises), sets, reps, kg and rest. This keeps the user's own exercises and works for imported plans too.
+- Read the request carefully and restate it in one short sentence before proposing. If something essential is ambiguous (which session, which day), ask one short question instead of guessing.
+- propose_plan_change regenerates the whole plan from the questionnaire. Use it only when the user wants a new plan built for them (e.g. "make it easier overall", "more machines everywhere") and a training profile exists.
 - An exercise that hurts: propose marking it "pain" and suggest a gentler alternative.
 - One-off situations ("only 25 minutes today", "no gym today") don't need a plan change: tell them to tap "Skip" on the Today screen, which offers a shorter version or a version for another place or with no equipment.`
     : `
@@ -98,7 +104,7 @@ async function trainingContext(userId: string, locale: Locale): Promise<string> 
     for (const s of plan.data.sessions) {
       const loc = profile?.locations.find((l) => l.id === s.locationId)?.name ?? s.locationId;
       out.push(`  Session key=${s.key} "${sessionName(s, t)}", ${s.day === null ? "any day" : DICTS[locale].days.long[s.day]}, at ${loc}, ~${s.estimatedMinutes} min`);
-      for (const e of s.exercises) out.push(`    - ${e.exerciseId} | ${name(e.exerciseId)} | ${e.sets}×${e.seconds ? `${e.seconds}s` : `${e.repMin}-${e.repMax}`} | rest ${e.restSec}s${e.grip ? ` | grip ${e.grip}` : ""}`);
+      for (const e of s.exercises) out.push(`    - ${e.exerciseId} | ${name(e.exerciseId)} | ${e.sets}×${e.seconds ? `${e.seconds}s` : `${e.repMin}-${e.repMax}`} | rest ${e.restSec}s${e.startKg ? ` | ${e.startKg} kg` : ""}${e.grip ? ` | grip ${e.grip}` : ""}`);
     }
   } else out.push("No active plan.");
   if (workouts.length) {
@@ -141,6 +147,34 @@ const TRAINING_TOOLS: BetaTool[] = [
       exercise_id: str("Id of the exercise to replace"),
       style: { type: "string", enum: ["machines", "free", "bodyweight"], description: "Optional: only machines/cables, only free weights, or only bodyweight" },
     }, ["session_key", "exercise_id"]),
+  },
+  {
+    name: "find_exercises",
+    description: "Find exercise ids in the library by name (any language, everyday names like 'brzuszki', 'hip thrust maszyna') and/or body part.",
+    input_schema: obj({
+      query: { type: ["string", "null"], description: "Words from the exercise name; null to list a body part" },
+      region: { type: ["string", "null"], enum: [...REGIONS, null], description: "Optional body part" },
+    }, ["query", "region"]),
+  },
+  {
+    name: "propose_plan_edit",
+    description: "Propose direct edits of the active plan, applied together after the user confirms. Keeps all other exercises as they are.",
+    input_schema: obj({
+      changes: {
+        type: "array", minItems: 1, maxItems: 20,
+        items: obj({
+          op: { type: "string", enum: [...EDIT_OPS] },
+          session_key: str("Session key from the plan (for duplicate_session: the session to copy)"),
+          exercise_id: { type: ["string", "null"], description: "For add/remove/set_exercise" },
+          name: { type: ["string", "null"], description: "New session name (rename, or name of the copy)" },
+          day: { type: ["integer", "null"], description: "set_day: 0=Monday ... 6=Sunday, null=any day" },
+          position: { type: ["integer", "null"], description: "1-based place in the list for duplicate/move/add; null = end" },
+          sets: { type: ["integer", "null"] }, rep_min: { type: ["integer", "null"] }, rep_max: { type: ["integer", "null"] },
+          kg: { type: ["number", "null"], description: "Working weight for the next workout" },
+          rest_sec: { type: ["integer", "null"] },
+        }, ["op", "session_key", "exercise_id", "name", "day", "position", "sets", "rep_min", "rep_max", "kg", "rest_sec"]),
+      },
+    }, ["changes"]),
   },
   {
     name: "propose_swap",
@@ -194,6 +228,7 @@ const NUTRITION_TOOLS: BetaTool[] = [
 const id = z.string().min(1).max(80);
 const meal = z.enum(MEALS).nullable();
 export const swapPayload = z.object({ planId: id, sessionKey: id, from: id, to: id });
+export const planEditPayload = z.object({ planId: id, version: z.number().int(), plan: planSchema });
 export const planChangePayload = z.object({ reasons: z.array(z.enum(REASONS)).max(10), dislike: z.array(id).max(30) });
 export const prefPayload = z.object({ exerciseId: id, pref: z.enum(["favorite", "dislike", "exclude", "pain"]) });
 export const foodPayload = z.object({ date: z.string(), meal, items: z.array(z.object({ productId: id, grams: z.number().positive().max(3000) })).min(1).max(10) });
@@ -208,13 +243,13 @@ type ToolOut = string | { error: string };
 async function sessionCtx(c: Ctx, sessionKey: string, exerciseId: string) {
   const [plan, profile, prefs, library] = await Promise.all([getActivePlan(c.userId), getProfile(c.userId), getPrefs(c.userId), libraryFor(c.userId)]);
   if (!plan) return { error: "No active plan." } as const;
-  if (!profile) return { error: "No training profile; ask the user to complete Training → Set up first." } as const;
   const session = plan.data.sessions.find((s) => s.key === sessionKey);
   if (!session) return { error: `Unknown session_key. Valid: ${plan.data.sessions.map((s) => s.key).join(", ")}` } as const;
   const original = library.find((e) => e.id === exerciseId);
   if (!original || !session.exercises.some((e) => e.exerciseId === exerciseId)) return { error: "That exercise is not in this session." } as const;
-  const equipment = profile.locations.find((l) => l.id === session.locationId)?.equipment ?? [];
-  const subs = substitutes(original, { profile, prefs, library, equipment, excludeIds: new Set(session.exercises.map((e) => e.exerciseId)) });
+  // Imported plans may have no questionnaire: then any equipment is allowed.
+  const equipment = profile ? profile.locations.find((l) => l.id === session.locationId)?.equipment ?? [] : [...EQUIPMENT];
+  const subs = substitutes(original, { profile: profile ?? defaultProfile(), prefs, library, equipment, excludeIds: new Set(session.exercises.map((e) => e.exerciseId)) });
   return { plan, profile, session, original, subs, library };
 }
 
@@ -247,6 +282,44 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
       if (!to) return { error: "Not a valid replacement here. Call find_substitutes and pick from its list." };
       return propose("swap", { planId: s.plan.id, sessionKey: s.session.key, from: s.original.id, to: to.id }, t("assistant.swapTitle"),
         [`${sessionName(s.session, t)}: ${label(s.original, s.original.id)} → ${label(to, to.id)}`]);
+    }
+    case "find_exercises": {
+      const a = z.object({ query: z.string().max(80).nullable(), region: z.enum(REGIONS).nullable() }).safeParse(input);
+      if (!a.success || (!a.data.query?.trim() && !a.data.region)) return { error: "Give a query or a region." };
+      const found = (await libraryFor(c.userId)).filter((e) => (!a.data.region || regionsOf(e).includes(a.data.region)) && matchesQuery(e, a.data.query ?? "")).slice(0, 15);
+      return found.length ? found.map((e) => `${e.id} | ${label(e, e.id)} | ${e.primary.join(", ")} | ${e.kind}`).join("\n") : "No exercises found. Try fewer or other words.";
+    }
+    case "propose_plan_edit": {
+      const op = z.object({
+        op: z.enum(EDIT_OPS), session_key: id, exercise_id: id.nullable(), name: z.string().max(60).nullable(), day: z.number().int().nullable(),
+        position: z.number().int().nullable(), sets: z.number().nullable(), rep_min: z.number().nullable(), rep_max: z.number().nullable(),
+        kg: z.number().nullable(), rest_sec: z.number().nullable(),
+      });
+      const a = z.object({ changes: z.array(op).min(1).max(20) }).safeParse(input);
+      if (!a.success) return { error: "Invalid input: every change needs all fields (use null when not used)." };
+      const [plan, profile, library] = await Promise.all([getActivePlan(c.userId), getProfile(c.userId), libraryFor(c.userId)]);
+      if (!plan) return { error: "No active plan." };
+      const r = applyPlanEdits(plan.data, a.data.changes, library, profile ?? defaultProfile());
+      if ("error" in r) return { error: r.error };
+      const ex = (x: string) => label(library.find((e) => e.id === x), x);
+      const line = (l: EditLine): string => {
+        switch (l.kind) {
+          case "duplicate": return t("assistant.edit.duplicate", { session: l.session, copy: l.copy });
+          case "remove_session": return t("assistant.edit.removeSession", { session: l.session });
+          case "rename": return t("assistant.edit.rename", { session: l.session, name: String(l.to) });
+          case "move": return t("assistant.edit.move", { session: l.session, n: Number(l.to) });
+          case "day": return t("assistant.edit.day", { session: l.session, day: l.day === null ? t("plan.flexibleDay") : DICTS[c.locale].days.long[l.day]! });
+          case "add": return t("assistant.edit.add", { session: l.session, exercise: ex(l.exerciseId) });
+          case "remove": return t("assistant.edit.remove", { session: l.session, exercise: ex(l.exerciseId) });
+          case "set": return `${l.session}: ${ex(l.exerciseId)} – ${[
+            l.sets ? `${l.sets} ${t("plan.sets")}` : "", l.reps ? `${l.reps[0]}–${l.reps[1]} ${t("plan.reps")}` : "",
+            l.kg ? `${fmt(c.locale, l.kg, 2)} kg` : "", l.rest !== undefined ? `${t("plan.rest")} ${l.rest} s` : "",
+          ].filter(Boolean).join(", ")}`;
+        }
+      };
+      const order = r.plan.sessions.map((s) => s.name ?? s.key).join(" → ");
+      return propose("plan_edit", { planId: plan.id, version: plan.current_version, plan: r.plan }, t("assistant.editTitle"),
+        [...r.lines.map(line), t("assistant.edit.result", { n: r.plan.sessions.length, order })]);
     }
     case "propose_plan_change": {
       const a = z.object({ reasons: z.array(z.enum(REASONS)).max(10), avoid_exercise_ids: z.array(id).max(30) }).safeParse(input);

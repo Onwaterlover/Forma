@@ -268,5 +268,24 @@ export function parseImport(text: string, library: Exercise[]): ImportDraft {
       }
     }
   }
-  return { sessions: sessions.filter((s) => s.exercises.length > 0), unparsed };
+  return applyWeekLine({ sessions: sessions.filter((s) => s.exercises.length > 0), unparsed });
+}
+
+const REST = /^(wolne|wolny|odpoczynek|przerwa|rest|off|frei|ruhetag|pauza)$/;
+
+/**
+ * A rotation line such as "Góra → Pośladki A → wolne → Góra → Nogi + pośladki B → wolne" sets the order of the
+ * sessions and repeats the ones listed twice (Upper twice = 4 sessions a week). Applied only when every
+ * non-rest entry names a parsed session; otherwise the line stays in `unparsed` for the user to see.
+ */
+function applyWeekLine(d: ImportDraft): ImportDraft {
+  for (const line of d.unparsed) {
+    const parts = line.split(/\s*(?:→|->|=>|»|\|)\s*/).map((x) => x.trim()).filter(Boolean);
+    if (parts.length < 2) continue;
+    const order = parts.filter((x) => !REST.test(normalize(x)));
+    const byName = (x: string) => d.sessions.find((s) => normalize(s.name) === normalize(x));
+    if (!order.length || !order.every(byName)) continue;
+    return { sessions: order.map((x) => structuredClone(byName(x)!)), unparsed: d.unparsed.filter((l) => l !== line) };
+  }
+  return d;
 }

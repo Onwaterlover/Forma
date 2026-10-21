@@ -312,12 +312,12 @@ export const en: Dict = {
   assistant: {
     open: "Assistant", title: "Assistant", placeholder: "Say what to change or ask a question…", placeholderFood: "e.g. 2 eggs and a slice of bread for breakfast", placeholderPhoto: "Reply or add details…", send: "Send", thinking: "Thinking…", newChat: "New chat", photo: "Food photo", takePhoto: "Take photo", takePhotoShort: "Photo", describeShort: "Describe", describe: "Describe meal", photoPrompt: "What's in this photo? Add it to my diary.", photoSent: "📷 Photo",
     apply: "Apply", reject: "No thanks", applied: "Applied", rejected: "Dismissed",
-    introTraining: "I can swap an exercise, rebuild your plan from your feedback or answer a training question. I always show changes for you to confirm first.",
+    introTraining: "I can change your plan (days per week, exercises, sets, kg), swap an exercise or answer a training question. I always show changes for you to confirm first.",
     introNutrition: "I can add food to your diary (values come from the product database, never guesses) or answer a food question. I always show entries for you to confirm first.",
-    exTraining1: "Swap the bench press for something on a machine", exTraining2: "My workouts are too long, shorten them", exTraining3: "My shoulder hurts when I press", exTraining4: "How many sets for back per week is good?",
+    exTraining1: "Swap the bench press for something on a machine", exTraining2: "I want to train 4 times a week, upper body twice", exTraining3: "My shoulder hurts when I press", exTraining4: "How many sets for back per week is good?",
     exNutrition1: "Add 2 eggs and a slice of bread for breakfast", exNutrition2: "How much protein am I missing today?", exNutrition3: "What could I eat tonight to hit my protein?", exNutrition4: "Add 650 kcal for dinner out", photoHint: "Take a photo of your plate. Photo recognition is approximate, so I'll ask about what I can't see. Calories come from the product database.",
     consentTitle: "Turn on the AI assistant?", enable: "Turn on assistant",
-    swapTitle: "Swap exercise", planTitle: "New plan version", prefTitle: "Mark exercise", foodTitle: "Add to diary", quickTitle: "Quick entry",
+    editTitle: "Plan changes", edit: { duplicate: "{session}: extra session “{copy}”", removeSession: "Remove session “{session}”", rename: "“{session}” → “{name}”", move: "“{session}” to position {n}", day: "{session}: {day}", add: "{session}: add {exercise}", remove: "{session}: remove {exercise}", result: "After the change: {n} sessions a week ({order})" }, swapTitle: "Swap exercise", planTitle: "New plan version", prefTitle: "Mark exercise", foodTitle: "Add to diary", quickTitle: "Quick entry",
     refused: "I can't help with that one.", empty: "I don't have a good answer for that — try asking another way.",
     errors: {
       not_configured: "The assistant isn't connected (no API key).", disabled: "The assistant is turned off in Settings.", limit: "Today's question limit is used up. Come back tomorrow.",

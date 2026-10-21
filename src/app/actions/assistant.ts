@@ -2,7 +2,9 @@
 import { z } from "zod";
 import { prescribe } from "@/engine/prescribe";
 import { isLocale } from "@/i18n";
-import { aiConfigured, foodPayload, planChangePayload, prefPayload, quickPayload, runAssistant, swapPayload, type Proposal } from "@/lib/assistant";
+import { defaultProfile } from "@/engine/profile";
+import type { Plan } from "@/engine/types";
+import { aiConfigured, foodPayload, planChangePayload, planEditPayload, prefPayload, quickPayload, runAssistant, swapPayload, type Proposal } from "@/lib/assistant";
 import { requireUser, throttle } from "@/lib/auth";
 import { isIsoDate } from "@/lib/ctx";
 import { getPlan, getProfile, getSettings, libraryFor, pendingSuggestion, resolveSuggestion } from "@/lib/data";
@@ -48,10 +50,18 @@ export async function applySuggestion(id: string): Promise<{ error?: string }> {
     const session = plan?.data.sessions.find((x) => x.key === p.sessionKey);
     const i = session?.exercises.findIndex((e) => e.exerciseId === p.from) ?? -1;
     const to = library.find((e) => e.id === p.to);
-    if (!plan || !session || i < 0 || !to || !profile) return { error: "stale" };
+    if (!plan || !session || i < 0 || !to) return { error: "stale" };
     const old = session.exercises[i]!;
-    session.exercises[i] = { ...prescribe(profile, to, old.priority), sets: old.sets, superset: old.superset };
+    session.exercises[i] = { ...prescribe(profile ?? defaultProfile(), to, old.priority), sets: old.sets, superset: old.superset };
     const r = await savePlanEdit(plan.id, plan.data, `AI: ${p.from} → ${p.to}`);
+    return r.error ? { error: r.error } : {};
+  }
+  if (s.kind === "plan_edit") {
+    const p = planEditPayload.parse(s.payload);
+    const plan = await getPlan(user.id, p.planId);
+    // Changed in the meantime (edited by hand or another proposal): don't overwrite it.
+    if (!plan || plan.current_version !== p.version) return { error: "stale" };
+    const r = await savePlanEdit(plan.id, p.plan as Plan, "AI");
     return r.error ? { error: r.error } : {};
   }
   if (s.kind === "plan_change") return regenerateWithFeedback(planChangePayload.parse(s.payload));

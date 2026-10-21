@@ -102,7 +102,7 @@ export function DeletePlanButton({ planId, undoImport }: { planId: string; undoI
   const [pending, start] = useTransition();
   return (
     <>
-      <Button variant={undoImport ? "secondary" : "ghost"} size="sm" className={undoImport ? "shrink-0 whitespace-nowrap" : "text-danger"} onClick={() => setOpen(true)}><Trash2 size={16} aria-hidden />{t(undoImport ? "import.undo" : "plan.delete")}</Button>
+      <Button variant={undoImport ? "secondary" : "danger"} size="sm" className={undoImport ? "shrink-0 whitespace-nowrap" : undefined} onClick={() => setOpen(true)}><Trash2 size={16} aria-hidden />{t(undoImport ? "import.undo" : "plan.delete")}</Button>
       <Sheet open={open} onClose={() => setOpen(false)} title={t(undoImport ? "import.undo" : "plan.delete")}>
         <p className="mb-4 text-sm">{t(undoImport ? "import.undoConfirm" : "plan.deleteConfirm")}</p>
         <div className="flex gap-2">

@@ -42,6 +42,11 @@ export function PlanEditor({
   const [plan, setPlan] = useState<Plan>(initial);
   const [title, setTitle] = useState(name);
   const [dirty, setDirty] = useState(false);
+  // A change saved elsewhere (e.g. the assistant on this page) arrives as new props: show it unless there are unsaved edits.
+  useEffect(() => {
+    if (!dirty) { setPlan(initial); setTitle(name); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial, name]);
   const [pending, start] = useTransition();
   const [sheet, setSheet] = useState<{ mode: "swap" | "add"; session: string; index?: number } | null>(null);
   const [query, setQuery] = useState("");

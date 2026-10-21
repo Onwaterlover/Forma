@@ -118,7 +118,7 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
             }} />
         </>
       )}
-      <Sheet open={open} onClose={() => setOpen(false)} title={title} wide>
+      <Sheet open={open} onClose={() => setOpen(false)} title={title} wide full>
         {!on ? (
           <div className="space-y-4">
             <p className="font-medium">{t("assistant.consentTitle")}</p>
@@ -127,7 +127,7 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
             <Button full onClick={async () => { await updateSettings({ ai: true }); setOn(true); }}>{t("assistant.enable")}</Button>
           </div>
         ) : (
-          <div className="flex min-h-[45dvh] flex-col">
+          <div className="flex min-h-[45dvh] flex-col max-sm:min-h-full">
             <div className="flex-1 space-y-3 pb-3" aria-live="polite">
               {msgs.length > 0 && !busy && (
                 <button type="button" onClick={() => setMsgs([])} className="ml-auto block text-sm text-muted hover:text-text">{t("assistant.newChat")}</button>

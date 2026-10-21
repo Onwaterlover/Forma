@@ -311,12 +311,12 @@ export const pl = {
   assistant: {
     open: "Asystent", title: "Asystent", placeholder: "Napisz, co zmienić albo o co zapytać…", placeholderFood: "Np. 2 jajka i kromka chleba na śniadanie", placeholderPhoto: "Odpowiedz albo dopisz szczegóły…", send: "Wyślij", thinking: "Myślę…", newChat: "Nowa rozmowa", photo: "Zdjęcie jedzenia", takePhoto: "Zrób zdjęcie", takePhotoShort: "Zdjęcie", describeShort: "Opisz", describe: "Opisz posiłek", photoPrompt: "Co jest na tym zdjęciu? Dodaj to do dziennika.", photoSent: "📷 Zdjęcie",
     apply: "Zastosuj", reject: "Nie, dzięki", applied: "Zastosowano", rejected: "Odrzucono",
-    introTraining: "Mogę zamienić ćwiczenie, ułożyć plan od nowa według Twoich uwag albo odpowiedzieć na pytanie o trening. Każdą zmianę najpierw pokazuję do zatwierdzenia.",
+    introTraining: "Mogę zmienić Twój plan (dni w tygodniu, ćwiczenia, serie, kg), zamienić ćwiczenie albo odpowiedzieć na pytanie o trening. Każdą zmianę najpierw pokazuję do zatwierdzenia.",
     introNutrition: "Dodam jedzenie do dziennika (wartości biorę z bazy produktów, nie zgaduję) albo odpowiem na pytanie o jedzenie. Każdy wpis najpierw pokazuję do zatwierdzenia.",
-    exTraining1: "Zamień wyciskanie na ławce na coś na maszynie", exTraining2: "Treningi są za długie, skróć je", exTraining3: "Boli mnie bark przy wyciskaniu", exTraining4: "Ile serii na plecy w tygodniu to dobrze?",
+    exTraining1: "Zamień wyciskanie na ławce na coś na maszynie", exTraining2: "Chcę trenować 4 razy w tygodniu, góra 2 razy", exTraining3: "Boli mnie bark przy wyciskaniu", exTraining4: "Ile serii na plecy w tygodniu to dobrze?",
     exNutrition1: "Dodaj 2 jajka i kromkę chleba na śniadanie", exNutrition2: "Ile białka mi dziś brakuje?", exNutrition3: "Co zjeść wieczorem, żeby dobić białko?", exNutrition4: "Dodaj 650 kcal — obiad na mieście", photoHint: "Zrób zdjęcie talerza. Rozpoznawanie ze zdjęcia jest przybliżone, więc dopytam o to, czego nie widać. Kalorie biorę z bazy produktów.",
     consentTitle: "Włączyć asystenta AI?", enable: "Włącz asystenta",
-    swapTitle: "Zamiana ćwiczenia", planTitle: "Nowa wersja planu", prefTitle: "Oznaczenie ćwiczenia", foodTitle: "Dodaj do dziennika", quickTitle: "Szybki wpis",
+    editTitle: "Zmiany w planie", edit: { duplicate: "{session}: dodatkowy trening „{copy}”", removeSession: "Usuń trening „{session}”", rename: "„{session}” → „{name}”", move: "„{session}” na pozycję {n}", day: "{session}: {day}", add: "{session}: dodaj {exercise}", remove: "{session}: usuń {exercise}", result: "Po zmianie: {n} treningi w tygodniu ({order})" }, swapTitle: "Zamiana ćwiczenia", planTitle: "Nowa wersja planu", prefTitle: "Oznaczenie ćwiczenia", foodTitle: "Dodaj do dziennika", quickTitle: "Szybki wpis",
     refused: "Na to pytanie nie odpowiem.", empty: "Nie mam na to dobrej odpowiedzi — spróbuj zapytać inaczej.",
     errors: {
       not_configured: "Asystent nie jest podłączony (brak klucza API).", disabled: "Asystent jest wyłączony w Ustawieniach.", limit: "Na dziś wykorzystano limit pytań. Wróć jutro.",

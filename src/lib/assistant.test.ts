@@ -48,6 +48,29 @@ describe("assistant tools", () => {
     expect((await data.getActivePlan(A))!.current_version).toBe(plan.current_version);
   });
 
+  it("edits an imported plan without a questionnaire: 4x a week with Upper twice, kg and exercise search", async () => {
+    // User B has no training profile, like someone who only imported a plan.
+    const pe = (exerciseId: string) => ({ exerciseId, sets: 3, repMin: 8, repMax: 12, restSec: 90, effort: "leave_1_3", progression: "double", pattern: "h_pull", priority: 2 });
+    const session = (key: string, name: string, ids: string[]) => ({ key, template: "IMPORTED", name, day: null, locationId: "", exercises: ids.map(pe), estimatedMinutes: 30 });
+    await data.createPlan(B, "Plan treningowy", "imported", {
+      engineVersion: "1", split: "imported", weeklySets: {}, tradeoffs: [], notes: [],
+      sessions: [session("A", "Góra", ["lat_pulldown"]), session("B", "Pośladki A", ["hip_thrust_bb"]), session("C", "Nogi + pośladki B", ["leg_press"])],
+    } as never, "imported", true);
+    const c = ctx(B);
+    const found = await ai.runTool(c, "find_exercises", { query: "hip thrust maszyn", region: null });
+    expect(found).toContain("hip_thrust_machine");
+    const r = await ai.runTool(c, "propose_plan_edit", { changes: [
+      { op: "duplicate_session", session_key: "A", exercise_id: null, name: null, day: null, position: 3, sets: null, rep_min: null, rep_max: null, kg: null, rest_sec: null },
+      { op: "set_exercise", session_key: "C", exercise_id: "leg_press", name: null, day: null, position: null, sets: null, rep_min: null, rep_max: null, kg: 70, rest_sec: null },
+    ] });
+    expect(typeof r).toBe("string");
+    expect(c.proposals[0]!.lines.join(" | ")).toContain("Góra → Pośladki A → Góra → Nogi + pośladki B");
+    // Nothing changes until the user taps Apply.
+    expect((await data.getActivePlan(B))!.data.sessions).toHaveLength(3);
+    // Bad input comes back as an error the model can fix.
+    expect(await ai.runTool(c, "propose_plan_edit", { changes: [{ op: "remove_session", session_key: "Z" }] })).toHaveProperty("error");
+  });
+
   it("computes food from the database and rejects unknown products", async () => {
     const nutrients = { ...emptyNutrients(), kcal: 150, protein: 12.5, carbs: 1, fat: 10 };
     const egg = await data.saveCustomProduct(A, { name: "Jajko testowe", brand: null, barcode: null, basis: "g", state: null, nutrients, servings: [] });

@@ -128,9 +128,20 @@ export default async function ProgressPage() {
         )}
       </Card>
 
+      {sites.length === 0 ? (
+        // Optional: until the first measurement it is a single collapsed line.
+        <details className="mt-6 rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5">
+          <summary className="cursor-pointer list-none font-semibold">{t("progress.measurements")} <span className="font-normal text-muted">· {t("common.optional")}</span></summary>
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-muted">{t("progress.noMeasurements")}</p>
+            <MeasurementForm today={today} existing={measurements} />
+          </div>
+        </details>
+      ) : (
+      <>
       <SectionTitle>{t("progress.measurements")}</SectionTitle>
       <Card className="space-y-3">
-        {sites.length === 0 ? <p className="text-sm text-muted">{t("progress.noMeasurements")}</p> : (
+        {(
           <ul className="divide-y divide-border">
             {sites.map((s) => (
               <li key={s.site} className="flex items-center gap-3 py-2.5 first:pt-0">
@@ -148,6 +159,8 @@ export default async function ProgressPage() {
         )}
         <MeasurementForm today={today} existing={measurements} />
       </Card>
+      </>
+      )}
 
       {settings.modules.nutrition && (
         <>

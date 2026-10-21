@@ -51,34 +51,11 @@ function centerBand(v: HTMLVideoElement, deg = 0) {
 
 const SIZE = { width: { ideal: 1920 }, height: { ideal: 1080 } };
 const CAMERA_KEY = "forma.scanCamera";
-const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-/**
- * Back camera for scanning. On iPhones with several lenses the default is a virtual camera that keeps
- * switching between them (and refocusing) as the code gets closer, so the view jumps. The plain wide
- * camera is picked instead (its label is the shortest of the back cameras in every language) and
- * remembered, so later scans open it directly.
- */
 async function openCamera(): Promise<MediaStream> {
-  const md = navigator.mediaDevices;
-  let saved: string | null = null;
-  try { saved = localStorage.getItem(CAMERA_KEY); } catch {}
-  if (saved) {
-    try { return await md.getUserMedia({ audio: false, video: { deviceId: { exact: saved }, ...SIZE } }); } catch {}
-  }
-  const stream = await md.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, ...SIZE } });
-  if (!isIos()) return stream;
-  try {
-    const back = (await md.enumerateDevices()).filter((d) => d.kind === "videoinput" && d.label && !/front|przedni|vorder|frontal|selfie/i.test(d.label));
-    if (back.length < 2) return stream;
-    const wide = back.reduce((a, b) => (b.label.length < a.label.length ? b : a));
-    try { localStorage.setItem(CAMERA_KEY, wide.deviceId); } catch {}
-    if (stream.getVideoTracks()[0]?.getSettings().deviceId === wide.deviceId) return stream;
-    stream.getTracks().forEach((tr) => tr.stop());
-    return await md.getUserMedia({ audio: false, video: { deviceId: { exact: wide.deviceId }, ...SIZE } });
-  } catch {
-    return stream.active ? stream : md.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, ...SIZE } });
-  }
+  // Plain back camera (the per-lens pick on iPhones made scanning worse, so it was removed).
+  try { localStorage.removeItem(CAMERA_KEY); } catch {}
+  return navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, ...SIZE } });
 }
 
 // Per try: level band, band tilted both ways, whole frame.

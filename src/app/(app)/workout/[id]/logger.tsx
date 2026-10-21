@@ -1,5 +1,5 @@
 "use client";
-import { ArrowDown, ArrowUp, Check, CircleHelp, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Pause, Play, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, CircleHelp, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { applyWorkoutToPlan } from "@/app/actions/training";
@@ -16,7 +16,6 @@ import type { Exercise, ExercisePref, PlannedExercise, TrainingProfile } from "@
 import { exName, fmt, fmtRest } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { WorkoutExercise, WorkoutPayload, WorkoutSet } from "@/lib/data";
-import { adjustRest, pauseRest, restLeftMs, resumeRest, startRest as newRest, type Rest } from "@/lib/rest-timer";
 
 export type ExerciseInfo = {
   last: { date: string; sets: { w: number | null; r: number | null; d: number | null }[] } | null;
@@ -57,7 +56,7 @@ export function WorkoutLogger({
   const [w, setW] = useState<WorkoutPayload>(initial);
   const [sync, setSync] = useState<"saved" | "saving" | "offline">("saved");
   const [sheet, setSheet] = useState<null | { kind: "swap"; index: number } | { kind: "shorten" } | { kind: "location" } | { kind: "finish" } | { kind: "apply" } | { kind: "delete" } | { kind: "abandon" } | { kind: "more" } | { kind: "howto" } | { kind: "exercise"; index: number }>(null);
-  const [rest, setRest] = useState<Rest | null>(null);
+  const [rest, setRest] = useState<{ endsAt: number; total: number } | null>(null);
   const [tick, setTick] = useState(Date.now());
   const [notesOpen, setNotesOpen] = useState<number | null>(null);
   // Rest suggested by the last completed set (the timer is started manually unless auto-start is on).
@@ -114,8 +113,7 @@ export function WorkoutLogger({
   }, [initial.id, initial.clientUpdatedAt, push]);
 
   // Rest timer end: vibrate once.
-  const restLeft = rest ? Math.ceil(restLeftMs(rest, tick) / 1000) : 0;
-  const paused = rest !== null && rest.pausedLeft !== null;
+  const restLeft = rest ? Math.ceil((rest.endsAt - tick) / 1000) : 0;
   const buzzed = useRef(false);
   useEffect(() => {
     if (rest && restLeft <= 0 && !buzzed.current) {
@@ -126,12 +124,7 @@ export function WorkoutLogger({
   }, [rest, restLeft]);
   const startRest = (sec: number) => {
     buzzed.current = false;
-    setRest(newRest(sec, Date.now()));
-  };
-  const changeRest = (fn: (r: Rest, now: number) => Rest) => {
-    const at = Date.now();
-    setTick(at);
-    setRest((r) => r && fn(r, at));
+    setRest({ endsAt: Date.now() + sec * 1000, total: sec });
   };
 
   const elapsed = Math.max(0, Math.floor(((w.endedAt ? Date.parse(w.endedAt) : tick) - Date.parse(w.startedAt)) / 1000));
@@ -413,16 +406,12 @@ export function WorkoutLogger({
               <div className="h-1 bg-bg/20"><div className="h-full bg-accent transition-[width] duration-1000 ease-linear" style={{ width: `${Math.max(0, Math.min(100, (restLeft / rest.total) * 100))}%` }} /></div>
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
-                  <p className="text-xs uppercase tracking-wide opacity-70">{paused ? t("workout.restPaused") : t("workout.restTimer")}</p>
-                  <p className={cx("text-4xl font-semibold tabular-nums", paused && "opacity-60")}>{restLeft > 0 ? clock(restLeft) : "0:00"}</p>
+                  <p className="text-xs uppercase tracking-wide opacity-70">{t("workout.restTimer")}</p>
+                  <p className="text-4xl font-semibold tabular-nums">{restLeft > 0 ? clock(restLeft) : "0:00"}</p>
                 </div>
                 <div className="flex gap-1.5">
-                  <button type="button" className="h-11 rounded-xl bg-bg/10 px-3 text-sm font-medium" onClick={() => changeRest((r, n) => adjustRest(r, -15, n))}>−15</button>
-                  <button type="button" className="h-11 rounded-xl bg-bg/10 px-3 text-sm font-medium" onClick={() => changeRest((r, n) => adjustRest(r, 15, n))}>+15</button>
-                  <button type="button" className="grid h-11 w-11 place-items-center rounded-xl bg-bg/10" aria-label={paused ? t("workout.restResume") : t("workout.restPause")}
-                    onClick={() => changeRest(paused ? resumeRest : pauseRest)}>
-                    {paused ? <Play size={18} aria-hidden /> : <Pause size={18} aria-hidden />}
-                  </button>
+                  <button type="button" className="h-11 rounded-xl bg-bg/10 px-3 text-sm font-medium" onClick={() => setRest((r) => r && { ...r, endsAt: Math.max(Date.now(), r.endsAt - 15000) })}>−15</button>
+                  <button type="button" className="h-11 rounded-xl bg-bg/10 px-3 text-sm font-medium" onClick={() => setRest((r) => r && { ...r, endsAt: r.endsAt + 15000, total: r.total + 15 })}>+15</button>
                   <button type="button" className="h-11 rounded-xl bg-bg px-3 text-sm font-semibold text-text" onClick={() => setRest(null)}>{t("workout.restStop")}</button>
                 </div>
               </div>

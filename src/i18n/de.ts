@@ -162,7 +162,7 @@ export const de: Dict = {
     simpleHint: "Übungen abhaken, ohne Sätze einzutragen.", detailedHint: "Gewicht und Wiederholungen eintragen.",
     markDone: "Erledigt", skip: "Überspringen", skipped: "Übersprungen", swap: "Tauschen", addSet: "+ Satz", removeSet: "− Satz", last: "Letztes Mal", nothingLogged: "Noch nichts eingetragen",
     target: "Ziel", weight: "Gewicht", reps: "Wdh.", sec: "Zeit (s)", rir: "RIR", rpe: "RPE", setDone: "Satz erledigt", notes: "Notizen",
-    restTimer: "Pause", restStart: "Pause starten", restStop: "Stopp", restPause: "Pause anhalten", restResume: "Pause fortsetzen", restPaused: "Angehalten", restLeft: "Pause: {t}", shorten: "Ich habe weniger Zeit", shortenTo: "Auf {n} Min. kürzen",
+    restTimer: "Pause", restStart: "Pause starten", restStop: "Stopp", restLeft: "Pause: {t}", shorten: "Ich habe weniger Zeit", shortenTo: "Auf {n} Min. kürzen",
     changeLocation: "Ort wechseln", elapsed: "Zeit", applyToPlan: "Diese Änderungen dauerhaft in den Plan übernehmen?", applyYes: "Ja, Plan aktualisieren", applyNo: "Nein, nur heute",
     completed: "Training gespeichert. Gut gemacht!", offline: "Offline — auf dem Gerät gespeichert, wird später synchronisiert.", syncing: "Synchronisiere…", synced: "Synchronisiert",
     simpleNote: "Ein ohne Sätze abgehaktes Training fließt nicht in die Fortschrittsberechnung ein.", perDumbbell: "pro Hantel", perSide: "pro Seite", assistance: "Unterstützung",

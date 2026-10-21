@@ -161,7 +161,7 @@ export const pl = {
     simpleHint: "Odhaczaj ćwiczenia bez wpisywania serii.", detailedHint: "Zapisuj ciężar i powtórzenia.",
     markDone: "Zrobione", skip: "Pomiń", skipped: "Pominięte", swap: "Zamień", addSet: "+ seria", removeSet: "− seria", last: "Ostatnio", nothingLogged: "Brak wcześniejszych zapisów",
     target: "Cel", weight: "Ciężar", reps: "Powt.", sec: "Czas (s)", rir: "RIR", rpe: "RPE", setDone: "Seria zrobiona", notes: "Notatki",
-    restTimer: "Przerwa", restStart: "Start przerwy", restStop: "Stop", restPause: "Wstrzymaj przerwę", restResume: "Wznów przerwę", restPaused: "Wstrzymana", restLeft: "Przerwa: {t}", shorten: "Mam mniej czasu", shortenTo: "Skróć do {n} min",
+    restTimer: "Przerwa", restStart: "Start przerwy", restStop: "Stop", restLeft: "Przerwa: {t}", shorten: "Mam mniej czasu", shortenTo: "Skróć do {n} min",
     changeLocation: "Zmień miejsce", elapsed: "Czas", applyToPlan: "Zapisać zmiany w planie na stałe?", applyYes: "Tak, zaktualizuj plan", applyNo: "Nie, tylko dziś",
     completed: "Trening zapisany. Dobra robota!", offline: "Brak sieci — zapisano na urządzeniu, zsynchronizuję później.", syncing: "Synchronizuję…", synced: "Zsynchronizowano",
     simpleNote: "Trening odhaczony bez serii nie jest używany do wyliczania postępów.", perDumbbell: "na hantlę", perSide: "na stronę", assistance: "odciążenie",

@@ -162,7 +162,7 @@ export const en: Dict = {
     simpleHint: "Tick off exercises without logging sets.", detailedHint: "Log weight and reps.",
     markDone: "Done", skip: "Skip", skipped: "Skipped", swap: "Swap", addSet: "+ set", removeSet: "− set", last: "Last time", nothingLogged: "Nothing logged before",
     target: "Target", weight: "Weight", reps: "Reps", sec: "Time (s)", rir: "RIR", rpe: "RPE", setDone: "Set done", notes: "Notes",
-    restTimer: "Rest", restStart: "Start rest", restStop: "Stop", restPause: "Pause rest", restResume: "Resume rest", restPaused: "Paused", restLeft: "Rest: {t}", shorten: "I have less time", shortenTo: "Shorten to {n} min",
+    restTimer: "Rest", restStart: "Start rest", restStop: "Stop", restLeft: "Rest: {t}", shorten: "I have less time", shortenTo: "Shorten to {n} min",
     changeLocation: "Change place", elapsed: "Time", applyToPlan: "Save these changes to your plan permanently?", applyYes: "Yes, update the plan", applyNo: "No, just today",
     completed: "Workout saved. Nice work!", offline: "Offline — saved on this device, will sync later.", syncing: "Syncing…", synced: "Synced",
     simpleNote: "A workout ticked off without sets isn't used to calculate progress.", perDumbbell: "per dumbbell", perSide: "per side", assistance: "assistance",

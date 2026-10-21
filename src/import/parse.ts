@@ -13,6 +13,8 @@ export interface DraftExercise {
   weightKg?: number;
   match: { exerciseId: string; confidence: number } | null;
   guessedPattern: Pattern | null;
+  /** No sets/reps in the source: defaults were filled in for the user to adjust. */
+  noSets?: boolean;
 }
 
 export interface DraftSession {
@@ -132,6 +134,23 @@ export function parseLine(line: string, library: Exercise[]): DraftExercise | nu
   };
 }
 
+const ISOLATION: Pattern[] = ["elbow_flex", "elbow_ext", "lateral_raise", "rear_delt", "chest_fly", "calf", "knee_ext", "knee_flex", "core"];
+
+/**
+ * A line that is only an exercise name (plans kept in a notebook, sets "in the head"). Accepted only when
+ * it is short and recognisably an exercise; it gets usual defaults (3 × 8–12, isolation 3 × 10–15) marked
+ * `noSets` so the review asks the user to check them. Anything else stays in `unparsed`.
+ */
+export function parseNameOnly(line: string, library: Exercise[]): DraftExercise | null {
+  const name = line.replace(WEIGHT, " ").replace(/^[\s\-–•*\d.)]+/, "").replace(/[:;,|]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!name || name.length > 50 || name.split(" ").length > 6 || /[.!?]$/.test(name)) return null;
+  const match = matchExercise(name, library);
+  const pattern = (match && library.find((e) => e.id === match.exerciseId)?.pattern) || guessPattern(name);
+  if (!match && !pattern) return null;
+  const iso = !!pattern && ISOLATION.includes(pattern);
+  return { raw: line.trim(), name, sets: 3, repMin: iso ? 10 : 8, repMax: iso ? 15 : 12, match, guessedPattern: guessPattern(name), noSets: true };
+}
+
 const WEEKDAY_WORDS = /(poniedzialek|wtorek|sroda|czwartek|piatek|sobota|niedziela|monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|push|pull|legs|nogi|upper|lower|gora|dol|full ?body|fbw)/;
 
 function isHeader(line: string): boolean {
@@ -139,7 +158,7 @@ function isHeader(line: string): boolean {
   if (!t || t.length > 60 || SETS_REPS.test(t)) return false;
   const n = normalize(t);
   if (t.endsWith(":") || t.startsWith("#") || /^[A-Z]$/.test(t)) return true;
-  if (/^(day|dzien|tag|trening|training|workout|sesja|session)/.test(n)) return true;
+  if (/^(day|dzien|tag|trening|training|workout|sesja|session)\b/.test(n)) return true;
   return WEEKDAY_WORDS.test(n) && n.split(" ").length <= 5;
 }
 
@@ -215,7 +234,12 @@ export function parseImport(text: string, library: Exercise[]): ImportDraft {
     } else if (isHeader(line)) {
       sessions.push((current = { name: line.trim().replace(/^#+\s*/, "").replace(/:$/, ""), exercises: [] }));
     } else {
-      unparsed.push(line);
+      const bare = parseNameOnly(line, library);
+      if (!bare) unparsed.push(line);
+      else {
+        if (!current) sessions.push((current = { name: "1", exercises: [] }));
+        current.exercises.push(bare);
+      }
     }
   }
   return { sessions: sessions.filter((s) => s.exercises.length > 0), unparsed };

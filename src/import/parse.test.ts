@@ -62,4 +62,23 @@ B;"Cable fly, low to high";2;15;`,
   it("returns nothing for empty input", () => {
     expect(parseImport("   \n  ", EXERCISES)).toEqual({ sessions: [], unparsed: [] });
   });
+
+  it("accepts a notebook plan without sets, with defaults to check", () => {
+    const d = parseImport(`Trening A
+Przysiad
+Wyciskanie na ławce
+Uginanie ramion z hantlami
+Kupić nowe buty.
+
+Trening B
+Martwy ciąg 3x5`, EXERCISES);
+    expect(d.sessions.map((s) => s.name)).toEqual(["Trening A", "Trening B"]);
+    const a = d.sessions[0]!.exercises;
+    expect(a).toHaveLength(3);
+    expect(a[0]).toMatchObject({ sets: 3, repMin: 8, repMax: 12, noSets: true });
+    expect(a[2]).toMatchObject({ repMin: 10, repMax: 15, noSets: true });
+    expect(d.sessions[1]!.exercises[0]).toMatchObject({ sets: 3, repMin: 5 });
+    expect(d.sessions[1]!.exercises[0]!.noSets).toBeUndefined();
+    expect(d.unparsed).toEqual(["Kupić nowe buty."]);
+  });
 });

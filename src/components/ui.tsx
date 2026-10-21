@@ -15,7 +15,8 @@ const SIZE = { sm: "h-9 px-3 text-sm", md: "h-11 px-4 text-[15px]", lg: "h-12 px
 
 export function buttonClass(variant: Variant = "primary", size: keyof typeof SIZE = "md", full = false) {
   return cx(
-    "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors select-none disabled:opacity-50 disabled:pointer-events-none",
+    // active: visible press feedback on phones, where there is no hover.
+    "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-[color,background-color,transform] duration-100 select-none active:scale-[0.97] active:brightness-95 disabled:opacity-50 disabled:pointer-events-none",
     VARIANT[variant], SIZE[size], full && "w-full",
   );
 }

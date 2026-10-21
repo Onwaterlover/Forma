@@ -199,7 +199,7 @@ export const pl = {
     pdfNote: "PDF i zdjęcia wymagają opcjonalnego asystenta AI (nie jest skonfigurowany). Skopiuj tekst i wklej go tutaj albo wpisz plan ręcznie.",
     parse: "Rozpoznaj", review: "Sprawdź, co rozpoznaliśmy", unparsed: "Nie rozpoznano tych linii", matched: "dopasowano", unmatched: "nie znaleziono — zostanie własnym ćwiczeniem",
     chooseMatch: "Dopasuj do ćwiczenia", saveAsIs: "Zapisz dokładnie tak", analyze: "Sprawdź mój plan", optimize: "Dopasuj do mojego czasu i sprzętu",
-    nothing: "Nie znaleziono żadnych ćwiczeń z seriami (np. 3x10).", pattern: "Rodzaj ruchu (do szacowania czasu)", importedName: "Zaimportowany plan",
+    noSets: "Bez serii w notatkach – przyjęto typowe, popraw jeśli robisz inaczej.", found: "Rozpoznano ćwiczeń: {n}", nothing: "Nie znaleziono żadnych ćwiczeń z seriami (np. 3x10).", pattern: "Rodzaj ruchu (do szacowania czasu)", importedName: "Zaimportowany plan",
     analysisTitle: "Analiza planu", optimizeNote: "Utworzymy nową wersję. Oryginał zostaje w historii wersji.", noProfile: "Najpierw odpowiedz na kilka pytań o czas i sprzęt.",
   },
   nutrition: {

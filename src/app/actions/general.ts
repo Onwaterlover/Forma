@@ -5,7 +5,7 @@ import { z } from "zod";
 import { isLocale } from "@/i18n";
 import { createInvite, destroySession, hashPassword, requireUser, verifyPassword } from "@/lib/auth";
 import { isIsoDate } from "@/lib/ctx";
-import { addWeight, changePassword, deleteInvite, deleteUser, deleteWeight, passwordHash, saveMeasurement, saveSettings, setLocale, type Settings } from "@/lib/data";
+import { addWeight, changePassword, deleteInvite, deleteUser, listInvites, deleteWeight, passwordHash, saveMeasurement, saveSettings, setLocale, type Settings } from "@/lib/data";
 import { MEASUREMENT_MAX_CM, MEASUREMENT_MIN_CM, MEASUREMENT_SITES, type MeasurementSite } from "@/lib/measurements";
 import { parseDecimal } from "@/nutrition/calc";
 
@@ -75,19 +75,20 @@ export async function logMeasurements(date: string, values: Record<MeasurementSi
   return r === "deleted" ? { deleted: true } : {};
 }
 
-export async function makeInvite(note: string): Promise<{ code?: string }> {
+// No revalidatePath here: re-rendering the settings page would wipe the code, which is shown only once.
+// The fresh invite list is returned instead.
+export async function makeInvite(note: string): Promise<{ code?: string; invites?: Awaited<ReturnType<typeof listInvites>> }> {
   const user = await requireUser();
   if (!user.is_admin) return {};
   const code = await createInvite(user.id, note.trim().slice(0, 60) || null);
-  revalidatePath("/settings");
-  return { code };
+  return { code, invites: await listInvites() };
 }
 
 export async function removeInvite(createdAt: string) {
   const user = await requireUser();
   if (!user.is_admin || typeof createdAt !== "string" || createdAt.length > 40) return;
   await deleteInvite(createdAt);
-  revalidatePath("/settings");
+  return listInvites();
 }
 
 export async function updatePassword(current: string, next: string): Promise<{ error?: string }> {

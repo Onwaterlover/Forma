@@ -13,7 +13,7 @@ const LANG_NAMES: Record<Locale, string> = { pl: "Polski", en: "English", de: "D
 export const PROVIDER_NAME = { gemini: "Google Gemini", anthropic: "Claude (Anthropic)" } as const;
 
 export function SettingsForm({
-  settings, locale, isAdmin, users, invites, aiProvider,
+  settings, locale, isAdmin, users, invites: initialInvites, aiProvider,
 }: {
   settings: Settings;
   locale: Locale;
@@ -28,6 +28,7 @@ export function SettingsForm({
   const [pending, start] = useTransition();
   const [inviteNote, setInviteNote] = useState("");
   const [code, setCode] = useState<string | null>(null);
+  const [invites, setInvites] = useState(initialInvites);
   const [pw, setPw] = useState({ current: "", next: "" });
   const [confirmWord, setConfirmWord] = useState("");
 
@@ -76,9 +77,16 @@ export function SettingsForm({
             {/* Wraps on narrow phones so the "for whom" field stays readable next to the long button label. */}
             <div className="flex flex-wrap gap-2">
               <Input className="min-w-0 flex-1 basis-44" placeholder={t("settings.inviteNote")} value={inviteNote} maxLength={60} onChange={(e) => setInviteNote(e.target.value)} aria-label={t("settings.inviteNote")} />
-              <Button className="grow" disabled={pending} onClick={() => start(async () => { const r = await makeInvite(inviteNote); setCode(r.code ?? null); setInviteNote(""); })}>{t("settings.createInvite")}</Button>
+              <Button className="grow" disabled={pending} onClick={() => start(async () => { const r = await makeInvite(inviteNote); setCode(r.code ?? null); if (r.invites) setInvites(r.invites); setInviteNote(""); })}>{t("settings.createInvite")}</Button>
             </div>
-            {code && <Notice tone="accent"><p className="font-mono text-lg tracking-widest">{t("settings.inviteShown", { code })}</p></Notice>}
+            {code && (
+              <Notice tone="accent" className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-mono text-lg tracking-widest">{t("settings.inviteShown", { code })}</p>
+                <Button size="sm" variant="secondary" className="shrink-0" onClick={() => {
+                  navigator.clipboard?.writeText(code).then(() => toast({ text: t("settings.copied") }), () => {});
+                }}>{t("settings.copy")}</Button>
+              </Notice>
+            )}
             {invites.length > 0 && (
               <ul className="space-y-1 text-sm text-muted">
                 {invites.map((i, k) => (
@@ -86,7 +94,7 @@ export function SettingsForm({
                     <span className="min-w-0">{i.note ?? "—"} · {i.used_at ? `${t("settings.used")} ${fmtDate(locale, i.used_at)}` : `${t("settings.expires")} ${fmtDate(locale, i.expires_at)}`}</span>
                     {!i.used_at && (
                       <Button size="sm" variant="ghost" className="shrink-0 text-danger!" disabled={pending}
-                        onClick={() => confirm(t("settings.deleteInviteConfirm")) && start(async () => { await removeInvite(i.created_at); router.refresh(); })}>
+                        onClick={() => confirm(t("settings.deleteInviteConfirm")) && start(async () => { const list = await removeInvite(i.created_at); if (list) setInvites(list); })}>
                         {t("common.delete")}
                       </Button>
                     )}

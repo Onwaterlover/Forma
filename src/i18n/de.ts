@@ -276,7 +276,7 @@ export const de: Dict = {
     title: "Einstellungen", language: "Sprache", theme: "Design", themeOpt: { system: "System", light: "Hell", dark: "Dunkel" }, modules: "Bereiche", training: "Training", nutrition: "Essen",
     logging: "Standard-Modus beim Training", restTimer: "Pausentimer", autoTimer: "Pause nach jedem Satz automatisch starten", effort: "RIR / RPE eintragen (für Fortgeschrittene)",
     fiber: "Ballaststoffe anzeigen", invites: "Einladungen", createInvite: "Einladungscode erstellen", inviteNote: "Für wen (optional)", inviteShown: "Code (nur jetzt sichtbar): {code}",
-    deleteInviteConfirm: "Diese Einladung löschen? Der Code funktioniert dann nicht mehr.", inviteHint: "Gib den Code der eingeladenen Person. Einmalig, 14 Tage gültig. Als Administrator siehst du keine fremden Daten.", users: "Nutzer",
+    deleteInviteConfirm: "Diese Einladung löschen? Der Code funktioniert dann nicht mehr.", copy: "Kopieren", copied: "Kopiert", inviteHint: "Gib den Code der eingeladenen Person. Einmalig, 14 Tage gültig. Als Administrator siehst du keine fremden Daten.", users: "Nutzer",
     data: "Deine Daten", export: "Meine Daten herunterladen (JSON)", deleteAccount: "Konto löschen", deleteConfirm: "Zum Bestätigen LÖSCHEN eingeben", deleteWord: "LÖSCHEN",
     deleteHint: "Entfernt dauerhaft alle deine Einheiten, dein Tagebuch und deine Einstellungen von diesem Server.", password: "Passwort ändern", currentPassword: "Aktuelles Passwort", newPassword: "Neues Passwort",
     passwordChanged: "Passwort geändert. Bitte erneut anmelden.", wrongPassword: "Aktuelles Passwort ist falsch.", about: "Über die App",

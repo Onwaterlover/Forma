@@ -276,7 +276,7 @@ export const en: Dict = {
     title: "Settings", language: "Language", theme: "Theme", themeOpt: { system: "System", light: "Light", dark: "Dark" }, modules: "Modules", training: "Training", nutrition: "Food",
     logging: "Default workout logging mode", restTimer: "Rest timer", autoTimer: "Start rest automatically after a set", effort: "Log RIR / RPE (advanced)",
     fiber: "Show fibre", invites: "Invites", createInvite: "Create invite code", inviteNote: "Who is it for (optional)", inviteShown: "Code (shown only now): {code}",
-    deleteInviteConfirm: "Delete this invite? The code will stop working.", inviteHint: "Give the code to the person you're inviting. Single use, valid for 14 days. As administrator you can't see other people's data.", users: "Users",
+    deleteInviteConfirm: "Delete this invite? The code will stop working.", copy: "Copy", copied: "Copied", inviteHint: "Give the code to the person you're inviting. Single use, valid for 14 days. As administrator you can't see other people's data.", users: "Users",
     data: "Your data", export: "Download my data (JSON)", deleteAccount: "Delete account", deleteConfirm: "Type DELETE to confirm", deleteWord: "DELETE",
     deleteHint: "Permanently removes all your workouts, diary and settings from this server.", password: "Change password", currentPassword: "Current password", newPassword: "New password",
     passwordChanged: "Password changed. Please log in again.", wrongPassword: "Current password is wrong.", about: "About",

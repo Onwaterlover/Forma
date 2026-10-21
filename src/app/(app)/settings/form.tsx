@@ -73,9 +73,10 @@ export function SettingsForm({
           <SectionTitle>{t("settings.invites")}</SectionTitle>
           <Card className="space-y-3">
             <p className="text-sm text-muted">{t("settings.inviteHint")}</p>
-            <div className="flex gap-2">
-              <Input placeholder={t("settings.inviteNote")} value={inviteNote} maxLength={60} onChange={(e) => setInviteNote(e.target.value)} aria-label={t("settings.inviteNote")} />
-              <Button className="shrink-0" disabled={pending} onClick={() => start(async () => { const r = await makeInvite(inviteNote); setCode(r.code ?? null); setInviteNote(""); })}>{t("settings.createInvite")}</Button>
+            {/* Wraps on narrow phones so the "for whom" field stays readable next to the long button label. */}
+            <div className="flex flex-wrap gap-2">
+              <Input className="min-w-0 flex-1 basis-44" placeholder={t("settings.inviteNote")} value={inviteNote} maxLength={60} onChange={(e) => setInviteNote(e.target.value)} aria-label={t("settings.inviteNote")} />
+              <Button className="grow" disabled={pending} onClick={() => start(async () => { const r = await makeInvite(inviteNote); setCode(r.code ?? null); setInviteNote(""); })}>{t("settings.createInvite")}</Button>
             </div>
             {code && <Notice tone="accent"><p className="font-mono text-lg tracking-widest">{t("settings.inviteShown", { code })}</p></Notice>}
             {invites.length > 0 && (

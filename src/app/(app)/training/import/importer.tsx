@@ -118,21 +118,21 @@ export function Importer({ custom }: { custom: Exercise[] }) {
                     </div>
                     {/* Sets, reps and weight stay editable: notebook plans often have none, or they were "in the head". */}
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 text-sm">
-                      <Input type="number" inputMode="numeric" min={1} max={12} aria-label={t("plan.sets")} value={r.sets} className="h-9 w-12! px-1! text-center"
+                      <Input type="number" inputMode="numeric" min={1} max={12} aria-label={t("plan.sets")} value={r.sets} className="h-9 w-11! px-1! text-center"
                         onChange={(e) => setRow(si, ri, { sets: num(e.target.value, 1, 12), noSets: false })} />
                       <span className="text-muted">×</span>
                       {r.seconds ? (
                         <><Input type="number" inputMode="numeric" min={5} max={600} aria-label={t("plan.seconds")} value={r.seconds} className="h-9 w-16! px-1! text-center"
                           onChange={(e) => setRow(si, ri, { seconds: num(e.target.value, 5, 600), noSets: false })} /><span className="text-muted">{t("plan.seconds")}</span></>
                       ) : (
-                        <><Input type="number" inputMode="numeric" min={1} max={100} aria-label={t("plan.reps")} value={r.repMin} className="h-9 w-12! px-1! text-center"
+                        <><Input type="number" inputMode="numeric" min={1} max={100} aria-label={t("plan.reps")} value={r.repMin} className="h-9 w-11! px-1! text-center"
                           onChange={(e) => { const v = num(e.target.value, 1, 100); setRow(si, ri, { repMin: v, repMax: Math.max(v, r.repMax), noSets: false }); }} />
                         <span className="text-muted">–</span>
-                        <Input type="number" inputMode="numeric" min={1} max={100} aria-label={t("plan.reps")} value={r.repMax} className="h-9 w-12! px-1! text-center"
+                        <Input type="number" inputMode="numeric" min={1} max={100} aria-label={t("plan.reps")} value={r.repMax} className="h-9 w-11! px-1! text-center"
                           onChange={(e) => { const v = num(e.target.value, 1, 100); setRow(si, ri, { repMax: v, repMin: Math.min(v, r.repMin), noSets: false }); }} /></>
                       )}
                       <span className="ml-auto flex items-center gap-1.5">
-                        <Input type="number" inputMode="decimal" min={0} max={500} step={0.25} aria-label={t("import.weight")} placeholder="—" value={r.weightKg ?? ""} className="h-9 w-16! px-1! text-center"
+                        <Input type="number" inputMode="decimal" min={0} max={500} step={0.25} aria-label={t("import.weight")} placeholder="—" value={r.weightKg ?? ""} className="h-9 w-15! px-1! text-center"
                           onChange={(e) => { const v = Number(e.target.value.replace(",", ".")); setRow(si, ri, { weightKg: e.target.value && v > 0 ? Math.min(500, v) : undefined }); }} />
                         <span className="text-muted">kg</span>
                       </span>

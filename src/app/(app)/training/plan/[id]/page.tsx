@@ -5,7 +5,7 @@ import { fmtDate } from "@/i18n";
 import { pageCtx } from "@/lib/ctx";
 import { getCustomExercises, getPlan, getPrefs, getProfile, listVersions } from "@/lib/data";
 import { PlanEditor } from "./editor";
-import { PlanActions } from "../../plan-actions";
+import { DeletePlanButton } from "../../plan-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ export default async function PlanPage({ params, searchParams }: { params: Promi
         {plan.status !== "active" && <form action={planAction.bind(null, id, "activate", undefined)}><button className={btn}>{t("plan.activate")}</button></form>}
         <form action={planAction.bind(null, id, "duplicate", undefined)}><button className={btn}>{t("plan.duplicate")}</button></form>
         {plan.status !== "archived" && <form action={planAction.bind(null, id, "archive", undefined)}><button className={btn}>{t("plan.archive")}</button></form>}
-        <PlanActions planId={id} exercises={[]} feedback={false} />
+        <DeletePlanButton planId={id} />
       </div>
 
       <PlanEditor

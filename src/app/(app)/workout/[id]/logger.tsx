@@ -66,7 +66,9 @@ export function WorkoutLogger({
   const readOnly = w.status !== "in_progress";
 
   // ── Persistence: local first, then server; newer data always wins ──────
+  const discarded = useRef(false);
   const push = useCallback(async () => {
+    if (discarded.current) return false;
     const body = latest.current;
     setSync("saving");
     try {
@@ -188,6 +190,19 @@ export function WorkoutLogger({
     const now = w.exercises.filter((e) => !e.skipped).map((e) => e.exerciseId);
     return now.length !== originalIds.length || now.some((id, i) => id !== originalIds[i]);
   }, [w.exercises, originalIds]);
+
+  const anyDone = w.exercises.some((e) => e.completed || e.sets.some((s) => s.completed));
+  // Started by mistake: remove the workout completely, as if it never happened.
+  const discard = async () => {
+    discarded.current = true;
+    if (timer.current) clearTimeout(timer.current);
+    setSheet(null);
+    setRest(null);
+    await fetch(`/api/workouts/${w.id}`, { method: "DELETE" });
+    try { localStorage.removeItem(STORE(w.id)); } catch {}
+    router.push("/");
+    router.refresh();
+  };
 
   const finish = async (status: "completed" | "abandoned") => {
     mutate((x) => ({ ...x, status, endedAt: now() }));
@@ -492,8 +507,18 @@ export function WorkoutLogger({
         <Button full onClick={() => finish("completed")}>{t("workout.finish")}</Button>
       </Sheet>
 
-      <Sheet open={sheet?.kind === "abandon"} onClose={() => setSheet(null)} title={t("workout.confirmAbandon")}>
-        <Button full variant="danger" onClick={() => finish("abandoned")}>{t("workout.abandon")}</Button>
+      <Sheet open={sheet?.kind === "abandon"} onClose={() => setSheet(null)} title={t("workout.stopTitle")}>
+        {anyDone ? (
+          <div className="flex flex-col gap-2">
+            <Button full variant="danger" onClick={() => finish("abandoned")}>{t("workout.stopKeep")}</Button>
+            <Button full variant="ghost" className="text-danger" onClick={discard}>{t("workout.discardWorkout")}</Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted">{t("workout.nothingSaved")}</p>
+            <Button full variant="danger" onClick={discard}>{t("workout.cancelWorkout")}</Button>
+          </div>
+        )}
       </Sheet>
 
       <Sheet open={sheet?.kind === "apply"} onClose={() => setSheet(null)} title={t("workout.applyToPlan")}>

@@ -166,7 +166,7 @@ export const pl = {
     completed: "Trening zapisany. Dobra robota!", offline: "Brak sieci — zapisano na urządzeniu, zsynchronizuję później.", syncing: "Synchronizuję…", synced: "Zsynchronizowano",
     simpleNote: "Trening odhaczony bez serii nie jest używany do wyliczania postępów.", perDumbbell: "na hantlę", perSide: "na stronę", assistance: "odciążenie",
     bodyweight: "masa ciała", plusWeight: "+ obciążenie", setType: { warmup: "Rozgrzewka", working: "Robocza", drop: "Drop", failure: "Do upadku" },
-    choose: "Wybierz trening", other: "Inny trening z planu", emptyWorkout: "Pusty trening", confirmFinish: "Zakończyć trening?", confirmAbandon: "Przerwać trening? Zapisane serie zostaną.",
+    choose: "Wybierz trening", other: "Inny trening z planu", emptyWorkout: "Pusty trening", confirmFinish: "Zakończyć trening?", confirmAbandon: "Przerwać trening? Zapisane serie zostaną.", stopTitle: "Przerwać trening?", stopKeep: "Przerwij i zachowaj zrobione serie", discardWorkout: "Usuń ten trening (nic nie zapisuj)", nothingSaved: "Nie zapisano jeszcze żadnej serii, więc ten trening po prostu zniknie.", cancelWorkout: "Anuluj trening",
     suggestion: {
       insufficient_data: "Zapisz serie, a zaproponuję kolejny krok.", increase_load: "Spróbuj {weight} kg × {reps}", add_reps: "Zostań przy {weight} kg i dodaj powtórzenie (cel {reps})",
       add_reps_bw: "Celuj w {reps} powtórzeń", harder_variant: "Czas na trudniejszą wersję", add_weight: "Możesz dodać {weight} kg obciążenia",

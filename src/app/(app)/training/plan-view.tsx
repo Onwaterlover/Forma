@@ -1,12 +1,10 @@
 import { Clock, Link2, MapPin } from "lucide-react";
 import { startWorkout } from "@/app/actions/training";
-import { HowToPicker } from "@/components/how-to";
 import { Notice } from "@/components/ui";
 import { BALANCED } from "@/engine/volume";
 import type { Effort, Exercise, Issue, Plan, TrainingProfile } from "@/engine/types";
 import { exName, fmt, fmtRest, renderMessage, type Locale, type T } from "@/i18n";
 import { DICTS } from "@/i18n";
-import { PrintButton } from "./print-button";
 
 /** The plan as a clean, printable document: one block per training day, one line per exercise. */
 export function PlanView({
@@ -28,7 +26,6 @@ export function PlanView({
   const msg = (m: Parameters<typeof renderMessage>[0]) => renderMessage(m, t, locale, lookup, locName);
   const errors = issues.filter((i) => i.severity === "error");
   const warnings = issues.filter((i) => i.severity === "warning");
-  const usedIds = plan.sessions.flatMap((s) => s.exercises.map((e) => e.exerciseId));
 
   return (
     <div className="space-y-4">
@@ -40,11 +37,6 @@ export function PlanView({
           </ul>
         </Notice>
       )}
-
-      <div className="flex flex-wrap items-center justify-end gap-1 print:hidden">
-        <HowToPicker ids={usedIds} library={library} />
-        <PrintButton />
-      </div>
 
       <div className="grid gap-3 lg:grid-cols-2 print:block print:space-y-4">
         {plan.sessions.map((s) => {

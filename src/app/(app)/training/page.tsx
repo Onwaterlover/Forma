@@ -1,10 +1,9 @@
-import { BookOpen, FileInput, History, Pencil, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, Empty, LinkButton, PageHeader, SectionTitle } from "@/components/ui";
 import { validatePlan } from "@/engine/validate";
 import { pageCtx } from "@/lib/ctx";
 import { getActivePlan, getPrefs, getProfile, inProgressWorkout, libraryFor, listPlans } from "@/lib/data";
-import { PlanActions } from "./plan-actions";
+import { PlanMenu } from "./plan-actions";
 import { PlanView } from "./plan-view";
 import { exName } from "@/i18n";
 import { Assistant } from "@/components/assistant";
@@ -21,33 +20,23 @@ export default async function TrainingPage() {
   const plans = allPlans.filter((p) => p.id !== plan?.id && p.status !== "archived");
   const issues = plan && profile && plan.source !== "imported" ? validatePlan({ plan: plan.data, profile, prefs, library }) : [];
 
-  const links = [
-    { href: "/training/setup", icon: SlidersHorizontal, label: profile ? t("plan.profile") : t("plan.create") },
-    { href: "/training/import", icon: FileInput, label: t("plan.import") },
-    { href: "/training/exercises", icon: BookOpen, label: t("library.title") },
-    ...(settings.logWorkouts ? [{ href: "/training/history", icon: History, label: t("workout.history") }] : []),
-  ];
+  const exercises = plan ? [...new Set(plan.data.sessions.flatMap((s) => s.exercises.map((e) => e.exerciseId)))].map((id) => ({ id, name: exName(library.find((x) => x.id === id), locale, id) })) : [];
 
   return (
     <>
       <PageHeader title={plan?.name ?? t("plan.title")} subtitle={plan ? `${t(`split.${plan.data.split}`, {})} · ${t("plan.perWeek", { n: plan.data.sessions.length })}` : undefined}
-        action={<div className="flex gap-2">{aiProvider() && <Assistant scope="training" date={todayIso()} enabled={settings.ai} provider={aiProvider()!} />}{plan && <LinkButton href={`/training/plan/${plan.id}`} variant="secondary" size="sm"><Pencil size={16} aria-hidden />{t("plan.edit")}</LinkButton>}</div>} />
+        action={
+          <div className="flex gap-2">
+            {aiProvider() && <Assistant scope="training" date={todayIso()} enabled={settings.ai} provider={aiProvider()!} />}
+            <PlanMenu planId={plan?.id ?? null} exercises={exercises} library={library} feedback={!!profile} logging={settings.logWorkouts} hasProfile={!!profile} />
+          </div>
+        } />
 
       {running && settings.logWorkouts && (
-        <Card className="mb-4 print:hidden flex items-center justify-between gap-3">
+        <Card className="mb-4 flex items-center justify-between gap-3 print:hidden">
           <p className="font-medium">{running.name} <Badge tone="accent">{t("workout.inProgress")}</Badge></p>
           <LinkButton href={`/workout/${running.id}`} size="sm">{t("workout.resume")}</LinkButton>
         </Card>
-      )}
-
-      {plan && (
-        <div className="mb-4 print:hidden">
-          <PlanActions
-            planId={plan.id}
-            feedback={!!profile}
-            exercises={[...new Set(plan.data.sessions.flatMap((s) => s.exercises.map((e) => e.exerciseId)))].map((id) => ({ id, name: exName(library.find((x) => x.id === id), locale, id) }))}
-          />
-        </div>
       )}
 
       {plan ? (
@@ -58,23 +47,15 @@ export default async function TrainingPage() {
         </Empty>
       )}
 
-      <nav className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 print:hidden" aria-label={t("nav.training")}>
-        {links.map(({ href, icon: Icon, label }) => (
-          <Link key={href} href={href} className="flex min-h-14 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-sm font-medium hover:bg-surface-2">
-            <Icon size={18} className="text-accent" aria-hidden />{label}
-          </Link>
-        ))}
-      </nav>
-
       {plans.length > 0 && (
         <div className="print:hidden">
           <SectionTitle>{t("plan.plans")}</SectionTitle>
-          <ul className="space-y-2">
+          <ul className="divide-y divide-border rounded-[var(--radius-card)] border border-border bg-surface">
             {plans.map((p) => (
               <li key={p.id}>
-                <Link href={`/training/plan/${p.id}`} className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 hover:bg-surface-2">
-                  <span className="font-medium">{p.name}</span>
-                  <span className="flex gap-2"><Badge>{t(`plan.source.${p.source}`)}</Badge><Badge>{t(`plan.status.${p.status}`)}</Badge></span>
+                <Link href={`/training/plan/${p.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-2">
+                  <span className="truncate font-medium">{p.name}</span>
+                  <Badge>{t(`plan.status.${p.status}`)}</Badge>
                 </Link>
               </li>
             ))}

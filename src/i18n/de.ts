@@ -167,7 +167,7 @@ export const de: Dict = {
     completed: "Training gespeichert. Gut gemacht!", offline: "Offline — auf dem Gerät gespeichert, wird später synchronisiert.", syncing: "Synchronisiere…", synced: "Synchronisiert",
     simpleNote: "Ein ohne Sätze abgehaktes Training fließt nicht in die Fortschrittsberechnung ein.", perDumbbell: "pro Hantel", perSide: "pro Seite", assistance: "Unterstützung",
     bodyweight: "Körpergewicht", plusWeight: "+ Zusatzgewicht", setType: { warmup: "Aufwärmen", working: "Arbeitssatz", drop: "Drop", failure: "Bis zum Versagen" },
-    choose: "Einheit wählen", other: "Andere Einheit aus dem Plan", emptyWorkout: "Leeres Training", confirmFinish: "Training beenden?", confirmAbandon: "Training abbrechen? Eingetragene Sätze bleiben erhalten.",
+    choose: "Einheit wählen", other: "Andere Einheit aus dem Plan", emptyWorkout: "Leeres Training", confirmFinish: "Training beenden?", confirmAbandon: "Training abbrechen? Eingetragene Sätze bleiben erhalten.", stopTitle: "Training abbrechen?", stopKeep: "Abbrechen und erledigte Sätze behalten", discardWorkout: "Training löschen (nichts speichern)", nothingSaved: "Noch keine Sätze erfasst, das Training verschwindet einfach.", cancelWorkout: "Training verwerfen",
     suggestion: {
       insufficient_data: "Trag deine Sätze ein, dann schlage ich den nächsten Schritt vor.", increase_load: "Versuch {weight} kg × {reps}", add_reps: "Bleib bei {weight} kg und mach eine Wiederholung mehr (Ziel {reps})",
       add_reps_bw: "Ziel: {reps} Wiederholungen", harder_variant: "Zeit für eine schwerere Variante", add_weight: "Du könntest {weight} kg zusätzlich nehmen",

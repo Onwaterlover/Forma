@@ -167,7 +167,7 @@ export const en: Dict = {
     completed: "Workout saved. Nice work!", offline: "Offline — saved on this device, will sync later.", syncing: "Syncing…", synced: "Synced",
     simpleNote: "A workout ticked off without sets isn't used to calculate progress.", perDumbbell: "per dumbbell", perSide: "per side", assistance: "assistance",
     bodyweight: "bodyweight", plusWeight: "+ added weight", setType: { warmup: "Warm-up", working: "Working", drop: "Drop", failure: "To failure" },
-    choose: "Choose a workout", other: "Another workout from the plan", emptyWorkout: "Empty workout", confirmFinish: "Finish the workout?", confirmAbandon: "Stop the workout? Logged sets are kept.",
+    choose: "Choose a workout", other: "Another workout from the plan", emptyWorkout: "Empty workout", confirmFinish: "Finish the workout?", confirmAbandon: "Stop the workout? Logged sets are kept.", stopTitle: "Stop this workout?", stopKeep: "Stop and keep the sets you did", discardWorkout: "Delete this workout (save nothing)", nothingSaved: "No sets logged yet, so this workout will simply disappear.", cancelWorkout: "Cancel workout",
     suggestion: {
       insufficient_data: "Log your sets and I'll suggest the next step.", increase_load: "Try {weight} kg × {reps}", add_reps: "Stay at {weight} kg and add a rep (aim {reps})",
       add_reps_bw: "Aim for {reps} reps", harder_variant: "Time for a harder variation", add_weight: "You could add {weight} kg",

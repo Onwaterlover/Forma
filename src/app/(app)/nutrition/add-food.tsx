@@ -279,13 +279,10 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
   const [amount, setAmount] = useState<number | null>(product.lastAmount ?? (startPieces ? product.servings[0]!.amount : 100));
   const [fav, setFav] = useState(!!product.favorite);
   const v = scale(product.nutrients, amount ?? 0);
-  // Compact tiles instead of a five-row table, so the whole card fits a phone screen without scrolling.
-  const tile = (k: NutrientKey, label: string) => (
-    <div className="rounded-xl bg-surface-2 px-2 py-2 text-center">
-      <p className="text-base font-semibold tabular-nums">{v[k] === null ? <span className="text-warning">?</span> : fmt(locale, v[k], k === "kcal" ? 0 : 1)}</p>
-      <p className="text-[11px] text-muted">{label}</p>
-    </div>
-  );
+  const num = (k: NutrientKey) => (v[k] === null ? <span className="text-warning">?</span> : fmt(locale, v[k], k === "kcal" ? 0 : 1));
+  // Averages of similar products are estimates: the only case worth a note under the values.
+  const estimate = product.source === "custom" && product.name.includes("≈");
+  const macros: NutrientKey[] = ["protein", "carbs", "fat", ...(v.fiber !== null ? (["fiber"] as const) : [])];
   return (
     <div className="space-y-3">
       {onRescan && (
@@ -307,25 +304,30 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
       {energyMismatch(product.nutrients) && <Notice tone="warning">{t("nutrition.energyMismatch")}</Notice>}
       {meal}
       <AmountInput amount={amount} onChange={setAmount} basis={product.basis} servings={servingsWithSlice(product, t("nutrition.slice"))} startPieces={startPieces} />
-      <div className="grid grid-cols-4 gap-1.5">
-        {tile("kcal", t("common.kcal"))}
-        {tile("protein", `${t("nutrition.protein")} (g)`)}
-        {tile("carbs", `${t("nutrition.carbs")} (g)`)}
-        {tile("fat", `${t("nutrition.fat")} (g)`)}
-      </div>
-      {/* Details and "favourite" at the bottom, out of the way (source in small print, except for basic foods). */}
-      <div className="flex items-center gap-2">
-        <p className="min-w-0 flex-1 text-xs text-muted">
-          {t("nutrition.per100", { basis: product.basis })}: {product.nutrients.kcal === null ? t("nutrition.missing") : `${fmt(locale, product.nutrients.kcal)} kcal`}
-          {v.fiber !== null && ` · ${t("nutrition.fiber")} ${fmt(locale, v.fiber, 1)} g`}
-          {product.source !== "generic" && ` · ${product.source === "off" ? t("nutrition.sourceOff") : t("nutrition.sourceCustom")}`}
-        </p>
-        <button type="button" aria-pressed={fav} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg px-2 text-sm text-muted hover:bg-surface-2"
-          onClick={() => { setFav(!fav); toggleFavorite(product.id, !fav); }}>
-          <Star size={16} className={fav ? "fill-current text-warning" : ""} aria-hidden />{fav ? t("nutrition.unfavorite") : t("nutrition.favorite")}
-        </button>
+      {/* The amount's calories big, per 100 g beside them, macros underneath; fits a phone screen without scrolling. */}
+      <div className="rounded-2xl bg-surface-2 px-4 py-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="tabular-nums"><span className="text-3xl font-semibold">{num("kcal")}</span><span className="ml-1 text-sm text-muted">kcal</span></p>
+          <p className="text-right text-xs text-muted tabular-nums">
+            {product.nutrients.kcal === null ? t("nutrition.missing") : `${fmt(locale, product.nutrients.kcal)} kcal`} {t("nutrition.per100", { basis: product.basis })}
+          </p>
+        </div>
+        <div className={cx("mt-3 grid gap-1 border-t border-border pt-3", macros.length === 4 ? "grid-cols-4" : "grid-cols-3")}>
+          {macros.map((k) => (
+            <div key={k} className="min-w-0">
+              <p className="font-semibold tabular-nums">{num(k)}<span className="ml-0.5 text-xs font-normal text-muted">g</span></p>
+              <p className="truncate text-[11px] text-muted">{t(`nutrition.${k}`)}</p>
+            </div>
+          ))}
+        </div>
+        {estimate && <p className="mt-2 text-xs text-muted">{t("nutrition.estimateNote")}</p>}
       </div>
       <div className="sticky bottom-0 -mx-5 flex gap-2 bg-surface px-5 pt-1">
+        {/* Favourite as a star next to Back: always at hand, no extra row. */}
+        <Button variant="secondary" className="w-12 shrink-0 px-0" aria-pressed={fav} aria-label={fav ? t("nutrition.unfavorite") : t("nutrition.favorite")} title={fav ? t("nutrition.unfavorite") : t("nutrition.favorite")}
+          onClick={() => { setFav(!fav); toggleFavorite(product.id, !fav); }}>
+          <Star size={22} className={fav ? "fill-current text-warning" : "text-text"} aria-hidden />
+        </Button>
         <Button variant="ghost" onClick={onBack}>{t("common.back")}</Button>
         <Button full disabled={pending || !amount || amount <= 0} onClick={() => amount && onAdd(amount)}>{t("common.add")}</Button>
       </div>
@@ -459,27 +461,31 @@ export function AmountInput({ amount, onChange, basis, servings, startPieces }: 
     return i >= 0 ? i : null;
   });
   const [count, setCount] = useState<number | null>(() => (unit !== null && amount ? amount / servings[unit]!.amount : 1));
-  const pieceLabel = (label: string) => label.replace(/^1\s+/, "");
+  const pieceLabel = (label: string) => { const s = label.replace(/^1\s+/, ""); return s.charAt(0).toLocaleUpperCase(locale) + s.slice(1); };
+  const segment = (on: boolean) => cx("min-h-10 flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition-colors", on ? "bg-accent text-accent-contrast" : "text-muted hover:text-text");
   const changeCount = (c: number | null) => { setCount(c); onChange(c && c > 0 ? Math.round(c * servings[unit!]!.amount * 10) / 10 : null); };
   return (
     <>
       {servings.length > 0 && (
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("nutrition.unit")}>
-          <Button size="sm" variant={unit === null ? "primary" : "secondary"} aria-pressed={unit === null} onClick={() => setUnit(null)}>{basis}</Button>
+        // One full-width switch: grams or the product's own unit (piece, slice, spoon).
+        <div className={cx("gap-1 rounded-xl bg-surface-2 p-1", servings.length >= 3 ? "grid grid-cols-2" : "flex flex-wrap")} role="group" aria-label={t("nutrition.unit")}>
+          <button type="button" className={segment(unit === null)} aria-pressed={unit === null} onClick={() => setUnit(null)}>{basis === "ml" ? t("nutrition.unitMl") : t("nutrition.unitGrams")}</button>
           {servings.map((sv, i) => (
-            <Button key={sv.label} size="sm" variant={unit === i ? "primary" : "secondary"} aria-pressed={unit === i}
+            <button key={sv.label} type="button" className={segment(unit === i)} aria-pressed={unit === i}
               onClick={() => { setUnit(i); setCount(1); onChange(sv.amount); }}>
               {pieceLabel(sv.label)}
-            </Button>
+            </button>
           ))}
         </div>
       )}
       {unit !== null ? (
-        <div className="flex items-center justify-center gap-3 py-2">
-          <Button variant="secondary" aria-label="−" disabled={!count || count <= 0.5} onClick={() => changeCount(Math.max(0.5, (count ?? 1) - (count && count <= 1 ? 0.5 : 1)))}>−</Button>
-          <div className="w-24"><DecimalInput aria-label={pieceLabel(servings[unit]!.label)} value={count} onChange={changeCount} className="h-12 text-center text-2xl font-semibold" /></div>
-          <Button variant="secondary" aria-label="+" onClick={() => changeCount((count ?? 0) < 1 ? 1 : (count ?? 0) + 1)}>+</Button>
-          <span className="text-sm text-muted tabular-nums">= {fmt(locale, amount ?? 0)} {basis}</span>
+        <div className="flex flex-col items-center gap-1.5 py-2">
+          <div className="flex items-center gap-4">
+            <Button variant="secondary" aria-label="−" className="h-12 w-12 rounded-full! px-0 text-2xl" disabled={!count || count <= 0.5} onClick={() => changeCount(Math.max(0.5, (count ?? 1) - (count && count <= 1 ? 0.5 : 1)))}>−</Button>
+            <div className="w-24"><DecimalInput aria-label={pieceLabel(servings[unit]!.label)} value={count} onChange={changeCount} className="h-14 text-center text-3xl! font-semibold" /></div>
+            <Button variant="secondary" aria-label="+" className="h-12 w-12 rounded-full! px-0 text-2xl" onClick={() => changeCount((count ?? 0) < 1 ? 1 : (count ?? 0) + 1)}>+</Button>
+          </div>
+          <p className="text-sm text-muted tabular-nums">= {fmt(locale, amount ?? 0)} {basis}</p>
         </div>
       ) : (
         <AmountWheel value={amount} onChange={onChange} unit={basis} />

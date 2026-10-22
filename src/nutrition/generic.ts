@@ -22,7 +22,7 @@ const SERVING = {
   egg: { pl: "1 sztuka (M)", en: "1 piece (M)", de: "1 Stück (M)" },
   tbsp: { pl: "1 łyżka", en: "1 tablespoon", de: "1 Esslöffel" },
   tsp: { pl: "1 łyżeczka", en: "1 teaspoon", de: "1 Teelöffel" },
-  spray: { pl: "1 psiknięcie (spray)", en: "1 spray", de: "1 Sprühstoß" },
+  spray: { pl: "1 psiknięcie", en: "1 spray", de: "1 Sprühstoß" },
   glass: { pl: "1 szklanka", en: "1 glass", de: "1 Glas" },
   slice: { pl: "1 kromka", en: "1 slice", de: "1 Scheibe" },
   bag: { pl: "1 woreczek", en: "1 bag", de: "1 Beutel" },
@@ -107,7 +107,7 @@ const F: Row[] = [
 ];
 
 /** Bump when values change: rows are re-written once on the next start. */
-export const GENERIC_VERSION = "generic-3";
+export const GENERIC_VERSION = "generic-4";
 
 export function genericRows() {
   return F.flatMap((f, rank) => (["pl", "en", "de"] as const).map((locale) => {

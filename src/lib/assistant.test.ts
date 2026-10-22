@@ -71,6 +71,17 @@ describe("assistant tools", () => {
     expect(await ai.runTool(c, "propose_plan_edit", { changes: [{ op: "remove_session", session_key: "Z" }] })).toHaveProperty("error");
   });
 
+  it("not in the database: proposes the median of similar products, named as such", async () => {
+    await data.searchProducts(A, "jablko", 1); // makes sure the basic foods exist
+    const c = ctx(A);
+    const r = await ai.runTool(c, "propose_food_average", { name: "Owoc", product_ids: ["gen_pl_apple", "gen_pl_banana", "gen_pl_orange"], grams: 100, meal: null });
+    expect(typeof r).toBe("string");
+    // median of 52, 89, 47 kcal = 52
+    expect(c.proposals[0]!.lines[0]).toContain("52 kcal");
+    expect(c.proposals[0]!.lines[1]).toContain("Jabłko");
+    expect(await ai.runTool(c, "propose_food_average", { name: "X", product_ids: ["gen_pl_apple", "nope"], grams: 100, meal: null })).toHaveProperty("error");
+  });
+
   it("computes food from the database and rejects unknown products", async () => {
     const nutrients = { ...emptyNutrients(), kcal: 150, protein: 12.5, carbs: 1, fat: 10 };
     const egg = await data.saveCustomProduct(A, { name: "Jajko testowe", brand: null, barcode: null, basis: "g", state: null, nutrients, servings: [] });

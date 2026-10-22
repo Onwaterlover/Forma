@@ -41,20 +41,21 @@ export function SettingsForm({
 
   return (
     <div className="space-y-2">
-      <SectionTitle>{t("settings.language")}</SectionTitle>
-      <Card><Choices name={t("settings.language")} columns={3} value={locale} onChange={(l) => start(async () => { await updateLocale(l); router.refresh(); })} options={LOCALES.map((l) => ({ value: l, label: LANG_NAMES[l] }))} /></Card>
-
-      <SectionTitle>{t("settings.theme")}</SectionTitle>
-      <Card><Choices name={t("settings.theme")} columns={3} value={settings.theme} onChange={theme} options={(["system", "light", "dark"] as const).map((v) => ({ value: v, label: t(`settings.themeOpt.${v}`) }))} /></Card>
-
-      <SectionTitle>{t("settings.modules")}</SectionTitle>
-      <Card className="divide-y divide-border py-1 sm:py-1">
-        <Switch checked={settings.modules.training} label={t("settings.training")} onChange={(v) => set({ modules: { ...settings.modules, training: v } })} />
-        <Switch checked={settings.modules.nutrition} label={t("settings.nutrition")} onChange={(v) => set({ modules: { ...settings.modules, nutrition: v } })} />
+      {/* Four groups instead of nine: look & language, training & food, assistant, account (folded). */}
+      <SectionTitle>{t("settings.appearance")}</SectionTitle>
+      <Card className="space-y-3">
+        <div><p className="mb-2 text-sm font-medium">{t("settings.language")}</p><Choices name={t("settings.language")} columns={3} value={locale} onChange={(l) => start(async () => { await updateLocale(l); router.refresh(); })} options={LOCALES.map((l) => ({ value: l, label: LANG_NAMES[l] }))} /></div>
+        <div><p className="mb-2 text-sm font-medium">{t("settings.theme")}</p><Choices name={t("settings.theme")} columns={3} value={settings.theme} onChange={theme} options={(["system", "light", "dark"] as const).map((v) => ({ value: v, label: t(`settings.themeOpt.${v}`) }))} /></div>
       </Card>
 
-      <SectionTitle>{t("nav.training")}</SectionTitle>
+      <SectionTitle>{t("settings.trainingFood")}</SectionTitle>
       <Card className="space-y-3">
+        <div className="divide-y divide-border">
+        <Switch checked={settings.modules.training} label={t("settings.training")} onChange={(v) => set({ modules: { ...settings.modules, training: v } })} />
+        <Switch checked={settings.modules.nutrition} label={t("settings.nutrition")} onChange={(v) => set({ modules: { ...settings.modules, nutrition: v } })} />
+        </div>
+        {settings.modules.training && (
+          <div className="space-y-3 border-t border-border pt-3">
         <Switch checked={settings.logWorkouts} label={t("settings.logWorkouts")} hint={t("settings.logWorkoutsHint")} onChange={(v) => set({ logWorkouts: v })} />
         <div>
           <p className="mb-2 text-sm font-medium">{t("settings.logging")}</p>
@@ -67,8 +68,20 @@ export function SettingsForm({
           <Switch checked={settings.showEffort} label={t("settings.effort")} onChange={(showEffort) => set({ showEffort })} />
           <Switch checked={settings.showFiber} label={t("settings.fiber")} onChange={(showFiber) => set({ showFiber })} />
         </div>
+          </div>
+        )}
       </Card>
 
+      <SectionTitle>{t("settings.ai")}</SectionTitle>
+      <Card className={aiProvider ? "py-1 sm:py-1" : undefined}>
+        {aiProvider
+          ? <Switch checked={settings.ai} label={t("settings.aiSwitch")} hint={`${t("settings.aiHint", { provider: PROVIDER_NAME[aiProvider] })}${aiProvider === "gemini" ? ` ${t("settings.aiGeminiNote")}` : ""}`} onChange={(v) => set({ ai: v })} />
+          : <p className="text-sm text-muted">{t("settings.aiNotConfigured")}</p>}
+      </Card>
+
+      <details className="mt-6 rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5">
+        <summary className="cursor-pointer list-none font-semibold">{t("settings.account")}</summary>
+        <div className="mt-2 space-y-2">
       {isAdmin && (
         <>
           <SectionTitle>{t("settings.invites")}</SectionTitle>
@@ -108,13 +121,6 @@ export function SettingsForm({
         </>
       )}
 
-      <SectionTitle>{t("settings.ai")}</SectionTitle>
-      <Card className={aiProvider ? "py-1 sm:py-1" : undefined}>
-        {aiProvider
-          ? <Switch checked={settings.ai} label={t("settings.aiSwitch")} hint={`${t("settings.aiHint", { provider: PROVIDER_NAME[aiProvider] })}${aiProvider === "gemini" ? ` ${t("settings.aiGeminiNote")}` : ""}`} onChange={(v) => set({ ai: v })} />
-          : <p className="text-sm text-muted">{t("settings.aiNotConfigured")}</p>}
-      </Card>
-
       <SectionTitle>{t("settings.password")}</SectionTitle>
       <Card>
         <form className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" onSubmit={(e) => {
@@ -146,6 +152,8 @@ export function SettingsForm({
 
       <SectionTitle>{t("settings.about")}</SectionTitle>
       <Card><p className="text-sm leading-relaxed text-muted">{t("settings.disclaimer")}</p><p className="mt-2 text-xs text-muted">{t("nutrition.offAttribution")}</p></Card>
+        </div>
+      </details>
     </div>
   );
 }

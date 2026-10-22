@@ -9,7 +9,7 @@ import { substitutes } from "@/engine/select";
 import { EQUIPMENT, type Exercise, type Kind, type PlannedSession } from "@/engine/types";
 import { planSchema } from "./schemas";
 import { DICTS, exName, fmt, translator, type Locale } from "@/i18n";
-import { scale, type Nutrients } from "@/nutrition/calc";
+import { medianOf, scale, type Nutrients } from "@/nutrition/calc";
 import { todayIso, weekdayOf } from "./ctx";
 import {
   createSuggestion, currentTarget, diaryDay, getActivePlan, getPrefs, getProduct, getProfile, libraryFor, listWeights, listWorkouts,
@@ -77,6 +77,7 @@ Food
 - Basic foods (egg, flour, rice, oats, oil, milk, chicken breast, vegetables, fruit…) are in the database as plain entries in the user's language, e.g. "Mąka pszenna", "Oliwa z oliwek", "Jajko kurze, surowe". Prefer them for unbranded food; pick raw vs cooked from the user's words (raw by default for cooking ingredients).
 - Add everything from one request in a single propose_add_food call. Convert household measures to grams and say what you assumed: 1 egg (M) ≈ 50 g edible, a slice of bread ≈ 35 g, a banana ≈ 120 g, a glass ≈ 250 ml, 1 tablespoon oil ≈ 10 g, 1 teaspoon oil ≈ 4 g, 1 spray of oil (spray bottle) ≈ 1 g, 1 tablespoon flour ≈ 10 g, 1 teaspoon sugar ≈ 5 g, a handful of nuts ≈ 30 g. Never turn a few sprays or drops into tablespoons.
 - Bakery and other unpackaged food (Lidl/Aldi bake-off, Bäckerei, piekarnia, street food) has no barcode. Search the plain item name, also in German or Polish and as a generic form (e.g. "Apfeltasche", then "Blätterteig Apfel"; "Laugenbrezel"; "drożdżówka"), and use the closest generic product. Say it is an approximation, with the weight you assumed.
+- If the exact food isn't in the database but similar ones are (e.g. several apple turnovers of other brands), call propose_food_average with 2–8 of them; the app takes the median of their values. Say plainly that it wasn't in the database and that you used the average of similar products, naming two or three.
 - If nothing suitable exists even generically, propose_quick_entry with an estimate: name ending in " (≈)", kcal rounded to 10, macros from typical values for that food. Say plainly that it is an estimate and what you based it on. Never present an estimate as exact.
 - propose_quick_entry otherwise only when the user states the calories themselves.
 - Meal: from the user's words or the time of day; leave it empty if unclear.
@@ -215,6 +216,16 @@ const NUTRITION_TOOLS: BetaTool[] = [
     }, ["meal", "items"]),
   },
   {
+    name: "propose_food_average",
+    description: "When the exact food is not in the database: propose an entry whose values are the median of 2–8 similar products from search_food (computed by the app, not by you).",
+    input_schema: obj({
+      name: str("What the user ate, short (e.g. 'Apfeltasche')"),
+      product_ids: { type: "array", minItems: 2, maxItems: 8, items: { type: "string" }, description: "Ids of similar products from search_food" },
+      grams: { type: "number", description: "Amount in g (or ml)" },
+      meal: { type: ["string", "null"], enum: [...MEALS, null] },
+    }, ["name", "product_ids", "grams", "meal"]),
+  },
+  {
     name: "propose_quick_entry",
     description: "Propose a quick entry with calories (and optional macros) that the user stated explicitly, e.g. 'add 650 kcal for dinner out'. Never estimate the numbers yourself unless search_food found nothing usable, even generically: then mark the name with \" (≈)\" and say it is an estimate.",
     input_schema: obj({
@@ -234,6 +245,7 @@ export const planChangePayload = z.object({ reasons: z.array(z.enum(REASONS)).ma
 export const prefPayload = z.object({ exerciseId: id, pref: z.enum(["favorite", "dislike", "exclude", "pain"]) });
 export const foodPayload = z.object({ date: z.string(), meal, items: z.array(z.object({ productId: id, grams: z.number().positive().max(3000) })).min(1).max(10) });
 const num = z.number().min(0).max(5000).nullable();
+export const foodAvgPayload = z.object({ date: z.string(), meal, name: z.string().trim().min(1).max(60), ids: z.array(id).min(2).max(8), grams: z.number().positive().max(3000) });
 export const quickPayload = z.object({ date: z.string(), meal, name: z.string().trim().min(1).max(80), kcal: z.number().min(0).max(10000), protein: num, carbs: num, fat: num });
 
 const KIND_STYLE: Record<"machines" | "free" | "bodyweight", Kind[]> = { machines: ["machine", "cable", "smith"], free: ["barbell", "dumbbell", "kettlebell"], bodyweight: ["bodyweight", "band"] };
@@ -375,6 +387,19 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
       if (a.data.items.length > 1) lines.push(`${t("nutrition.total")}: ${fmt(c.locale, kcal)} kcal · ${t("nutrition.protein")} ${fmt(c.locale, protein, 1)} g`);
       return propose("food", { date: c.date, meal: a.data.meal, items: a.data.items.map((i) => ({ productId: i.product_id, grams: i.grams })) },
         `${t("assistant.foodTitle")}${a.data.meal ? ` · ${t(`nutrition.meal.${a.data.meal}`)}` : ""}`, lines);
+    }
+    case "propose_food_average": {
+      const a = z.object({ name: z.string().trim().min(1).max(60), product_ids: z.array(id).min(2).max(8), grams: z.number().positive().max(3000), meal }).safeParse(input);
+      if (!a.success) return { error: "Invalid input." };
+      const found = (await Promise.all(a.data.product_ids.map((x) => getProduct(c.userId, x)))).filter((p): p is Product => !!p);
+      const m = medianOf(found);
+      if (!m) return { error: "Need at least 2 known products with kcal (same unit). Use ids from search_food." };
+      const v = scale(m.nutrients, a.data.grams);
+      return propose("food_avg", { date: c.date, meal: a.data.meal, name: a.data.name, ids: m.used.map((p) => p.id), grams: a.data.grams },
+        `${t("assistant.foodTitle")}${a.data.meal ? ` · ${t(`nutrition.meal.${a.data.meal}`)}` : ""}`, [
+          `${a.data.name} (≈) · ${fmt(c.locale, a.data.grams)} ${m.basis} · ${fmt(c.locale, v.kcal)} kcal · ${t("nutrition.protein")} ${fmt(c.locale, v.protein, 1)} g`,
+          t("assistant.avgFrom", { names: m.used.slice(0, 4).map((p) => p.name).join(", ") }),
+        ]);
     }
     case "propose_quick_entry": {
       const a = quickPayload.omit({ date: true }).safeParse(input);

@@ -1,13 +1,13 @@
 "use client";
 import { ChevronLeft, Flame, PackagePlus, Plus, ScanBarcode, Star, Utensils } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
-import { addProductEntry, addQuickEntry, addRecipeEntry, productFor, saveFood, toggleFavorite } from "@/app/actions/nutrition";
+import { addProductEntry, addQuickEntry, addRecipeEntry, averageProduct, productFor, saveFood, toggleFavorite } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, cx, Field, Input, Notice, Select } from "@/components/ui";
 import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product } from "@/lib/data";
-import { energyMismatch, NUTRIENT_KEYS, scale, type NutrientKey } from "@/nutrition/calc";
+import { energyMismatch, medianOf, NUTRIENT_KEYS, scale, type NutrientKey } from "@/nutrition/calc";
 import { Scanner } from "./scanner";
 
 export type RecipeLite = { id: string; name: string; isMeal: boolean; servings: number; finalWeight: number; perServingKcal: number | null; totalKcal: number | null };
@@ -168,6 +168,33 @@ export function ProductList({ items, onPick, onQuick, pending }: { items: (Produ
   );
 }
 
+/**
+ * "Not exactly this? Use the average of similar results": the median of the top results (same as the server
+ * computes), shown with a few of their names so it's clear what it is based on.
+ */
+function AverageOffer({ query, items, onPick }: { query: string; items: Product[]; onPick: (p: Product) => void }) {
+  const { t, locale } = useI18n();
+  const toast = useToast();
+  const [pending, start] = useTransition();
+  const top = items.filter((p) => p.source !== "custom" || !p.name.includes("≈")).slice(0, 8);
+  // A basic food among the first results is better than any average.
+  const m = query.trim().length >= 3 && top.length >= 3 && !top.slice(0, 3).some((p) => p.source === "generic") ? medianOf(top) : null;
+  if (!m) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-border px-3 py-2.5">
+      <div className="min-w-0 text-sm">
+        <p className="font-medium">{t("nutrition.avgOffer", { n: m.used.length, kcal: fmt(locale, m.nutrients.kcal), basis: m.basis })}</p>
+        <p className="truncate text-xs text-muted">{m.used.slice(0, 3).map((p) => p.name).join(" · ")}</p>
+      </div>
+      <Button size="sm" variant="secondary" className="shrink-0" disabled={pending} onClick={() => start(async () => {
+        const r = await averageProduct({ ids: m.used.map((p) => p.id), name: query.trim().slice(0, 60) });
+        if (r.product) onPick(r.product);
+        else toast({ text: t("common.error") });
+      })}>{t("nutrition.avgUse")}</Button>
+    </div>
+  );
+}
+
 function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void; onScan: () => void; children: ReactNode }) {
   const { t } = useI18n();
   const [q, setQ] = useState("");
@@ -216,6 +243,7 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
       {q.trim().length < 2 && children}
       {q.trim().length >= 2 && (
         <>
+          <AverageOffer query={q} items={[...local, ...(remote ?? [])]} onPick={onPick} />
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.localResults")}</p>
           {searched ? <ProductList items={local} onPick={onPick} /> : <p className="py-3 text-center text-sm text-muted">{t("common.loading")}</p>}
           {remote === null ? (

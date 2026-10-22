@@ -4,7 +4,7 @@ import type { Locale } from "@/i18n";
 import { EXERCISES } from "@/engine/exercises";
 import { parseProfile } from "@/engine/profile";
 import type { Exercise, ExercisePref, Grip, Plan, TrainingProfile } from "@/engine/types";
-import { emptyNutrients, recipe as recipeCalc, scale, sum, type Ingredient, type Nutrients } from "@/nutrition/calc";
+import { emptyNutrients, medianOf, recipe as recipeCalc, scale, sum, type Ingredient, type Nutrients } from "@/nutrition/calc";
 import type { ProductDraft } from "@/nutrition/off";
 import { db, json, newId, nowIso, type Q } from "./db";
 import { MEASUREMENT_SITES, type Measurement } from "./measurements";
@@ -421,6 +421,16 @@ export async function saveCustomProduct(
   await q.run("INSERT INTO food_products (id, owner_user_id, source, barcode, name, brand, basis, state, nutrients, servings, fetched_at, updated_at) VALUES (?, ?, 'custom', ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
     [id, userId, p.barcode, p.name, p.brand, p.basis, p.state, JSON.stringify(p.nutrients), JSON.stringify(p.servings), now]);
   return id;
+}
+
+/** A private product whose values are the median of similar visible products; null if fewer than 2 usable. */
+export async function saveAverageProduct(userId: string, ids: string[], name: (n: number) => string): Promise<{ product: Product; used: Product[] } | null> {
+  const found = (await Promise.all([...new Set(ids)].slice(0, 10).map((id) => getProduct(userId, id)))).filter((p): p is Product => !!p);
+  const m = medianOf(found);
+  if (!m) return null;
+  const id = await saveCustomProduct(userId, { name: name(m.used.length).slice(0, 100), brand: null, barcode: null, basis: m.basis, state: null, nutrients: m.nutrients, servings: [] });
+  const product = await getProduct(userId, id);
+  return product ? { product, used: m.used } : null;
 }
 
 /**

@@ -7,7 +7,9 @@ import { energyEstimate } from "@/lib/estimate";
 import {
   addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, intakeHistory, saveCustomProduct, undoDelete, saveRecipe, setDayComplete,
   setFavorite, setTarget, updateEntry, type Recipe,
+  saveAverageProduct, type Product,
 } from "@/lib/data";
+import { translator } from "@/i18n";
 import { NUTRIENT_KEYS, sanitize, type Nutrients } from "@/nutrition/calc";
 import { normalizeBarcode } from "@/nutrition/barcode";
 
@@ -199,4 +201,17 @@ export async function answerWeek(weekStart: string, complete: boolean) {
   if (!complete) return {};
   const { adaptive, suggestion } = await energyEstimate(user.id);
   return { adaptive, suggestion };
+}
+
+/** "Use the average of these results": creates a private "(≈ average of N)" product and returns it. */
+export async function averageProduct(raw: unknown): Promise<{ product?: Product; error?: string }> {
+  const user = await requireUser();
+  const p = z.object({ ids: z.array(z.string().min(1).max(64)).min(2).max(10), name: z.string().trim().min(1).max(60) }).safeParse(raw);
+  if (!p.success) return { error: "invalid" };
+  const t = translator(user.locale);
+  // Named after the search and how many products it is based on, so it is obviously an estimate.
+  const r = await saveAverageProduct(user.id, p.data.ids, (n) => t("nutrition.avgName", { name: p.data.name, n }));
+  if (!r) return { error: "too_few" };
+  done();
+  return { product: r.product };
 }

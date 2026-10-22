@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { gtinChecksumOk, normalizeBarcode, upcEToUpcA } from "./barcode";
-import { emptyNutrients, energyMismatch, parseDecimal, recipe, sanitize, scale, sum, type Nutrients } from "./calc";
+import { emptyNutrients, energyMismatch, medianOf, parseDecimal, recipe, sanitize, scale, sum, type Nutrients } from "./calc";
 import { adaptiveTdee, initialEstimate, proteinTarget, suggestTarget, weightTrend, type IntakeDay, type WeighIn } from "./energy";
 import { mapOffProduct } from "./off";
 
@@ -200,5 +200,20 @@ describe("bodyweight trend and adaptive expenditure", () => {
     expect(e.tdee).toBe(2750);
     expect(e.low).toBeLessThan(e.tdee);
     expect(e.high).toBeGreaterThan(e.tdee);
+  });
+});
+
+describe("average of similar products", () => {
+  const p = (kcal: number | null, protein: number | null, basis: "g" | "ml" = "g") => ({ basis, nutrients: { ...emptyNutrients(), kcal, protein } });
+  it("takes the median per nutrient, ignoring an odd one and the minority unit", () => {
+    const m = medianOf([p(280, 3), p(300, 4), p(2900, 40), p(290, null), p(50, 1, "ml")])!;
+    expect(m.basis).toBe("g");
+    expect(m.used).toHaveLength(4);
+    expect(m.nutrients.kcal).toBe(295);
+    expect(m.nutrients.protein).toBe(4);
+  });
+  it("needs at least two usable products", () => {
+    expect(medianOf([p(100, 1)])).toBeNull();
+    expect(medianOf([p(null, 1), p(100, 2)])).toBeNull();
   });
 });

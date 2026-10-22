@@ -114,3 +114,25 @@ export function sanitize(n: Partial<Record<NutrientKey, unknown>>): Nutrients {
   if (out.satFat !== null && out.fat !== null && out.satFat > out.fat + 0.5) out.satFat = null;
   return out;
 }
+
+/**
+ * "Not in the database, but similar products are": per-100 values as the median of similar products of the
+ * majority basis (g or ml). The median keeps one odd entry (a typo, a different variant) from skewing it.
+ */
+export function medianOf<T extends { nutrients: Nutrients; basis: "g" | "ml" }>(items: T[]): { nutrients: Nutrients; basis: "g" | "ml"; used: T[] } | null {
+  const withKcal = items.filter((i) => i.nutrients.kcal !== null);
+  const basis = withKcal.filter((i) => i.basis === "ml").length > withKcal.length / 2 ? "ml" : "g";
+  const used = withKcal.filter((i) => i.basis === basis);
+  if (used.length < 2) return null;
+  const med = (xs: number[]) => {
+    const s = [...xs].sort((a, b) => a - b);
+    const m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+  };
+  const nutrients = emptyNutrients();
+  for (const k of NUTRIENT_KEYS) {
+    const xs = used.map((i) => i.nutrients[k]).filter((x): x is number => x !== null);
+    nutrients[k] = xs.length >= Math.ceil(used.length / 2) ? Math.round(med(xs) * 10) / 10 : null;
+  }
+  return { nutrients, basis, used };
+}

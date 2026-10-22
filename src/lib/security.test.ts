@@ -281,4 +281,14 @@ describe("progress photos", () => {
     // Basic foods of other languages don't show up twice.
     expect((await data.searchProducts(A, "jajko", 25, "pl")).filter((p) => p.id.startsWith("gen_de_"))).toEqual([]);
   });
+
+  it("creates a private '(≈ average of N)' product from visible products only", async () => {
+    await data.searchProducts(A, "jablko", 1);
+    const r = await data.saveAverageProduct(A, ["gen_pl_apple", "gen_pl_banana", "gen_pl_orange"], (n) => `Owoc (≈ średnia z ${n})`);
+    expect(r?.product).toMatchObject({ name: "Owoc (≈ średnia z 3)", source: "custom", mine: true });
+    expect(r?.product.nutrients.kcal).toBe(52);
+    // Someone else's private product doesn't count.
+    const secret = await data.saveCustomProduct(B, { name: "B only", brand: null, barcode: null, basis: "g", state: null, nutrients: { ...emptyNutrients(), kcal: 999 }, servings: [] });
+    expect(await data.saveAverageProduct(A, ["gen_pl_apple", secret], () => "x")).toBeNull();
+  });
 });

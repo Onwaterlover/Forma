@@ -1,13 +1,13 @@
 "use server";
 import { z } from "zod";
 import { prescribe } from "@/engine/prescribe";
-import { isLocale } from "@/i18n";
+import { isLocale, translator } from "@/i18n";
 import { defaultProfile } from "@/engine/profile";
 import type { Plan } from "@/engine/types";
-import { aiConfigured, foodPayload, planChangePayload, planEditPayload, prefPayload, quickPayload, runAssistant, swapPayload, type Proposal } from "@/lib/assistant";
+import { aiConfigured, foodAvgPayload, foodPayload, planChangePayload, planEditPayload, prefPayload, quickPayload, runAssistant, swapPayload, type Proposal } from "@/lib/assistant";
 import { requireUser, throttle } from "@/lib/auth";
 import { isIsoDate } from "@/lib/ctx";
-import { getPlan, getProfile, getSettings, libraryFor, pendingSuggestion, resolveSuggestion } from "@/lib/data";
+import { getPlan, getProfile, getSettings, libraryFor, pendingSuggestion, resolveSuggestion, saveAverageProduct } from "@/lib/data";
 import { addProductEntry, addQuickEntry } from "./nutrition";
 import { regenerateWithFeedback, savePlanEdit, setExercisePref } from "./training";
 
@@ -77,6 +77,15 @@ export async function applySuggestion(id: string): Promise<{ error?: string }> {
       if (r.error) return { error: r.error };
     }
     return {};
+  }
+  if (s.kind === "food_avg") {
+    // The averaged product is created only now, when the user applies the proposal.
+    const p = foodAvgPayload.parse(s.payload);
+    const t = translator(user.locale);
+    const r = await saveAverageProduct(user.id, p.ids, (n) => t("nutrition.avgName", { name: p.name, n }));
+    if (!r) return { error: "stale" };
+    const e = await addProductEntry({ productId: r.product.id, amount: p.grams, date: p.date, meal: p.meal });
+    return e.error ? { error: e.error } : {};
   }
   if (s.kind === "quick") {
     const { date, meal, ...q } = quickPayload.parse(s.payload);

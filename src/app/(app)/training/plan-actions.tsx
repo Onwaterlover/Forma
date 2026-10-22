@@ -1,5 +1,5 @@
 "use client";
-import { BookOpen, ChevronRight, CircleHelp, FileInput, History, MoreHorizontal, Printer, SlidersHorizontal, ThumbsDown, Trash2 } from "lucide-react";
+import { BookOpen, ChevronRight, CircleHelp, FileInput, History, MoreHorizontal, Plus, Printer, SlidersHorizontal, ThumbsDown, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition, type ReactNode } from "react";
 import { deletePlanAction, regenerateWithFeedback, type PlanFeedback } from "@/app/actions/training";
@@ -12,8 +12,8 @@ import { useI18n } from "@/i18n/client";
 const REASONS: PlanFeedback["reasons"] = ["too_long", "too_short", "fewer_days", "more_days", "more_upper", "more_lower", "too_hard", "more_machines", "more_free", "more_bodyweight"];
 
 /**
- * Everything around the plan behind one "⋯" button, so the Training tab itself reads like a clean
- * written plan: edit, "I don't like it", how-to, print/PDF, setup, import, library, history, delete.
+ * Everything around the plan behind one "⋯" button, kept to five entries: history, exercises, how-to,
+ * print/PDF and "New plan…" (wizard, import, or adjusting the current plan). Deleting lives on the edit page.
  */
 export function PlanMenu({ planId, exercises, library, feedback, logging, hasProfile }: {
   planId: string | null;
@@ -25,7 +25,7 @@ export function PlanMenu({ planId, exercises, library, feedback, logging, hasPro
 }) {
   const { t } = useI18n();
   const toast = useToast();
-  const [sheet, setSheet] = useState<"menu" | "feedback" | "delete" | "howto" | null>(null);
+  const [sheet, setSheet] = useState<"menu" | "new" | "feedback" | "howto" | null>(null);
   const [reasons, setReasons] = useState<PlanFeedback["reasons"]>([]);
   const [dislike, setDislike] = useState<string[]>([]);
   const [pending, start] = useTransition();
@@ -45,14 +45,19 @@ export function PlanMenu({ planId, exercises, library, feedback, logging, hasPro
 
       <Sheet open={sheet === "menu"} onClose={() => setSheet(null)} title={t("plan.title")}>
         <ul className="-mx-2 divide-y divide-border">
-          {planId && feedback && item(<ThumbsDown size={18} aria-hidden />, t("plan.dislike"), { onClick: () => setSheet("feedback") })}
+          {logging && item(<History size={18} aria-hidden />, t("workout.history"), { href: "/training/history" })}
+          {item(<BookOpen size={18} aria-hidden />, t("library.title"), { href: "/training/exercises" })}
           {item(<CircleHelp size={18} aria-hidden />, t("plan.howToAny"), { onClick: () => setSheet("howto") })}
           {planId && item(<Printer size={18} aria-hidden />, t("plan.print"), { onClick: () => { setSheet(null); setTimeout(() => window.print(), 150); } })}
+          {item(<Plus size={18} aria-hidden />, t("plan.newPlan"), { onClick: () => setSheet("new") })}
+        </ul>
+      </Sheet>
+
+      <Sheet open={sheet === "new"} onClose={() => setSheet(null)} title={t("plan.newPlan")}>
+        <ul className="-mx-2 divide-y divide-border">
           {item(<SlidersHorizontal size={18} aria-hidden />, hasProfile ? t("plan.profile") : t("plan.create"), { href: "/training/setup" })}
           {item(<FileInput size={18} aria-hidden />, t("plan.import"), { href: "/training/import" })}
-          {item(<BookOpen size={18} aria-hidden />, t("library.title"), { href: "/training/exercises" })}
-          {logging && item(<History size={18} aria-hidden />, t("workout.history"), { href: "/training/history" })}
-          {planId && item(<Trash2 size={18} aria-hidden />, t("plan.delete"), { onClick: () => setSheet("delete"), danger: true })}
+          {planId && feedback && item(<ThumbsDown size={18} aria-hidden />, t("plan.dislike"), { onClick: () => setSheet("feedback") })}
         </ul>
       </Sheet>
 
@@ -83,13 +88,6 @@ export function PlanMenu({ planId, exercises, library, feedback, logging, hasPro
         </div>
       </Sheet>
 
-      <Sheet open={sheet === "delete"} onClose={() => setSheet(null)} title={t("plan.delete")}>
-        <p className="mb-4 text-sm">{t("plan.deleteConfirm")}</p>
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={() => setSheet(null)}>{t("common.cancel")}</Button>
-          <Button full variant="danger" disabled={pending || !planId} onClick={() => planId && start(() => deletePlanAction(planId))}>{t("plan.delete")}</Button>
-        </div>
-      </Sheet>
     </>
   );
 }

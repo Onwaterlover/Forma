@@ -2,22 +2,33 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { removeRecipe, saveRecipeAction } from "@/app/actions/nutrition";
+import { productFor, removeRecipe, saveRecipeAction } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, Switch, useToast } from "@/components/client";
 import { Badge, Button, Card, Empty, Field, Input } from "@/components/ui";
 import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product, Recipe } from "@/lib/data";
 import { recipe as calc } from "@/nutrition/calc";
-import { ProductList } from "../add-food";
+import { AmountInput, ProductList, servingsWithSlice } from "../add-food";
 
 type Draft = { id?: string; name: string; ingredients: { productId: string | null; name: string; grams: number | null; nutrients: Product["nutrients"] }[]; cookedYieldG: number | null; servings: number | null; isMeal: boolean };
 
-export function Recipes({ recipes }: { recipes: Recipe[] }) {
+/** `openId`: opened straight away (from the diary: a logged meal's ingredients, or "Add ingredient" after saving a meal). */
+export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: string | null }) {
   const { t, locale } = useI18n();
   const toast = useToast();
   const router = useRouter();
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const toDraft = (r: Recipe): Draft => ({ id: r.id, name: r.name, ingredients: r.ingredients.map((i) => ({ ...i })), cookedYieldG: r.cookedYieldG, servings: r.servings, isMeal: r.isMeal });
+  const [draft, setDraft] = useState<Draft | null>(() => { const r = openId ? recipes.find((x) => x.id === openId) : undefined; return r ? toDraft(r) : null; });
+  // The ingredient whose amount is being changed (same wheel / pieces / quick amounts as when adding food).
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [editServings, setEditServings] = useState<{ label: string; amount: number }[]>([]);
+  const editIngredient = (k: number) => {
+    setEditIdx(editIdx === k ? null : k);
+    setEditServings([]);
+    const pid = draft?.ingredients[k]?.productId;
+    if (pid && editIdx !== k) productFor(pid).then((pr) => pr && setEditServings(servingsWithSlice(pr, t("nutrition.slice")))).catch(() => {});
+  };
   const [q, setQ] = useState("");
   const [found, setFound] = useState<Product[] | null>(null);
   const [remote, setRemote] = useState<Product[] | null>(null);
@@ -50,8 +61,12 @@ export function Recipes({ recipes }: { recipes: Recipe[] }) {
   };
   const addIngredient = (p: Product) => {
     if (!draft) return;
-    setDraft({ ...draft, ingredients: [...draft.ingredients, { productId: p.id, name: p.name, grams: p.servings[0]?.amount ?? 100, nutrients: p.nutrients }] });
+    setDraft({ ...draft, ingredients: [...draft.ingredients, { productId: p.id, name: p.name, grams: 100, nutrients: p.nutrients }] });
     setQ("");
+    // Open the new ingredient's amount right away (starts at 100 g).
+    setEditIdx(draft.ingredients.length);
+    setEditServings([]);
+    productFor(p.id).then((pr) => pr && setEditServings(servingsWithSlice(pr, t("nutrition.slice")))).catch(() => {});
   };
 
   const preview = draft ? calc(draft.ingredients.map((i) => ({ ...i, grams: i.grams ?? 0 })), { cookedYieldG: draft.cookedYieldG, servings: draft.servings ?? 1 }) : null;
@@ -65,7 +80,7 @@ export function Recipes({ recipes }: { recipes: Recipe[] }) {
             {recipes.map((r) => (
               <li key={r.id} className="flex items-center gap-2 px-4 py-3">
                 <button type="button" className="min-w-0 flex-1 text-left"
-                  onClick={() => setDraft({ id: r.id, name: r.name, ingredients: r.ingredients.map((i) => ({ ...i })), cookedYieldG: r.cookedYieldG, servings: r.servings, isMeal: r.isMeal })}>
+                  onClick={() => { setEditIdx(null); setDraft(toDraft(r)); }}>
                   <span className="block font-medium">{r.name} {r.isMeal && <Badge>{t("nutrition.meals")}</Badge>}</span>
                   <span className="block text-xs text-muted">{r.ingredients.length} · {fmt(locale, r.calc.total.kcal)} kcal {t("nutrition.total").toLowerCase()} · {fmt(locale, r.calc.perServing.kcal)} kcal {t("nutrition.perServing")}</span>
                 </button>
@@ -76,7 +91,7 @@ export function Recipes({ recipes }: { recipes: Recipe[] }) {
         </Card>
       )}
 
-      <Sheet open={!!draft} onClose={() => setDraft(null)} title={draft?.id ? draft.name : t("nutrition.newRecipe")} wide>
+      <Sheet open={!!draft} onClose={() => { setDraft(null); setEditIdx(null); }} title={draft?.id ? draft.name : t("nutrition.newRecipe")} wide full>
         {draft && (
           <div className="space-y-4">
             <Field label={t("nutrition.name")} htmlFor="r-name"><Input id="r-name" value={draft.name} maxLength={80} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
@@ -84,11 +99,20 @@ export function Recipes({ recipes }: { recipes: Recipe[] }) {
               <p className="mb-2 text-sm font-medium">{t("nutrition.ingredients")}</p>
               <ul className="space-y-2">
                 {draft.ingredients.map((i, k) => (
-                  <li key={k} className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-sm">{i.name}</span>
-                    <div className="w-24"><DecimalInput aria-label={`${i.name} g`} value={i.grams} onChange={(v) => setDraft({ ...draft, ingredients: draft.ingredients.map((x, j) => (j === k ? { ...x, grams: v } : x)) })} className="h-10" /></div>
-                    <span className="text-sm text-muted">g</span>
-                    <Button variant="ghost" size="sm" aria-label={t("common.delete")} onClick={() => setDraft({ ...draft, ingredients: draft.ingredients.filter((_, j) => j !== k) })}><Trash2 size={15} /></Button>
+                  <li key={k} className="rounded-xl border border-border">
+                    <div className="flex items-center gap-2 px-3">
+                      <button type="button" className="flex min-w-0 flex-1 items-center justify-between gap-2 py-2.5 text-left" onClick={() => editIngredient(k)} aria-expanded={editIdx === k}>
+                        <span className="min-w-0 truncate text-sm">{i.name}</span>
+                        <span className="shrink-0 text-sm font-medium tabular-nums">{i.grams ? fmt(locale, i.grams) : "—"} g</span>
+                      </button>
+                      <Button variant="ghost" size="sm" aria-label={t("common.delete")} onClick={() => { setEditIdx(null); setDraft({ ...draft, ingredients: draft.ingredients.filter((_, j) => j !== k) }); }}><Trash2 size={15} /></Button>
+                    </div>
+                    {editIdx === k && (
+                      <div className="space-y-3 border-t border-border px-3 py-3">
+                        <AmountInput key={`${k}-${editServings.length}`} amount={i.grams} basis="g" servings={editServings}
+                          onChange={(v) => setDraft((d) => d && { ...d, ingredients: d.ingredients.map((x, j) => (j === k ? { ...x, grams: v } : x)) })} />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

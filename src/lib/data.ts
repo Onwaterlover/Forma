@@ -22,6 +22,10 @@ export interface Settings {
   autoTimer: boolean;
   showEffort: boolean;
   showFiber: boolean;
+  /** Daily goals for carbs, fat and fibre too (derived from the calorie and protein target), coloured by progress. */
+  showMacroTargets: boolean;
+  /** With macro goals on: which goals to show, and whether to colour them by progress. */
+  macroGoals: { protein: boolean; carbs: boolean; fat: boolean; fiber: boolean; colors: boolean };
   weightGoal: "maintain" | "lose" | "gain" | "recomp" | null;
   onboarded: boolean;
   /** The user agreed to send the data a question needs to the AI provider. */
@@ -34,18 +38,22 @@ export interface Settings {
 
 const DEFAULT_SETTINGS: Settings = {
   theme: "system", modules: { training: true, nutrition: true }, logMode: "detailed", restTimer: true, autoTimer: false,
-  showEffort: false, showFiber: false, weightGoal: null, onboarded: false, ai: false, logWorkouts: true,
+  showEffort: false, showFiber: false, showMacroTargets: false, macroGoals: { protein: true, carbs: true, fat: true, fiber: true, colors: true }, weightGoal: null, onboarded: false, ai: false, logWorkouts: true,
   body: { sex: null, birthYear: null, heightCm: null, activity: null },
 };
 
 export async function getSettings(userId: string): Promise<Settings> {
   const row = await (await db()).get<{ data: string }>("SELECT data FROM user_settings WHERE user_id = ?", [userId]);
   const s = json<Partial<Settings>>(row?.data, {});
-  return { ...DEFAULT_SETTINGS, ...s, modules: { ...DEFAULT_SETTINGS.modules, ...s.modules }, body: { ...DEFAULT_SETTINGS.body, ...s.body } };
+  return { ...DEFAULT_SETTINGS, ...s, modules: { ...DEFAULT_SETTINGS.modules, ...s.modules }, body: { ...DEFAULT_SETTINGS.body, ...s.body }, macroGoals: { ...DEFAULT_SETTINGS.macroGoals, ...s.macroGoals } };
 }
 
-export async function saveSettings(userId: string, patch: Partial<Settings>) {
-  const next = { ...(await getSettings(userId)), ...patch };
+/** A settings change; `macroGoals` may name only the switches that changed (merged, so quick taps don't undo each other). */
+export type SettingsPatch = Partial<Omit<Settings, "macroGoals">> & { macroGoals?: Partial<Settings["macroGoals"]> };
+
+export async function saveSettings(userId: string, patch: SettingsPatch) {
+  const cur = await getSettings(userId);
+  const next = { ...cur, ...patch, macroGoals: { ...cur.macroGoals, ...patch.macroGoals } };
   await (await db()).run("INSERT INTO user_settings (user_id, data) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET data = excluded.data", [userId, JSON.stringify(next)]);
   return next;
 }

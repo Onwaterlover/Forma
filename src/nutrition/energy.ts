@@ -169,3 +169,13 @@ export function proteinTarget(bodyweightKg: number, goal: WeightGoal): number {
   const perKg = goal === "lose" || goal === "recomp" ? 1.8 : 1.6;
   return Math.round((bodyweightKg * perKg) / 5) * 5;
 }
+
+/**
+ * Daily goals besides protein, from the calorie target: fat ~30 % of calories, carbs the rest,
+ * fibre 14 g per 1000 kcal (at least 25 g). Rounded to whole grams.
+ */
+export function macroTargets(kcal: number, protein: number | null): { carbs: number; fat: number; fiber: number } {
+  const fat = (kcal * 0.3) / 9;
+  const carbs = Math.max(0, (kcal - (protein ?? 0) * 4 - fat * 9) / 4);
+  return { carbs: Math.round(carbs), fat: Math.round(fat), fiber: Math.max(25, Math.round((kcal / 1000) * 14)) };
+}

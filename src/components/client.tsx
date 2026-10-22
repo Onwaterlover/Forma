@@ -22,7 +22,8 @@ export function Choices<V extends string | number>({
           <label
             key={String(o.value)}
             className={cx(
-              "flex cursor-pointer flex-col justify-center rounded-xl border px-3.5 py-3 transition-colors min-h-12",
+              "flex min-w-0 cursor-pointer flex-col justify-center rounded-xl border py-3 transition-colors min-h-12",
+              columns === 3 ? "px-2.5" : "px-3.5", // three in a row on a narrow phone: less padding so labels fit
               on ? "border-accent bg-accent-soft" : "border-border bg-surface hover:bg-surface-2",
             )}
           >

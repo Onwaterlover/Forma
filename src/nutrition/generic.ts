@@ -19,7 +19,7 @@ type Row = {
 
 type ServingKey = keyof typeof SERVING;
 const SERVING = {
-  egg: { pl: "1 jajko (M)", en: "1 egg (M)", de: "1 Ei (M)" },
+  egg: { pl: "1 sztuka (M)", en: "1 piece (M)", de: "1 Stück (M)" },
   tbsp: { pl: "1 łyżka", en: "1 tablespoon", de: "1 Esslöffel" },
   tsp: { pl: "1 łyżeczka", en: "1 teaspoon", de: "1 Teelöffel" },
   spray: { pl: "1 psiknięcie (spray)", en: "1 spray", de: "1 Sprühstoß" },
@@ -29,7 +29,7 @@ const SERVING = {
   piece: { pl: "1 sztuka (średnia)", en: "1 piece (medium)", de: "1 Stück (mittel)" },
   handful: { pl: "1 garść", en: "1 handful", de: "1 Handvoll" },
   can: { pl: "1 puszka (odsączona)", en: "1 can (drained)", de: "1 Dose (abgetropft)" },
-  white: { pl: "1 białko", en: "1 egg white", de: "1 Eiweiß" },
+  white: { pl: "1 sztuka", en: "1 piece", de: "1 Stück" },
   cup: { pl: "1 kubeczek", en: "1 pot", de: "1 Becher" },
   fillet: { pl: "1 filet", en: "1 fillet", de: "1 Filet" },
 } satisfies Record<string, Record<Locale, string>>;
@@ -107,7 +107,7 @@ const F: Row[] = [
 ];
 
 /** Bump when values change: rows are re-written once on the next start. */
-export const GENERIC_VERSION = "generic-2";
+export const GENERIC_VERSION = "generic-3";
 
 export function genericRows() {
   return F.flatMap((f, rank) => (["pl", "en", "de"] as const).map((locale) => {

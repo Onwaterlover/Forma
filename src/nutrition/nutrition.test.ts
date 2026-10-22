@@ -242,3 +242,11 @@ describe("typical slices", () => {
     expect(typicalSlice("Jogurt naturalny")).toBeNull();
   });
 });
+
+describe("macro goals", () => {
+  it("splits calories: fat 30 %, carbs the rest after protein, fibre 14 g/1000 kcal (min 25)", async () => {
+    const { macroTargets } = await import("./energy");
+    expect(macroTargets(2000, 140)).toEqual({ carbs: 210, fat: 67, fiber: 28 });
+    expect(macroTargets(1500, null).fiber).toBe(25);
+  });
+});

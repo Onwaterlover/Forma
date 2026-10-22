@@ -298,15 +298,12 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
           <Button size="sm" variant="ghost" className="shrink-0 whitespace-nowrap" onClick={onRescan}>{t("nutrition.rescan")}</Button>
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-2">
-        {product.brand && <Badge>{product.brand}</Badge>}
-        {product.state && <Badge tone="accent">{t(`nutrition.state.${product.state}`)}</Badge>}
-        <Badge>{product.source === "off" ? t("nutrition.sourceOff") : product.source === "generic" ? t("nutrition.sourceGeneric") : t("nutrition.sourceCustom")}</Badge>
-        <button type="button" aria-pressed={fav} className="ml-auto inline-flex h-9 items-center gap-1 rounded-lg px-2 text-sm text-muted hover:bg-surface-2"
-          onClick={() => { setFav(!fav); toggleFavorite(product.id, !fav); }}>
-          <Star size={16} className={fav ? "fill-current text-warning" : ""} aria-hidden />{fav ? t("nutrition.unfavorite") : t("nutrition.favorite")}
-        </button>
-      </div>
+      {(product.brand || product.state) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {product.brand && <Badge>{product.brand}</Badge>}
+          {product.state && <Badge tone="accent">{t(`nutrition.state.${product.state}`)}</Badge>}
+        </div>
+      )}
       {energyMismatch(product.nutrients) && <Notice tone="warning">{t("nutrition.energyMismatch")}</Notice>}
       {meal}
       <AmountInput amount={amount} onChange={setAmount} basis={product.basis} servings={servingsWithSlice(product, t("nutrition.slice"))} startPieces={startPieces} />
@@ -316,10 +313,18 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
         {tile("carbs", `${t("nutrition.carbs")} (g)`)}
         {tile("fat", `${t("nutrition.fat")} (g)`)}
       </div>
-      <p className="text-xs text-muted">
-        {t("nutrition.per100", { basis: product.basis })}: {product.nutrients.kcal === null ? t("nutrition.missing") : `${fmt(locale, product.nutrients.kcal)} kcal`}
-        {v.fiber !== null && ` · ${t("nutrition.fiber")} ${fmt(locale, v.fiber, 1)} g`}
-      </p>
+      {/* Details and "favourite" at the bottom, out of the way (source in small print, except for basic foods). */}
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 text-xs text-muted">
+          {t("nutrition.per100", { basis: product.basis })}: {product.nutrients.kcal === null ? t("nutrition.missing") : `${fmt(locale, product.nutrients.kcal)} kcal`}
+          {v.fiber !== null && ` · ${t("nutrition.fiber")} ${fmt(locale, v.fiber, 1)} g`}
+          {product.source !== "generic" && ` · ${product.source === "off" ? t("nutrition.sourceOff") : t("nutrition.sourceCustom")}`}
+        </p>
+        <button type="button" aria-pressed={fav} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg px-2 text-sm text-muted hover:bg-surface-2"
+          onClick={() => { setFav(!fav); toggleFavorite(product.id, !fav); }}>
+          <Star size={16} className={fav ? "fill-current text-warning" : ""} aria-hidden />{fav ? t("nutrition.unfavorite") : t("nutrition.favorite")}
+        </button>
+      </div>
       <div className="sticky bottom-0 -mx-5 flex gap-2 bg-surface px-5 pt-1">
         <Button variant="ghost" onClick={onBack}>{t("common.back")}</Button>
         <Button full disabled={pending || !amount || amount <= 0} onClick={() => amount && onAdd(amount)}>{t("common.add")}</Button>

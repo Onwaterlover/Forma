@@ -288,6 +288,14 @@ describe("workout generator", () => {
     expect(plan.tradeoffs[0]).toEqual({ code: "fewer_days_than_requested", params: { requested: 5, available: 3 } });
   });
 
+  it("with every day free, the chosen days include today (start right away)", () => {
+    const all = week({ 0: ["gym"], 1: ["gym"], 2: ["gym"], 3: ["gym"], 4: ["gym"], 5: ["gym"], 6: ["gym"] });
+    for (const startDay of [0, 1, 2, 3, 4, 5, 6] as Weekday[]) {
+      const plan = generatePlan({ profile: profile({ sessionsPerWeek: 3, week: all, locations: [gym()] }), startDay });
+      expect(plan.sessions.map((s) => s.day)).toContain(startDay);
+    }
+  });
+
   it("no available days yields an empty plan with an explanation", () => {
     const p = profile({ week: week({}), locations: [gym()] });
     const plan = generatePlan({ profile: p });

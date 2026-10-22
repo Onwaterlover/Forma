@@ -7,7 +7,7 @@ import { Choices, DecimalInput, Switch, useToast } from "@/components/client";
 import { Button, Card, Field, Input, Notice, SectionTitle } from "@/components/ui";
 import { fmtDate, LOCALES, type Locale } from "@/i18n";
 import { useI18n } from "@/i18n/client";
-import type { Settings } from "@/lib/data";
+import type { Settings, SettingsPatch } from "@/lib/data";
 
 const LANG_NAMES: Record<Locale, string> = { pl: "Polski", en: "English", de: "Deutsch" };
 export const PROVIDER_NAME = { gemini: "Google Gemini", anthropic: "Claude (Anthropic)" } as const;
@@ -34,7 +34,7 @@ export function SettingsForm({
   const [pw, setPw] = useState({ current: "", next: "" });
   const [confirmWord, setConfirmWord] = useState("");
 
-  const set = (patch: Partial<Settings>) => start(async () => { await updateSettings(patch); router.refresh(); });
+  const set = (patch: SettingsPatch) => start(async () => { await updateSettings(patch); router.refresh(); });
   const theme = (v: Settings["theme"]) => {
     if (v === "system") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", v);
@@ -69,6 +69,15 @@ export function SettingsForm({
           {settings.restTimer && <Switch checked={settings.autoTimer} label={t("settings.autoTimer")} onChange={(autoTimer) => set({ autoTimer })} />}
           <Switch checked={settings.showEffort} label={t("settings.effort")} onChange={(showEffort) => set({ showEffort })} />
           <Switch checked={settings.showFiber} label={t("settings.fiber")} onChange={(showFiber) => set({ showFiber })} />
+          <Switch checked={settings.showMacroTargets} label={t("settings.macroTargets")} hint={t("settings.macroTargetsHint")} onChange={(showMacroTargets) => set({ showMacroTargets })} />
+          {settings.showMacroTargets && (
+            <div className="divide-y divide-border pl-4">
+              {(["protein", "carbs", "fat", "fiber"] as const).map((k) => (
+                <Switch key={k} checked={settings.macroGoals[k]} label={t(`nutrition.${k}`)} onChange={(v) => set({ macroGoals: { [k]: v } })} />
+              ))}
+              <Switch checked={settings.macroGoals.colors} label={t("settings.macroColors")} hint={t("settings.macroColorsHint")} onChange={(colors) => set({ macroGoals: { colors } })} />
+            </div>
+          )}
         </div>
           </div>
         )}

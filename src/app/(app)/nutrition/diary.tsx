@@ -10,6 +10,7 @@ import { fmt, fmtDate } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { DiaryEntry, Product, Recipe } from "@/lib/data";
 import type { Nutrients, NutrientKey } from "@/nutrition/calc";
+import { macroTargets } from "@/nutrition/energy";
 import { AddFood, AmountInput, mealNow, servingsWithSlice, type RecipeLite } from "./add-food";
 
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
@@ -21,7 +22,7 @@ const shift = (iso: string, d: number) => {
 };
 
 export function Diary({
-  date, today, entries, totals, complete, target, recents, recentMeals = [], favorites, recipes, showFiber, assistant,
+  date, today, entries, totals, complete, target, recents, recentMeals = [], favorites, recipes, showFiber, macroGoals = null, assistant,
 }: {
   date: string;
   today: string;
@@ -34,6 +35,8 @@ export function Diary({
   favorites: Product[];
   recipes: RecipeLite[];
   showFiber: boolean;
+  /** Set when macro goals are switched on in settings (which ones, colours). */
+  macroGoals?: { protein: boolean; carbs: boolean; fat: boolean; fiber: boolean; colors: boolean } | null;
   assistant?: ReactNode;
 }) {
   const { t, locale } = useI18n();
@@ -66,11 +69,21 @@ export function Diary({
 
   const kcal = totals.kcal ?? 0;
   const label = date === today ? t("common.today") : date === shift(today, -1) ? t("common.yesterday") : fmtDate(locale, date, { weekday: "long", day: "numeric", month: "long" });
+  // Goals: protein from the target; carbs, fat and fibre derived from calories when switched on in settings
+  // (each one can be hidden there, as can the colours).
+  const derived = macroGoals && target?.kcal ? macroTargets(target.kcal, target.protein) : null;
+  const goals: Partial<Record<NutrientKey, number>> = {
+    ...(target?.protein && (!macroGoals || macroGoals.protein) ? { protein: target.protein } : {}),
+    ...(derived && macroGoals ? Object.fromEntries((["carbs", "fat", "fiber"] as const).filter((k) => macroGoals[k]).map((k) => [k, derived[k]])) : {}),
+  };
+  const colored = !!macroGoals?.colors;
+  // Below 50 % red, from 50 % yellow, from 90 % green.
+  const tone = (v: number, goal: number) => (v / goal >= 0.9 ? "text-accent" : v / goal >= 0.5 ? "text-warning" : "text-danger");
   const macro = (k: NutrientKey, name: string) => (
     <div className="min-w-0">
-      <p className="text-xs text-muted">{name}</p>
-      <p className="text-lg font-semibold tabular-nums">
-        {fmt(locale, totals[k] ?? 0)}<span className="text-sm font-normal text-muted"> g</span>
+      <p className="truncate text-xs text-muted">{name}</p>
+      <p className={cx("text-lg font-semibold tabular-nums", colored && !!goals[k] && tone(totals[k] ?? 0, goals[k]!))}>
+        {fmt(locale, totals[k] ?? 0)}<span className="text-sm font-normal text-muted">{goals[k] ? ` / ${fmt(locale, goals[k])}` : ""} g</span>
         {totals.incomplete?.includes(k) && <span className="ml-0.5 text-warning" title={t("nutrition.incompleteValue")}>*</span>}
       </p>
     </div>
@@ -108,7 +121,7 @@ export function Diary({
           </div>
         ) : null}
         <div className={cx("mt-4 grid gap-3", showFiber ? "grid-cols-4" : "grid-cols-3")}>
-          {macro("protein", t("nutrition.protein") + (target?.protein ? ` / ${fmt(locale, target.protein)}` : ""))}
+          {macro("protein", t("nutrition.protein"))}
           {macro("carbs", t("nutrition.carbs"))}
           {macro("fat", t("nutrition.fat"))}
           {showFiber && macro("fiber", t("nutrition.fiber"))}
@@ -154,7 +167,8 @@ export function Diary({
               </ul>
             </Card>
           ))}
-          {totals.incomplete?.length ? <p className="text-xs text-muted">* {t("nutrition.incompleteValue")}</p> : null}
+          {/* Only for values shown above (sugar, salt etc. are not shown; fibre only when switched on). */}
+          {totals.incomplete?.some((k) => ["kcal", "protein", "carbs", "fat"].includes(k) || (k === "fiber" && showFiber)) ? <p className="text-xs text-muted">* {t("nutrition.incompleteValue")}</p> : null}
         </div>
       )}
 
@@ -167,7 +181,7 @@ export function Diary({
               <li key={m.id} className="flex items-center gap-2">
                 <Link href={`/nutrition/recipes?open=${m.id}`} className="min-w-0 flex-1 py-2.5">
                   <span className="block truncate text-[15px] font-medium">{m.name}</span>
-                  <span className="block text-xs text-muted"><span className="font-medium text-accent">{t(m.isMeal ? "nutrition.kindMeal" : "nutrition.kindRecipe")}</span> · {m.mode === "servings" ? `${fmt(locale, m.amount)} × ${t("nutrition.portion")}` : `${fmt(locale, m.amount)} g`}{m.kcal !== null ? ` · ${fmt(locale, m.kcal)} kcal` : ""}</span>
+                  <span className="block text-xs text-muted">{m.mode === "servings" ? `${fmt(locale, m.amount)} × ${t("nutrition.portion")}` : `${fmt(locale, m.amount)} g`}{m.kcal !== null ? ` · ${fmt(locale, m.kcal)} kcal` : ""}</span>
                 </Link>
                 <button type="button" disabled={pending} aria-label={`${t("common.add")} ${m.name}`}
                   onClick={() => start(async () => {

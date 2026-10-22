@@ -38,7 +38,8 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
       recentMeals={recentMeals}
       favorites={favorites}
       recipes={recipes.map((r) => ({ id: r.id, name: r.name, isMeal: r.isMeal, servings: r.servings, finalWeight: r.calc.finalWeight, perServingKcal: r.calc.perServing.kcal, totalKcal: r.calc.total.kcal }))}
-      showFiber={settings.showFiber}
+      showFiber={settings.showFiber || (settings.showMacroTargets && settings.macroGoals.fiber)}
+      macroGoals={settings.showMacroTargets ? settings.macroGoals : null}
       assistant={aiProvider() ? <Assistant scope="nutrition" date={date} enabled={settings.ai} provider={aiProvider()!} /> : null}
     />
     </>

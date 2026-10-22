@@ -5,7 +5,7 @@ import { z } from "zod";
 import { isLocale } from "@/i18n";
 import { createInvite, destroySession, hashPassword, requireUser, verifyPassword } from "@/lib/auth";
 import { isIsoDate } from "@/lib/ctx";
-import { addWeight, changePassword, deleteInvite, deleteUser, listInvites, deleteWeight, passwordHash, saveMeasurement, saveSettings, setLocale, type Settings } from "@/lib/data";
+import { addWeight, changePassword, deleteInvite, deleteUser, listInvites, deleteWeight, passwordHash, saveMeasurement, saveSettings, setLocale, type SettingsPatch } from "@/lib/data";
 import { MEASUREMENT_MAX_CM, MEASUREMENT_MIN_CM, MEASUREMENT_SITES, type MeasurementSite } from "@/lib/measurements";
 import { parseDecimal } from "@/nutrition/calc";
 
@@ -26,6 +26,8 @@ const settingsSchema = z
     autoTimer: z.boolean(),
     showEffort: z.boolean(),
     showFiber: z.boolean(),
+    showMacroTargets: z.boolean(),
+    macroGoals: z.object({ protein: z.boolean(), carbs: z.boolean(), fat: z.boolean(), fiber: z.boolean(), colors: z.boolean() }).partial(),
     weightGoal: z.enum(["maintain", "lose", "gain", "recomp"]).nullable(),
     ai: z.boolean(),
     logWorkouts: z.boolean(),
@@ -38,7 +40,7 @@ const settingsSchema = z
   })
   .partial();
 
-export async function updateSettings(patch: Partial<Settings>) {
+export async function updateSettings(patch: SettingsPatch) {
   const user = await requireUser();
   const p = settingsSchema.safeParse(patch);
   if (!p.success) return;

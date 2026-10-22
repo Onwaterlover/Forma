@@ -40,8 +40,12 @@ export function Assistant({ scope, date, enabled, provider, review }: { scope: "
   const fileRef = useRef<HTMLInputElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
+  // Scroll only the chat itself to the newest message. scrollIntoView would also move the page behind the
+  // sheet on iPhones (the "jump up" when opening "Describe a meal").
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "end" });
+    if (!msgs.length && !busy) return;
+    const box = end.current?.closest<HTMLElement>(".overflow-y-auto");
+    if (box) box.scrollTop = box.scrollHeight;
   }, [msgs, busy]);
 
   const err = (code: string) => {

@@ -154,6 +154,8 @@ export function autoSplit(p: TrainingProfile, n: number): { split: string; templ
     case 3:
       if (!novice && legsLow && upperHigh) return { split: "upper_lower_upper", templates: ["UPPER_A", "LOWER_FULL", "UPPER_B"] };
       if (!novice && legsHigh && !upperHigh) return { split: "lower_upper_lower", templates: ["LOWER_A", "UPPER_A", "LOWER_B"] };
+      // Short sessions can't fit a proper whole-body workout; half the body per session leaves room for real work.
+      if (!novice && p.sessionMinutes <= 30) return { split: "upper_lower_upper", templates: ["UPPER_A", "LOWER_FULL", "UPPER_B"] };
       return { split: "full_body", templates: ["FULL_A", "FULL_B", "FULL_C"] };
     case 4:
       if (legsLow) return { split: "upper_lower_upper_plus", templates: ["UPPER_A", "LOWER_FULL", "UPPER_B", "ARMS_DELTS"] };

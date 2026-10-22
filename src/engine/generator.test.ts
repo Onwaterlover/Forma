@@ -324,6 +324,8 @@ describe("workout generator", () => {
     expect(splitFor(profile({ ...base, splitPref: "full_body" }), 4).templates).toEqual(["FULL_A", "FULL_B", "FULL_C", "FULL_A"]);
     expect(splitFor(profile({ ...base, splitPref: "ppl" }), 2).split).toBe("full_body"); // PPL needs 3 sessions
     expect(splitFor(profile({ ...base, splitPref: "auto" }), 4).split).toBe("upper_lower");
+    expect(splitFor(profile({ ...base, sessionMinutes: 30 }), 3).split).toBe("upper_lower_upper"); // short sessions
+    expect(splitFor(profile({ ...base, sessionMinutes: 60 }), 3).split).toBe("full_body");
     for (const splitPref of ["full_body", "upper_lower", "ppl"] as const) for (const n of [2, 3, 4, 5, 6]) {
       const p = profile({ ...base, splitPref, sessionsPerWeek: n, week: week({ 0: ["gym"], 1: ["gym"], 2: ["gym"], 3: ["gym"], 4: ["gym"], 5: ["gym"] }), locations: [gym()] });
       gen(p); // valid plan, no errors

@@ -61,7 +61,7 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
   const [exQuery, setExQuery] = useState("");
   const up = (patch: Partial<TrainingProfile>) => setP((x) => ({ ...x, ...patch }));
 
-  const steps = ["goal", "experience", "time", "places", "schedule", "more"] as const;
+  const steps = ["goal", "experience", "time", "split", "places", "schedule", "more"] as const;
   const total = steps.length;
   const availableDays = p.week.filter((d) => !d.rest && d.locations.length > 0).length;
   // Only offer choices the user's equipment actually supports (no "machines" without machines, etc.).
@@ -83,7 +83,7 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
     styles: x.styles.filter((st) => styleOptions.includes(st)),
     excludedKinds: x.excludedKinds.filter((k) => kindOptions.includes(k)),
   });
-  const canNext = step !== 3 || p.locations.length > 0;
+  const canNext = step !== 4 || p.locations.length > 0;
 
   const addPreset = (key: keyof typeof LOCATION_PRESETS) => {
     const preset = LOCATION_PRESETS[key]!;
@@ -153,22 +153,28 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
               <span className="text-muted">{t("common.min")}</span>
             </label>
           </div>
-          <div>
-            {/* The split; the automatic choice for the current days, level and priorities is marked "recommended". */}
-            <h2 className="mb-3 text-lg font-semibold">{t("onb.splitQ")}</h2>
-            <Choices name={t("onb.splitQ")} value={p.splitPref ?? "auto"} onChange={(splitPref) => up({ splitPref })}
-              options={(["auto", "full_body", "upper_lower", "ppl"] as const).map((v) => ({
-                value: v,
-                label: <span className="flex flex-wrap items-center gap-x-2">{t(`onb.splitOpt.${v}`)}{v !== "auto" && v === recommendedSplit && <span className="text-xs font-medium text-accent">{t("review.recommended")}</span>}</span>,
-                hint: t(`onb.splitOptHint.${v}`),
-              }))} />
-            {p.splitPref && p.splitPref !== "auto" && !splitFits(p.splitPref, p.sessionsPerWeek) && <p className="mt-2 text-sm text-warning">{t("onb.splitFallback")}</p>}
-            {p.splitPref === "ppl" && p.sessionsPerWeek === 3 && <p className="mt-2 text-sm text-muted">{t("onb.splitOnce")}</p>}
-          </div>
         </Card>
       )}
 
       {step === 3 && (
+        <Card className="space-y-3">
+          {/* The split; the automatic choice for the current days, level and priorities is marked "recommended". */}
+          <div>
+            <h2 className="mb-1 text-lg font-semibold">{t("onb.splitQ")}</h2>
+            <p className="text-sm text-muted">{t("onb.splitHint", { n: p.sessionsPerWeek, min: p.sessionMinutes, split: t(`onb.splitOpt.${recommendedSplit}`) })}</p>
+          </div>
+          <Choices name={t("onb.splitQ")} value={p.splitPref ?? "auto"} onChange={(splitPref) => up({ splitPref })}
+            options={(["auto", "full_body", "upper_lower", "ppl"] as const).map((v) => ({
+              value: v,
+              label: <span className="flex flex-wrap items-center gap-x-2">{t(`onb.splitOpt.${v}`)}{v !== "auto" && v === recommendedSplit && <span className="text-xs font-medium text-accent">{t("review.recommended")}</span>}</span>,
+              hint: t(`onb.splitOptHint.${v}`),
+            }))} />
+          {p.splitPref && p.splitPref !== "auto" && !splitFits(p.splitPref, p.sessionsPerWeek) && <p className="text-sm text-warning">{t("onb.splitFallback")}</p>}
+          {p.splitPref === "ppl" && p.sessionsPerWeek === 3 && <p className="text-sm text-muted">{t("onb.splitOnce")}</p>}
+        </Card>
+      )}
+
+      {step === 4 && (
         <Card className="space-y-4">
           <div>
             <h2 className="mb-1 text-lg font-semibold">{t("onb.whereQ")}</h2>
@@ -209,7 +215,7 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
         </Card>
       )}
 
-      {step === 4 && (
+      {step === 5 && (
         <Card className="space-y-4">
           <div>
             <h2 className="mb-1 text-lg font-semibold">{t("onb.scheduleQ")}</h2>
@@ -244,7 +250,7 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
         </Card>
       )}
 
-      {step === 5 && (
+      {step === 6 && (
         <>
           <Card className="space-y-4">
             <h2 className="text-lg font-semibold">{t("onb.styleQ")}</h2>

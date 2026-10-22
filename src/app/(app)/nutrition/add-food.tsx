@@ -312,11 +312,12 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
             {product.nutrients.kcal === null ? t("nutrition.missing") : `${fmt(locale, product.nutrients.kcal)} kcal`} {t("nutrition.per100", { basis: product.basis })}
           </p>
         </div>
-        <div className={cx("mt-3 grid gap-1 border-t border-border pt-3", macros.length === 4 ? "grid-cols-4" : "grid-cols-3")}>
+        {/* Columns as wide as their text, spread across: "Węglowodany" fits in full even on a narrow phone. */}
+        <div className="mt-3 flex justify-between gap-2 border-t border-border pt-3">
           {macros.map((k) => (
-            <div key={k} className="min-w-0">
+            <div key={k}>
               <p className="font-semibold tabular-nums">{num(k)}<span className="ml-0.5 text-xs font-normal text-muted">g</span></p>
-              <p className="truncate text-[11px] text-muted">{t(`nutrition.${k}`)}</p>
+              <p className="text-[11px] text-muted">{t(`nutrition.${k}`)}</p>
             </div>
           ))}
         </div>

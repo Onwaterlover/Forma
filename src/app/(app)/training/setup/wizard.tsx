@@ -225,10 +225,6 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
           {availableDays < p.sessionsPerWeek && (
             <Notice tone="warning">{t("msg.fewer_days_than_requested", { requested: p.sessionsPerWeek, available: availableDays })}</Notice>
           )}
-          <div>
-            <p className="mb-2 text-sm font-medium">{t("onb.flexibleQ")}</p>
-            <Choices name={t("onb.flexibleQ")} value={p.scheduleMode} onChange={(scheduleMode) => up({ scheduleMode })} options={[{ value: "fixed", label: t("onb.fixed") }, { value: "flexible", label: t("onb.flexible") }]} />
-          </div>
         </Card>
       )}
 

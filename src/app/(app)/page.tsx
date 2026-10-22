@@ -39,7 +39,9 @@ export default async function TodayPage() {
   // The next session follows the rotation (a missed one comes first), but it is labelled with the
   // nearest training day from today on, not the weekday it was originally planned for.
   const planDays = new Set<number>(plan?.data.sessions.flatMap((s) => (s.day === null ? [] : [s.day])) ?? []);
-  const daysAhead = next?.day === wd ? 0 : [1, 2, 3, 4, 5, 6, 7].find((k) => planDays.has((wd + k) % 7));
+  // Before the first workout of this plan there is nothing to wait for: it can start today.
+  const daysAhead = next?.day === wd || (logging && !lastKey) ? 0 : [1, 2, 3, 4, 5, 6, 7].find((k) => planDays.has((wd + k) % 7));
+  const firstEver = logging && !lastKey && next?.day !== wd;
   const showStart = !settings.onboarded && !plan && day.entries.length === 0;
   const locName = (id: string) => profile?.locations.find((l) => l.id === id)?.name ?? "";
 
@@ -65,7 +67,7 @@ export default async function TodayPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-                    {daysAhead === 0 ? t(logging ? "today.scheduledToday" : "today.inPlanToday") : daysAhead === 1 ? t("today.tomorrow") : daysAhead ? t("today.scheduledOn", { day: DICTS[locale].days.long[(wd + daysAhead) % 7]! }) : t("today.anytime")}
+                    {firstEver ? t("today.startToday") : daysAhead === 0 ? t(logging ? "today.scheduledToday" : "today.inPlanToday") : daysAhead === 1 ? t("today.tomorrow") : daysAhead ? t("today.scheduledOn", { day: DICTS[locale].days.long[(wd + daysAhead) % 7]! }) : t("today.anytime")}
                   </p>
                   <p className="text-lg font-medium">{next.name ?? t(`template.${next.template}`)}</p>
                   <p className="text-sm text-muted">

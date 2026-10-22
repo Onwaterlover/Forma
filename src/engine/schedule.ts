@@ -89,6 +89,7 @@ export function assign(
   p: TrainingProfile,
   templates: string[],
   coverage: (templateId: string, equipment: Equipment[]) => number,
+  startDay?: Weekday,
 ): Assignment[] {
   const days = availableDays(p);
   const n = Math.min(templates.length, days.length);
@@ -143,6 +144,8 @@ export function assign(
           if (gap === 1) cost += 2.5 * beginnerFactor * sharedLoad(TEMPLATES[perm[i]!]!, TEMPLATES[perm[(i + 1) % n]!]!);
         }
       }
+      // Tiny tie-break only: among equally good day sets, one that includes today lets you start right away.
+      if (startDay !== undefined && !daySet.includes(startDay)) cost += 0.05;
       if (cost < bestCost - 1e-9) {
         bestCost = cost;
         bestAssign = daySet.map((d, i) => ({ template: perm[i]!, day: d, locationId: best.get(`${perm[i]}@${d}`)!.locationId }));

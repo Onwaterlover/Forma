@@ -7,6 +7,7 @@ import { NumberField, Sheet, useToast } from "@/components/client";
 import { FilterRow } from "@/components/filter-row";
 import { Button, Card, cx, Input, Notice, Select } from "@/components/ui";
 import { moveSession } from "@/engine/adapt";
+import { weekOrder } from "@/engine/plan-edit";
 import { estimateMinutes } from "@/engine/duration";
 import { isPossible } from "@/engine/equipment";
 import { EXERCISES } from "@/engine/exercises";
@@ -142,7 +143,7 @@ export function PlanEditor({
             <p className="mb-1 font-medium">{t("plan.issues")}</p>
             <ul className="list-disc space-y-0.5 pl-5">
               {issues.slice(0, 12).map((i, k) => (
-                <li key={k}>{msg(i.code, { ...i.params, ...(i.session ? { session: i.session } : {}), ...(i.exerciseId ? { exercise: i.exerciseId } : {}) })}</li>
+                <li key={k}>{msg(i.code, { ...i.params, ...(i.session ? { session: plan.sessions.find((x) => x.key === i.session)?.name ?? i.session } : {}), ...(i.exerciseId ? { exercise: i.exerciseId } : {}) })}</li>
               ))}
             </ul>
           </Notice>
@@ -156,7 +157,7 @@ export function PlanEditor({
         </div>
       )}
 
-      {plan.sessions.map((s) => (
+      {weekOrder(plan.sessions).map((s) => (
         <Card key={s.key} className="space-y-3">
           <div className="flex flex-wrap items-end gap-2">
             <Input aria-label={t("plan.sessionName")} className="min-w-40 flex-1 font-medium" value={s.name ?? t(`template.${s.template}`)} maxLength={60}

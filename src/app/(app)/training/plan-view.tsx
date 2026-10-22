@@ -2,6 +2,7 @@ import { Clock, Link2, MapPin } from "lucide-react";
 import { startWorkout } from "@/app/actions/training";
 import { DismissibleNotice } from "@/components/dismissible";
 import { cx } from "@/components/ui";
+import { weekOrder } from "@/engine/plan-edit";
 import { BALANCED } from "@/engine/volume";
 import type { Exercise, Issue, Plan, TrainingProfile } from "@/engine/types";
 import { exName, fmt, renderMessage, type Locale, type T } from "@/i18n";
@@ -25,17 +26,20 @@ export function PlanView({
   const days = DICTS[locale].days.long;
   const maxSets = Math.max(1, ...BALANCED.map((m) => plan.weeklySets[m] ?? 0));
   const msg = (m: Parameters<typeof renderMessage>[0]) => renderMessage(m, t, locale, lookup, locName);
+  // Messages name the session ("Góra"), not its internal letter.
+  const sessionName = (key: string) => { const s = plan.sessions.find((x) => x.key === key); return s ? s.name ?? t(`template.${s.template}`) : key; };
   const errors = issues.filter((i) => i.severity === "error");
   const warnings = issues.filter((i) => i.severity === "warning");
 
   return (
     <div className="space-y-4">
       {(errors.length > 0 || warnings.length > 0) && (() => {
-        const lines = [...errors, ...warnings].slice(0, 8).map((i) => msg({ code: i.code, params: { ...i.params, ...(i.session ? { session: i.session } : {}), ...(i.exerciseId ? { exercise: i.exerciseId } : {}) } }));
+        const lines = [...errors, ...warnings].slice(0, 8).map((i) => msg({ code: i.code, params: { ...i.params, ...(i.session ? { session: sessionName(i.session) } : {}), ...(i.exerciseId ? { exercise: i.exerciseId } : {}) } }));
         // Warnings can be hidden ("I know, it's on purpose"); they come back only if the list changes. Errors stay.
         return (
           <DismissibleNotice tone={errors.length ? "danger" : "warning"} id={`issues:${planId}:${lines.join("|")}`} dismissible={!errors.length} closeLabel={t("plan.hideIssues")} className="print:hidden">
-            <p className="mb-1 font-medium">{t("plan.issues")}</p>
+            <p className="font-medium">{t("plan.issues")}</p>
+            {!errors.length && <p className="mb-1 text-xs text-muted">{t("plan.issuesHint")}</p>}
             <ul className="list-disc space-y-0.5 pl-5">{lines.map((l, k) => <li key={k}>{l}</li>)}</ul>
           </DismissibleNotice>
         );
@@ -43,7 +47,7 @@ export function PlanView({
 
       {/* Printed: compact columns so a typical plan fits one A4 page. */}
       <div className={cx("grid gap-3 lg:grid-cols-2 print:gap-2", plan.sessions.length >= 5 ? "print:grid-cols-3" : "print:grid-cols-2")}>
-        {plan.sessions.map((s) => {
+        {weekOrder(plan.sessions).map((s) => {
           // Rest and effort cues are shown during the workout; the plan itself stays a clean list.
           return (
             <section key={s.key} className="break-inside-avoid rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 print:rounded-lg print:p-2.5">

@@ -437,5 +437,7 @@ describe("workout generator", () => {
     for (const s of plan.sessions.filter((x) => x.template.startsWith("UPPER"))) expect(pats(s.key)).toEqual(expect.arrayContaining(["elbow_flex", "elbow_ext"]));
     for (const s of plan.sessions) for (const e of s.exercises) if (lib(e.exerciseId).mechanics === "isolation") expect(e.sets).toBeLessThanOrEqual(3);
     for (const v of Object.values(plan.weeklySets)) expect(v).toBeLessThanOrEqual(22);
+    // Hard sets per session stay within ~20 (45 min → 15).
+    for (const s of plan.sessions) expect(s.exercises.reduce((n, e) => n + e.sets, 0)).toBeLessThanOrEqual(20);
   });
 });

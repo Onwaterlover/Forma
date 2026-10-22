@@ -8,7 +8,7 @@ import { PATTERN_MUSCLES, PRIORITY_SLOT, priorityOf, splitFor, TEMPLATES, type S
 import { validatePlan } from "./validate";
 import { BALANCED, weeklySets, weeklyTarget } from "./volume";
 import {
-  MUSCLES, type Equipment, type Exercise, type ExercisePref, type Message, type Muscle, type Pattern,
+  MUSCLES, type Equipment, type Exercise, type ExercisePref, type Message, type Muscle, type Pattern, type Weekday,
   type Plan, type PlannedExercise, type PlannedSession, type TrainingProfile,
 } from "./types";
 
@@ -19,6 +19,8 @@ export interface GenerateInput {
   prefs?: Record<string, ExercisePref>;
   /** Built-in library plus the user's custom exercises. */
   library?: Exercise[];
+  /** Today's weekday: among equally good day sets, one starting today wins (start right away). */
+  startDay?: Weekday;
 }
 
 const UPPER_PATTERNS: Pattern[] = ["h_push", "v_push", "chest_fly", "h_pull", "v_pull", "lateral_raise", "rear_delt", "elbow_flex", "elbow_ext"];
@@ -76,6 +78,9 @@ function orderKey(pe: PlannedExercise, lookup: (id: string) => Exercise | undefi
 
 function balanceVolume(sessions: PlannedSession[], p: TrainingProfile, lookup: (id: string) => Exercise | undefined) {
   const maxSets = { beginner: 3, intermediate: 4, advanced: 5 }[p.experience];
+  // A session stays productive up to ~20 hard sets (fewer in short sessions); more mostly adds fatigue.
+  const sessionCap = Math.min(20, Math.max(10, Math.round(p.sessionMinutes / 3)));
+  const setsIn = (s: PlannedSession) => s.exercises.reduce((n, e) => n + e.sets, 0);
   const gaveUp = new Set<Muscle>();
   for (let iter = 0; iter < 80; iter++) {
     const ws = weeklySets(sessions, lookup);
@@ -94,6 +99,7 @@ function balanceVolume(sessions: PlannedSession[], p: TrainingProfile, lookup: (
     if (!worst) return;
     let cand: PlannedExercise | null = null;
     for (const s of sessions) {
+      if (setsIn(s) >= sessionCap) continue;
       for (const pe of s.exercises) {
         const ex = lookup(pe.exerciseId);
         // Extra sets go to the main lifts; isolation (flyes, raises, curls) stops at 3 sets.
@@ -208,7 +214,7 @@ export function generatePlan(input: GenerateInput): Plan {
     return covCache.get(key)!;
   };
 
-  const assignments = assign(p, templates.slice(0, n), coverage).sort((a, b) => a.day - b.day);
+  const assignments = assign(p, templates.slice(0, n), coverage, input.startDay).sort((a, b) => a.day - b.day);
   const usedInWeek = new Map<string, number>();
   const sessions: PlannedSession[] = assignments.map((a, idx) => {
     const key = String.fromCharCode(65 + idx);

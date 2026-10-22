@@ -34,6 +34,11 @@ export type EditLine =
   | { kind: "set_all"; session: string | null; sets?: number; reps?: [number, number]; rest?: number };
 
 const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/** Week order (Mon → Sun); sessions without a day keep their place relative to each other, after dated ones. */
+export function weekOrder<T extends { day: number | null }>(sessions: T[]): T[] {
+  return sessions.map((s, i) => ({ s, i })).sort((a, b) => (a.s.day ?? 7 + a.i / 100) - (b.s.day ?? 7 + b.i / 100)).map((x) => x.s);
+}
 const label = (s: PlannedSession) => s.name ?? s.key;
 
 export function applyPlanEdits(

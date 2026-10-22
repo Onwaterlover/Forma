@@ -10,7 +10,9 @@ import { parseProfile } from "@/engine/profile";
 import { suggestNext } from "@/engine/progression";
 import { substitutes } from "@/engine/select";
 import { PATTERN_MUSCLES } from "@/engine/templates";
-import { PATTERNS, type Exercise, type ExercisePref, type Pattern, type Plan, type PlannedSession } from "@/engine/types";
+import { PATTERNS, type Exercise, type ExercisePref, type Pattern, type Plan, type PlannedSession, type Weekday } from "@/engine/types";
+import { todayIso, weekdayOf } from "@/lib/ctx";
+import { weekOrder } from "@/engine/plan-edit";
 import { validatePlan } from "@/engine/validate";
 import { weeklySets } from "@/engine/volume";
 import { translator, exName } from "@/i18n";
@@ -48,7 +50,7 @@ export async function saveProfileAndGenerate(raw: unknown, exclude?: string[]): 
   }
   if (exclude) await syncExcluded(user.id, exclude);
   const library = await libraryFor(user.id);
-  const plan = generatePlan({ profile, prefs: await getPrefs(user.id), library });
+  const plan = generatePlan({ profile, prefs: await getPrefs(user.id), library, startDay: weekdayOf(todayIso()) as Weekday });
   const active = await getActivePlan(user.id);
   // Regenerating a generated plan adds a version; a manual/imported plan is never overwritten.
   let planId: string;
@@ -120,6 +122,8 @@ export async function savePlanEdit(planId: string, raw: unknown, note: string | 
   const parsed = planSchema.safeParse(raw);
   if (!parsed.success) return { error: "invalid_plan" };
   const plan = parsed.data as Plan;
+  // Stored in week order, so the "next workout" rotation follows the week too.
+  plan.sessions = weekOrder(plan.sessions);
   const library = await libraryFor(user.id);
   const lookup = (id: string) => library.find((e) => e.id === id);
   for (const s of plan.sessions) s.estimatedMinutes = estimateMinutes(s.exercises, lookup);
@@ -427,7 +431,7 @@ export async function regenerateWithFeedback(raw: unknown): Promise<{ error?: st
   for (const id of fb.data.dislike) await setPref(user.id, id, "dislike");
 
   const saved = await saveProfile(user.id, p);
-  const plan = generatePlan({ profile: saved, prefs: await getPrefs(user.id), library: await libraryFor(user.id) });
+  const plan = generatePlan({ profile: saved, prefs: await getPrefs(user.id), library: await libraryFor(user.id), startDay: weekdayOf(todayIso()) as Weekday });
   const active = await getActivePlan(user.id);
   if (active && active.source === "generated") await savePlanVersion(user.id, active.id, plan, `feedback: ${[...r, ...fb.data.dislike.map((d) => `-${d}`)].join(", ")}`.slice(0, 120));
   else await createPlan(user.id, generatedName(user.locale, plan.split), "generated", plan, "feedback", true);

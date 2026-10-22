@@ -119,7 +119,7 @@ export const pl = {
     print: "Drukuj / PDF", detailsToggle: "Objętość tygodniowa i uzasadnienie planu",
     howToAny: "Jak wykonać ćwiczenie?", howToShort: "Jak wykonać?",
     howTo: "Jak to zrobić?", video: "Zobacz wideo z techniką (YouTube)", back: "Wstecz",
-    empty: "Brak ćwiczeń", addSession: "Dodaj trening", sessionName: "Nazwa treningu",
+    empty: "Brak ćwiczeń", removeSession: "Usuń ten trening", exercisesShort: "ćw.", addSession: "Dodaj trening", sessionName: "Nazwa treningu",
   },
   msg: {
     no_days_available: "Nie zaznaczono żadnego dnia z dostępnym miejscem do treningu.",

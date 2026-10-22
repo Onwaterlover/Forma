@@ -1,7 +1,7 @@
 "use client";
 import { VerdictChip } from "@/components/verdict";
 import { verdictOf } from "@/engine/compare";
-import { ArrowDown, ArrowUp, Minus, Plus, Repeat, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Minus, Plus, Repeat, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { analyzePlan, optimizePlan, planAction, savePlanEdit } from "@/app/actions/training";
@@ -45,6 +45,8 @@ export function PlanEditor({
   const [plan, setPlan] = useState<Plan>(initial);
   const [title, setTitle] = useState(name);
   const [dirty, setDirty] = useState(false);
+  // Folded workouts (all closed at first; a newly added one opens).
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
   // A change saved elsewhere (e.g. the assistant on this page) arrives as new props: show it unless there are unsaved edits.
   useEffect(() => {
     if (!dirty) { setPlan(initial); setTitle(name); }
@@ -161,6 +163,16 @@ export function PlanEditor({
 
       {weekOrder(plan.sessions).map((s) => (
         <Card key={s.key} className="space-y-3">
+          {/* Each workout folds: the header shows what it is; open it to edit or delete the whole workout. */}
+          <button type="button" aria-expanded={openKeys.includes(s.key)} className="flex w-full items-center justify-between gap-3 text-left"
+            onClick={() => setOpenKeys((k) => (k.includes(s.key) ? k.filter((x) => x !== s.key) : [...k, s.key]))}>
+            <span className="min-w-0">
+              <span className="block truncate font-semibold">{s.name ?? t(`template.${s.template}`)}</span>
+              <span className="block text-xs text-muted">{s.day !== null ? days[s.day] : t("plan.noDay")} · {s.exercises.length} {t("plan.exercisesShort")}</span>
+            </span>
+            <ChevronDown size={18} className={cx("shrink-0 text-muted transition-transform", openKeys.includes(s.key) && "rotate-180")} aria-hidden />
+          </button>
+          {openKeys.includes(s.key) && (<>
           <div className="flex flex-wrap items-end gap-2">
             <Input aria-label={t("plan.sessionName")} className="min-w-40 flex-1 font-medium" value={s.name ?? t(`template.${s.template}`)} maxLength={60}
               onChange={(e) => update(s.key, (x) => ({ ...x, name: e.target.value }))} />
@@ -245,14 +257,24 @@ export function PlanEditor({
               );
             })}
           </ul>
-          <Button variant="secondary" size="sm" onClick={() => setSheet({ mode: "add", session: s.key })}><Plus size={16} aria-hidden />{t("plan.addExercise")}</Button>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setSheet({ mode: "add", session: s.key })}><Plus size={16} aria-hidden />{t("plan.addExercise")}</Button>
+            {plan.sessions.length > 1 && (
+              <Button variant="ghost" size="sm" className="text-danger" onClick={() => { setPlan((p) => ({ ...p, sessions: p.sessions.filter((x) => x.key !== s.key) })); setDirty(true); }}>
+                <Trash2 size={16} aria-hidden />{t("plan.removeSession")}
+              </Button>
+            )}
+          </div>
+          </>)}
         </Card>
       ))}
 
       {plan.sessions.length < 7 && (
         <Button variant="ghost" onClick={() => {
-          const key = String.fromCharCode(65 + plan.sessions.length);
+          // First free letter (a deleted workout may have left a gap).
+          const key = "ABCDEFG".split("").find((c) => !plan.sessions.some((x) => x.key === c))!;
           setPlan((p) => ({ ...p, sessions: [...p.sessions, { key, template: "IMPORTED", name: `${t("template.IMPORTED")} ${key}`, day: null, locationId: profile?.locations[0]?.id ?? "", exercises: [], estimatedMinutes: 0 }] }));
+          setOpenKeys((k) => [...k, key]);
           setDirty(true);
         }}><Plus size={16} aria-hidden />{t("plan.addSession")}</Button>
       )}

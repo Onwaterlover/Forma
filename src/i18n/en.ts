@@ -120,7 +120,7 @@ export const en: Dict = {
     print: "Print / PDF", detailsToggle: "Weekly volume and why this plan",
     howToAny: "How to do an exercise", howToShort: "How to",
     howTo: "How do I do it?", video: "Watch a technique video (YouTube)", back: "Back",
-    empty: "No exercises", addSession: "Add workout", sessionName: "Workout name",
+    empty: "No exercises", removeSession: "Delete this workout", exercisesShort: "exercises", addSession: "Add workout", sessionName: "Workout name",
   },
   msg: {
     no_days_available: "No day has a place where you can train.",

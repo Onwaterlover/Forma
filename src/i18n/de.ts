@@ -120,7 +120,7 @@ export const de: Dict = {
     print: "Drucken / PDF", detailsToggle: "Wochenvolumen und Begründung des Plans",
     howToAny: "Wie geht eine Übung?", howToShort: "Wie geht's?",
     howTo: "Wie geht das?", video: "Technik-Video ansehen (YouTube)", back: "Zurück",
-    empty: "Keine Übungen", addSession: "Einheit hinzufügen", sessionName: "Name der Einheit",
+    empty: "Keine Übungen", removeSession: "Dieses Training löschen", exercisesShort: "Übungen", addSession: "Einheit hinzufügen", sessionName: "Name der Einheit",
   },
   msg: {
     no_days_available: "An keinem Tag ist ein Trainingsort verfügbar.",

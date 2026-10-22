@@ -274,7 +274,7 @@ export const pl = {
   settings: {
     title: "Ustawienia", language: "Język", theme: "Motyw", themeOpt: { system: "Systemowy", light: "Jasny", dark: "Ciemny" }, modules: "Moduły", training: "Trening", nutrition: "Jedzenie",
     logging: "Domyślny tryb zapisu treningu", restTimer: "Minutnik przerw", autoTimer: "Uruchamiaj przerwę automatycznie po serii", effort: "Zapisuj RIR / RPE (dla zaawansowanych)",
-    fiber: "Pokazuj błonnik", appearance: "Wygląd i język", trainingFood: "Trening i jedzenie", account: "Konto, hasło i dane", invites: "Zaproszenia", createInvite: "Utwórz kod zaproszenia", inviteNote: "Dla kogo (opcjonalnie)", inviteShown: "Kod (widoczny tylko teraz): {code}",
+    fiber: "Pokazuj błonnik", aboutYou: "O Tobie", aboutYouHint: "Opcjonalnie. Służy tylko do wyliczenia kalorii w „Cel”.", appearance: "Wygląd i język", trainingFood: "Trening i jedzenie", account: "Konto, hasło i dane", invites: "Zaproszenia", createInvite: "Utwórz kod zaproszenia", inviteNote: "Dla kogo (opcjonalnie)", inviteShown: "Kod (widoczny tylko teraz): {code}",
     deleteInviteConfirm: "Usunąć to zaproszenie? Kod przestanie działać.", copy: "Kopiuj", copied: "Skopiowano", inviteHint: "Przekaż kod osobie, którą zapraszasz. Działa jednorazowo przez 14 dni. Jako administrator nie widzisz cudzych danych.", users: "Użytkownicy",
     data: "Twoje dane", export: "Pobierz moje dane (JSON)", deleteAccount: "Usuń konto", deleteConfirm: "Wpisz USUŃ, aby potwierdzić", deleteWord: "USUŃ",
     deleteHint: "Usuwa trwale wszystkie Twoje treningi, dziennik i ustawienia z tego serwera.", password: "Zmień hasło", currentPassword: "Obecne hasło", newPassword: "Nowe hasło",

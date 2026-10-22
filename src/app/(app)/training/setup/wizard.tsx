@@ -2,7 +2,7 @@
 import { ChevronDown, Plus, Trash2, X } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { saveProfileAndGenerate, saveProfileOnly } from "@/app/actions/training";
-import { Chips, Choices, Switch, useToast } from "@/components/client";
+import { Chips, Choices, NumberField, Switch, useToast } from "@/components/client";
 import { Button, Card, cx, Input, Notice, Select, Textarea } from "@/components/ui";
 import { availableKinds, LOCATION_PRESETS } from "@/engine/equipment";
 import { EXERCISES } from "@/engine/exercises";
@@ -145,7 +145,7 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
             <Choices name={t("onb.minutesQ")} columns={3} value={p.sessionMinutes} onChange={(sessionMinutes) => up({ sessionMinutes })} options={[20, 30, 45, 60, 75, 90].map((n) => ({ value: n, label: `${n} ${t("common.min")}` }))} />
             <label className="mt-3 flex items-center gap-3 text-sm">
               <span className="text-muted">{t("onb.custom")}</span>
-              <Input type="number" min={10} max={180} inputMode="numeric" className="w-24" value={p.sessionMinutes} onChange={(e) => up({ sessionMinutes: Math.max(10, Math.min(180, Number(e.target.value) || 10)) })} aria-label={t("onb.minutesQ")} />
+              <NumberField min={10} max={180} className="w-24" value={p.sessionMinutes} onChange={(sessionMinutes) => up({ sessionMinutes })} aria-label={t("onb.minutesQ")} />
               <span className="text-muted">{t("common.min")}</span>
             </label>
           </div>

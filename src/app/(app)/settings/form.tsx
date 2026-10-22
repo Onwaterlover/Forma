@@ -3,7 +3,7 @@ import { Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteAccount, makeInvite, removeInvite, updateLocale, updatePassword, updateSettings } from "@/app/actions/general";
-import { Choices, Switch, useToast } from "@/components/client";
+import { Choices, DecimalInput, Switch, useToast } from "@/components/client";
 import { Button, Card, Field, Input, Notice, SectionTitle } from "@/components/ui";
 import { fmtDate, LOCALES, type Locale } from "@/i18n";
 import { useI18n } from "@/i18n/client";
@@ -28,6 +28,8 @@ export function SettingsForm({
   const [pending, start] = useTransition();
   const [inviteNote, setInviteNote] = useState("");
   const [code, setCode] = useState<string | null>(null);
+  const [age, setAge] = useState<number | null>(settings.body.birthYear ? new Date().getFullYear() - settings.body.birthYear : null);
+  const [height, setHeight] = useState<number | null>(settings.body.heightCm);
   const [invites, setInvites] = useState(initialInvites);
   const [pw, setPw] = useState({ current: "", next: "" });
   const [confirmWord, setConfirmWord] = useState("");
@@ -70,6 +72,23 @@ export function SettingsForm({
         </div>
           </div>
         )}
+      </Card>
+
+      <SectionTitle>{t("settings.aboutYou")}</SectionTitle>
+      <Card className="space-y-3">
+        <p className="text-sm text-muted">{t("settings.aboutYouHint")}</p>
+        <Choices<"female" | "male"> name={t("targets.sex")} columns={2} value={settings.body.sex} onChange={(sex) => set({ body: { ...settings.body, sex } })}
+          options={(["female", "male"] as const).map((x) => ({ value: x, label: t(`targets.sexOpt.${x}`) }))} />
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("targets.age")} htmlFor="s-age">
+            <DecimalInput id="s-age" value={age} onChange={setAge}
+              onBlur={() => set({ body: { ...settings.body, birthYear: age && age >= 14 && age <= 100 ? new Date().getFullYear() - Math.round(age) : null } })} />
+          </Field>
+          <Field label={t("targets.height")} htmlFor="s-height">
+            <DecimalInput id="s-height" value={height} onChange={setHeight}
+              onBlur={() => set({ body: { ...settings.body, heightCm: height && height >= 100 && height <= 250 ? height : null } })} />
+          </Field>
+        </div>
       </Card>
 
       <SectionTitle>{t("settings.ai")}</SectionTitle>

@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Minus, Plus, Repeat, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { analyzePlan, optimizePlan, planAction, savePlanEdit } from "@/app/actions/training";
-import { Sheet, useToast } from "@/components/client";
+import { NumberField, Sheet, useToast } from "@/components/client";
 import { FilterRow } from "@/components/filter-row";
 import { Button, Card, cx, Input, Notice, Select } from "@/components/ui";
 import { moveSession } from "@/engine/adapt";
@@ -207,14 +207,14 @@ export function PlanEditor({
                     </span>
                     {e.seconds ? (
                       <label className="inline-flex items-center gap-1.5">
-                        <Input type="number" inputMode="numeric" className="h-9 w-20 text-center" value={e.seconds} min={5} max={3600} onChange={(ev) => editEx(s.key, i, { seconds: Math.max(5, Number(ev.target.value) || 5) })} />
+                        <NumberField className="h-9 w-20 text-center" value={e.seconds} min={5} max={3600} onChange={(v) => editEx(s.key, i, { seconds: v })} aria-label={t("plan.seconds")} />
                         {t("plan.seconds")}
                       </label>
                     ) : (
                       <span className="inline-flex items-center gap-1.5">
-                        <Input type="number" inputMode="numeric" aria-label="min" className="h-9 w-16 text-center" value={e.repMin} min={1} max={50} onChange={(ev) => editEx(s.key, i, { repMin: Math.max(1, Number(ev.target.value) || 1) })} />
+                        <NumberField aria-label="min" className="h-9 w-16 text-center" value={e.repMin} min={1} max={50} onChange={(v) => editEx(s.key, i, { repMin: v, repMax: Math.max(v, e.repMax) })} />
                         –
-                        <Input type="number" inputMode="numeric" aria-label="max" className="h-9 w-16 text-center" value={e.repMax} min={1} max={50} onChange={(ev) => editEx(s.key, i, { repMax: Math.max(1, Number(ev.target.value) || 1) })} />
+                        <NumberField aria-label="max" className="h-9 w-16 text-center" value={e.repMax} min={1} max={50} onChange={(v) => editEx(s.key, i, { repMax: v, repMin: Math.min(v, e.repMin) })} />
                         {t("plan.reps")}
                       </span>
                     )}

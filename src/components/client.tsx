@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { cx } from "./ui";
+import { cx, inputClass } from "./ui";
 
 // ── Choice cards (radio group with large touch targets) ─────────────────
 export function Choices<V extends string | number>({
@@ -188,6 +188,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 export const useToast = () => useContext(ToastCtx);
+
+/**
+ * Whole number within [min, max] that can be cleared and retyped: the text is free while typing, valid numbers
+ * are passed on immediately, and leaving the field puts back the nearest allowed value.
+ */
+export function NumberField({ value, onChange, min, max, className, ...rest }: Omit<React.ComponentProps<"input">, "value" | "onChange" | "min" | "max"> & {
+  value: number; onChange: (v: number) => void; min: number; max: number;
+}) {
+  const [text, setText] = useState(String(value));
+  const last = useRef(value);
+  useEffect(() => { if (value !== last.current) { last.current = value; setText(String(value)); } }, [value]);
+  const clamp = (n: number) => Math.min(max, Math.max(min, Math.round(n)));
+  return (
+    <input {...rest} type="text" inputMode="numeric" value={text}
+      className={cx(inputClass, className)}
+      onChange={(e) => {
+        const t = e.target.value.replace(/[^\d]/g, "").slice(0, 4);
+        setText(t);
+        const n = Number(t);
+        if (t && n >= min && n <= max) { last.current = n; onChange(n); }
+      }}
+      onBlur={(e) => {
+        const n = clamp(Number(text) || value);
+        setText(String(n));
+        if (n !== value) { last.current = n; onChange(n); }
+        rest.onBlur?.(e);
+      }} />
+  );
+}
 
 /** Locale-friendly decimal input: accepts "12,5"; emits numbers or null. */
 export function DecimalInput({

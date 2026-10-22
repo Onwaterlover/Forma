@@ -1,7 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { updateSettings } from "@/app/actions/general";
 import { saveTarget } from "@/app/actions/nutrition";
+import type { Settings } from "@/lib/data";
 import { Choices, DecimalInput, useToast } from "@/components/client";
 import { Button, Card, Field, Notice, Select } from "@/components/ui";
 import { fmt } from "@/i18n";
@@ -13,19 +15,39 @@ const ACTIVITY = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 }
 type Activity = keyof typeof ACTIVITY;
 
 export function TargetsForm({
-  target, lastKg, adaptive, suggestion,
+  target, lastKg, adaptive, suggestion, body,
 }: {
   target: { kcal: number | null; protein: number | null; goal: WeightGoal | null } | null;
   lastKg: number | null;
   adaptive: AdaptiveResult;
   suggestion: TargetSuggestion | null;
+  body: Settings["body"];
 }) {
   const { t, locale } = useI18n();
   const toast = useToast();
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [mode, setMode] = useState<"track" | "estimate">(target?.kcal ? "estimate" : "track");
-  const [est, setEst] = useState<{ sex: Sex | null; age: number | null; height: number | null; weight: number | null; activity: Activity | null }>({ sex: null, age: null, height: null, weight: lastKg, activity: null });
+  // Once something was filled in, come back to the estimate rather than the "just track" choice.
+  const [mode, setMode] = useState<"track" | "estimate">(target?.kcal || body.sex || body.heightCm ? "estimate" : "track");
+  const year = new Date().getFullYear();
+  const [est, setEst] = useState<{ sex: Sex | null; age: number | null; height: number | null; weight: number | null; activity: Activity | null }>({
+    sex: body.sex, age: body.birthYear ? year - body.birthYear : null, height: body.heightCm, weight: lastKg, activity: body.activity,
+  });
+  // Sex, age, height and activity are remembered (settings), so leaving and coming back keeps them.
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const h = setTimeout(() => {
+      updateSettings({ body: {
+        sex: est.sex === "female" || est.sex === "male" ? est.sex : null,
+        birthYear: est.age && est.age >= 14 && est.age <= 100 ? year - Math.round(est.age) : null,
+        heightCm: est.height && est.height >= 100 && est.height <= 250 ? est.height : null,
+        activity: est.activity,
+      } });
+    }, 700);
+    return () => clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [est.sex, est.age, est.height, est.activity]);
   const [goal, setGoal] = useState<WeightGoal>(target?.goal ?? "maintain");
   const [kcal, setKcal] = useState<number | null>(target?.kcal ?? null);
   const [protein, setProtein] = useState<number | null>(target?.protein ?? null);

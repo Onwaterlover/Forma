@@ -27,17 +27,20 @@ export interface Settings {
   ai: boolean;
   /** Off = "plan only": the plan is shown for reading, without starting or logging workouts. */
   logWorkouts: boolean;
+  /** For the calorie estimate; asked only on the targets page and in settings, never forced. */
+  body: { sex: "female" | "male" | null; birthYear: number | null; heightCm: number | null; activity: "sedentary" | "light" | "moderate" | "active" | null };
 }
 
 const DEFAULT_SETTINGS: Settings = {
   theme: "system", modules: { training: true, nutrition: true }, logMode: "detailed", restTimer: true, autoTimer: false,
   showEffort: false, showFiber: false, weightGoal: null, onboarded: false, ai: false, logWorkouts: true,
+  body: { sex: null, birthYear: null, heightCm: null, activity: null },
 };
 
 export async function getSettings(userId: string): Promise<Settings> {
   const row = await (await db()).get<{ data: string }>("SELECT data FROM user_settings WHERE user_id = ?", [userId]);
   const s = json<Partial<Settings>>(row?.data, {});
-  return { ...DEFAULT_SETTINGS, ...s, modules: { ...DEFAULT_SETTINGS.modules, ...s.modules } };
+  return { ...DEFAULT_SETTINGS, ...s, modules: { ...DEFAULT_SETTINGS.modules, ...s.modules }, body: { ...DEFAULT_SETTINGS.body, ...s.body } };
 }
 
 export async function saveSettings(userId: string, patch: Partial<Settings>) {

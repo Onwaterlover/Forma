@@ -29,6 +29,12 @@ const settingsSchema = z
     weightGoal: z.enum(["maintain", "lose", "gain", "recomp"]).nullable(),
     ai: z.boolean(),
     logWorkouts: z.boolean(),
+    body: z.object({
+      sex: z.enum(["female", "male"]).nullable(),
+      birthYear: z.number().int().min(1900).max(2020).nullable(),
+      heightCm: z.number().min(100).max(250).nullable(),
+      activity: z.enum(["sedentary", "light", "moderate", "active"]).nullable(),
+    }),
   })
   .partial();
 

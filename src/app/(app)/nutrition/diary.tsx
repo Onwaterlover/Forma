@@ -148,7 +148,13 @@ export function Diary({
         <div className="space-y-3">
           {groups.map((g) => (
             <Card key={g.meal ?? "none"} className="p-0 sm:p-0">
-              {(groups.length > 1 || g.meal) && <p className="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-muted">{g.meal ? t(`nutrition.meal.${g.meal}`) : t("nutrition.noMeal")}</p>}
+              {(groups.length > 1 || g.meal) && (
+                <p className="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                  {g.meal ? t(`nutrition.meal.${g.meal}`) : t("nutrition.noMeal")}
+                  {/* The meal's calories right beside its name. */}
+                  <span className="ml-2 font-medium normal-case tracking-normal tabular-nums">{fmt(locale, g.items.reduce((a, e) => a + (e.values.kcal ?? 0), 0))} kcal</span>
+                </p>
+              )}
               <ul className="divide-y divide-border">
                 {g.items.map((e) => (
                   <li key={e.id}>

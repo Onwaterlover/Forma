@@ -152,7 +152,7 @@ export function Diary({
                 <p className="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   {g.meal ? t(`nutrition.meal.${g.meal}`) : t("nutrition.noMeal")}
                   {/* The meal's calories right beside its name. */}
-                  <span className="ml-2 font-medium normal-case tracking-normal tabular-nums">{fmt(locale, g.items.reduce((a, e) => a + (e.values.kcal ?? 0), 0))} kcal</span>
+                  <span className="ml-2 font-medium normal-case tracking-normal tabular-nums text-accent">{t("nutrition.mealTotal", { n: fmt(locale, g.items.reduce((a, e) => a + (e.values.kcal ?? 0), 0)) })}</span>
                 </p>
               )}
               <ul className="divide-y divide-border">

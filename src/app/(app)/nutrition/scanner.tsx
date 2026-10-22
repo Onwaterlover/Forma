@@ -38,10 +38,12 @@ function toCanvas(src: CanvasImageSource & { width: number; height: number }, w:
  */
 function centerBand(v: HTMLVideoElement, deg = 0) {
   const w = v.videoWidth, h = v.videoHeight;
-  const k = Math.min(1, 1280 / w);
+  // Native pixels, no downscaling: scaling a perfectly level code by an odd factor (e.g. 1920 → 1280) blurs
+  // neighbouring bars together, which is why level codes failed while slightly tilted ones read.
+  const k = 1;
   const c = document.createElement("canvas");
-  c.width = Math.round(w * k);
-  c.height = Math.round(h * 0.5 * k);
+  c.width = w;
+  c.height = Math.round(h * 0.5);
   const g = c.getContext("2d", { willReadFrequently: true })!;
   g.translate(c.width / 2, c.height / 2);
   g.rotate((deg * Math.PI) / 180);

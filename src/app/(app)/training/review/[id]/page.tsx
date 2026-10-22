@@ -19,14 +19,17 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   const lookup = (exId: string) => library.find((e) => e.id === exId);
   const option = (exId: string) => {
     const ex = lookup(exId);
-    return { id: exId, name: exName(ex, locale, exId), traits: ex ? traitsOf(ex, prefs[exId], profile.experience) : [], primary: ex?.primary ?? [], secondary: ex?.secondary ?? [] };
+    // Recommended: only what it trains (the user found the list of traits too much).
+    return { id: exId, name: exName(ex, locale, exId), traits: [] as ReturnType<typeof traitsOf>, primary: ex?.primary ?? [], secondary: ex?.secondary ?? [] };
   };
   // Alternatives explain themselves by how they differ from the recommended exercise, not by repeating its traits.
   const alternative = (exId: string, rec: string) => {
     const ex = lookup(exId);
     const base = lookup(rec);
-    const level = option(exId).traits.filter((tr) => tr === "favorite" || tr === "forAdvanced" || tr === "tooEasy");
-    return { ...option(exId), traits: level, diffs: ex && base ? compareTo(ex, base) : [] };
+    // Alternatives: what they train plus at most two differences, the most important first.
+    const level = ex ? traitsOf(ex, prefs[exId], profile.experience).filter((tr) => tr === "forAdvanced" || tr === "tooEasy") : [];
+    const diffs = ex && base ? compareTo(ex, base).filter((d) => d.key !== "similar") : [];
+    return { ...option(exId), traits: level.slice(0, Math.max(0, 2 - diffs.length)), diffs: diffs.slice(0, 2) };
   };
 
   const days: ReviewDay[] = plan.data.sessions.map((s) => {

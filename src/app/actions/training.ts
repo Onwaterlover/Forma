@@ -96,8 +96,8 @@ export async function applyReview(planId: string, raw: unknown): Promise<{ error
     const lookup = (id: string) => library.find((e) => e.id === id);
     for (const s of data.sessions) s.estimatedMinutes = estimateMinutes(s.exercises, lookup);
     data.weeklySets = weeklySets(data.sessions, lookup);
+    // Choosing an alternative is not the same as liking it: no automatic favorites.
     await savePlanVersion(user.id, planId, data, "review");
-    for (const id of chosen) if (prefs[id] !== "favorite") await setPref(user.id, id, "favorite");
   }
   revalidatePath("/", "layout");
   redirect("/training");

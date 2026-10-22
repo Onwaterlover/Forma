@@ -422,4 +422,20 @@ describe("workout generator", () => {
       gen(p, prefs);
     }
   });
+
+  it("upper/lower/upper: the one leg day has squat AND hinge, upper days keep arm isolation, isolation ≤ 3 sets, ≤ 20 sets per muscle", () => {
+    const p = profile({
+      goal: "muscle", experience: "intermediate", sessionsPerWeek: 3, sessionMinutes: 45, locations: [gym()],
+      priorities: { chest: "high", lats: "high", side_delts: "high", quads: "low", hamstrings: "low", glutes: "low", calves: "low" },
+    });
+    const { plan } = gen(p);
+    expect(plan.split).toBe("upper_lower_upper");
+    const lib = lookup(EXERCISES);
+    const pats = (key: string) => plan.sessions.find((s) => s.key === key)!.exercises.map((e) => e.pattern);
+    const lower = plan.sessions.find((s) => s.template === "LOWER_FULL")!;
+    expect(lower.exercises.map((e) => e.pattern)).toEqual(expect.arrayContaining(["squat", "hinge"]));
+    for (const s of plan.sessions.filter((x) => x.template.startsWith("UPPER"))) expect(pats(s.key)).toEqual(expect.arrayContaining(["elbow_flex", "elbow_ext"]));
+    for (const s of plan.sessions) for (const e of s.exercises) if (lib(e.exerciseId).mechanics === "isolation") expect(e.sets).toBeLessThanOrEqual(3);
+    for (const v of Object.values(plan.weeklySets)) expect(v).toBeLessThanOrEqual(22);
+  });
 });

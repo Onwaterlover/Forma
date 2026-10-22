@@ -230,14 +230,16 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
   const [amount, setAmount] = useState<number | null>(product.lastAmount ?? product.servings[0]?.amount ?? 100);
   const [fav, setFav] = useState(!!product.favorite);
   const v = scale(product.nutrients, amount ?? 0);
-  const row = (k: NutrientKey, label: string) => (
-    <div className="flex justify-between py-1.5 text-sm">
-      <span className="text-muted">{label}</span>
-      <span className="tabular-nums">{v[k] === null ? <span className="text-warning">{t("nutrition.missing")}</span> : `${fmt(locale, v[k], 1)} ${k === "kcal" ? "kcal" : "g"}`}</span>
+  // Compact tiles instead of a five-row table, so the whole card fits a phone screen without scrolling.
+  const tile = (k: NutrientKey, label: string) => (
+    <div className="rounded-xl bg-surface-2 px-2 py-2 text-center">
+      <p className="text-base font-semibold tabular-nums">{v[k] === null ? <span className="text-warning">?</span> : fmt(locale, v[k], k === "kcal" ? 0 : 1)}</p>
+      <p className="text-[11px] text-muted">{label}</p>
     </div>
   );
+  const presets = [50, 100, 150, 200].filter((g) => !product.servings.some((s) => s.amount === g));
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {onRescan && (
         // After a scan, make sure it is the right product before choosing the amount.
         <div className="flex items-center justify-between gap-3 rounded-xl bg-accent-soft px-3 py-2.5 text-sm">
@@ -262,17 +264,19 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
       <AmountWheel value={amount} onChange={setAmount} unit={product.basis} />
       <div className="flex flex-wrap gap-2">
         {product.servings.map((s) => <Button key={s.label} size="sm" variant="secondary" onClick={() => setAmount(s.amount)}>{s.label}</Button>)}
-        {[50, 100, 150, 200].map((g) => <Button key={g} size="sm" variant="secondary" onClick={() => setAmount(g)}>{g} {product.basis}</Button>)}
+        {presets.map((g) => <Button key={g} size="sm" variant="secondary" onClick={() => setAmount(g)}>{g} {product.basis}</Button>)}
       </div>
-      <div className="divide-y divide-border rounded-xl border border-border px-3">
-        {row("kcal", t("common.kcal"))}
-        {row("protein", t("nutrition.protein"))}
-        {row("carbs", t("nutrition.carbs"))}
-        {row("fat", t("nutrition.fat"))}
-        {row("fiber", t("nutrition.fiber"))}
+      <div className="grid grid-cols-4 gap-1.5">
+        {tile("kcal", t("common.kcal"))}
+        {tile("protein", `${t("nutrition.protein")} (g)`)}
+        {tile("carbs", `${t("nutrition.carbs")} (g)`)}
+        {tile("fat", `${t("nutrition.fat")} (g)`)}
       </div>
-      <p className="text-xs text-muted">{t("nutrition.per100", { basis: product.basis })}: {product.nutrients.kcal === null ? t("nutrition.missing") : `${fmt(locale, product.nutrients.kcal)} kcal`}</p>
-      <div className="flex gap-2">
+      <p className="text-xs text-muted">
+        {t("nutrition.per100", { basis: product.basis })}: {product.nutrients.kcal === null ? t("nutrition.missing") : `${fmt(locale, product.nutrients.kcal)} kcal`}
+        {v.fiber !== null && ` · ${t("nutrition.fiber")} ${fmt(locale, v.fiber, 1)} g`}
+      </p>
+      <div className="sticky bottom-0 -mx-5 flex gap-2 bg-surface px-5 pt-1">
         <Button variant="ghost" onClick={onBack}>{t("common.back")}</Button>
         <Button full disabled={pending || !amount || amount <= 0} onClick={() => amount && onAdd(amount)}>{t("common.add")}</Button>
       </div>

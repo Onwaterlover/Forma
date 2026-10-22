@@ -263,6 +263,19 @@ CREATE TABLE body_measurements (
 ALTER TABLE body_measurements ENABLE ROW LEVEL SECURITY
 `,
   },
+  {
+    // The plan review used to mark every chosen alternative as a favorite. Remove exactly those automatic marks
+    // (set within a minute after a "review" plan version); favorites the user set by hand stay.
+    version: 4,
+    sql: `
+DELETE FROM exercise_prefs ep
+WHERE ep.pref = 'favorite' AND EXISTS (
+  SELECT 1 FROM plan_versions pv JOIN plans p ON p.id = pv.plan_id
+  WHERE p.user_id = ep.user_id AND pv.note = 'review'
+    AND ep.updated_at::timestamptz BETWEEN pv.created_at::timestamptz AND pv.created_at::timestamptz + interval '1 minute'
+)
+`,
+  },
 ];
 // Row Level Security is enabled with no policies: Supabase's public API keys can read nothing.
 // The app connects as the database owner on the server and enforces per-user access in src/lib/data.ts.

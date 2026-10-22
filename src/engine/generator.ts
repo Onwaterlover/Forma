@@ -96,7 +96,8 @@ function balanceVolume(sessions: PlannedSession[], p: TrainingProfile, lookup: (
     for (const s of sessions) {
       for (const pe of s.exercises) {
         const ex = lookup(pe.exerciseId);
-        if (!ex || !ex.primary.includes(worst) || pe.sets >= maxSets || pe.seconds) continue;
+        // Extra sets go to the main lifts; isolation (flyes, raises, curls) stops at 3 sets.
+        if (!ex || !ex.primary.includes(worst) || pe.sets >= (ex.mechanics === "isolation" ? Math.min(3, maxSets) : maxSets) || pe.seconds) continue;
         pe.sets++;
         const fits = estimateMinutes(s.exercises, lookup) <= p.sessionMinutes;
         pe.sets--;

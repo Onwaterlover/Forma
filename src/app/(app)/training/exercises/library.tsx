@@ -1,5 +1,5 @@
 "use client";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, Plus, Star } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { createCustomExercise, setExercisePref } from "@/app/actions/training";
 import { Sheet, useToast } from "@/components/client";
@@ -39,6 +39,7 @@ export function Library({ prefs: initialPrefs, custom }: { prefs: Record<string,
   const [q, setQ] = useState("");
   const [equip, setEquip] = useState<EquipGroup | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
+  const [favOnly, setFavOnly] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -49,6 +50,7 @@ export function Library({ prefs: initialPrefs, custom }: { prefs: Record<string,
   const list = all.filter((e) => {
     if (equip && equipGroupOf(e) !== equip) return false;
     if (region && !regionsOf(e).includes(region)) return false;
+    if (favOnly && prefs[e.id] !== "favorite") return false;
     return matchesQuery(e, q);
   });
 
@@ -85,6 +87,10 @@ export function Library({ prefs: initialPrefs, custom }: { prefs: Record<string,
     <div className="space-y-3">
       <div className="flex gap-2">
         <Input type="search" placeholder={t("library.search")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("library.search")} />
+        {/* Favourites as one toggle; un-favourite inside the exercise (preference). */}
+        <Button variant={favOnly ? "primary" : "secondary"} aria-pressed={favOnly} onClick={() => setFavOnly(!favOnly)} className="shrink-0" aria-label={t("library.pref.favorite")}>
+          <Star size={16} className={favOnly ? "fill-current" : ""} aria-hidden /><span className="hidden sm:inline">{t("library.pref.favorite")}</span>
+        </Button>
         <Button variant="secondary" onClick={() => setCreating(true)} className="shrink-0" aria-label={t("library.createCustom")}><Plus size={16} aria-hidden /><span className="hidden sm:inline">{t("library.createCustom")}</span></Button>
       </div>
       <FilterRow label={t("library.equipFilter")} value={equip} onChange={setEquip} options={EQUIP_GROUPS.map((g) => ({ value: g, label: t(`library.equip.${g}`) }))} allLabel={t("library.all")} />

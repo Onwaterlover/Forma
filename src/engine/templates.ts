@@ -33,15 +33,21 @@ export const TEMPLATES: Record<string, Template> = {
   },
   UPPER_A: {
     id: "UPPER_A", focus: "upper", load: { push: 1, pull: 1, grip: 0.6 },
-    slots: [s("h_push", 1), s("h_pull", 1), s("v_push", 2), s("v_pull", 2), s("lateral_raise", 3), s("elbow_flex", 3), s("elbow_ext", 3)],
+    // Arms at priority 2: on upper days direct biceps/triceps work should survive a short session.
+    slots: [s("h_push", 1), s("h_pull", 1), s("v_push", 2), s("v_pull", 2), s("elbow_flex", 2), s("elbow_ext", 2), s("lateral_raise", 3)],
   },
   UPPER_B: {
     id: "UPPER_B", focus: "upper", load: { push: 1, pull: 1, grip: 0.6 },
-    slots: [s("v_pull", 1), s("h_push", 1), s("h_pull", 2), s("lateral_raise", 2), s("chest_fly", 3), s("rear_delt", 3), s("elbow_ext", 3), s("elbow_flex", 3)],
+    slots: [s("v_pull", 1), s("h_push", 1), s("h_pull", 2), s("lateral_raise", 2), s("elbow_ext", 2), s("elbow_flex", 2), s("chest_fly", 3), s("rear_delt", 3)],
   },
   LOWER_A: {
     id: "LOWER_A", focus: "lower", load: { legs: 1.2 },
     slots: [s("squat", 1), s("knee_flex", 2), s("single_leg", 2), s("calf", 3), s("core", 3)],
+  },
+  // The only lower day of the week: both basic leg movements (squat pattern and hip hinge) are mandatory.
+  LOWER_FULL: {
+    id: "LOWER_FULL", focus: "lower", load: { legs: 1.3, grip: 0.3 },
+    slots: [s("squat", 1), s("hinge", 1), s("knee_flex", 2), s("single_leg", 2), s("calf", 3), s("core", 3)],
   },
   LOWER_B: {
     id: "LOWER_B", focus: "lower", load: { legs: 1.2, grip: 0.3 },
@@ -115,19 +121,19 @@ export function splitFor(p: TrainingProfile, n: number): { split: string; templa
     case 2:
       return { split: "full_body", templates: ["FULL_A", "FULL_B"] };
     case 3:
-      if (!novice && legsLow && upperHigh) return { split: "upper_lower_upper", templates: ["UPPER_A", "LOWER_A", "UPPER_B"] };
+      if (!novice && legsLow && upperHigh) return { split: "upper_lower_upper", templates: ["UPPER_A", "LOWER_FULL", "UPPER_B"] };
       if (!novice && legsHigh && !upperHigh) return { split: "lower_upper_lower", templates: ["LOWER_A", "UPPER_A", "LOWER_B"] };
       return { split: "full_body", templates: ["FULL_A", "FULL_B", "FULL_C"] };
     case 4:
-      if (legsLow) return { split: "upper_lower_upper_plus", templates: ["UPPER_A", "LOWER_A", "UPPER_B", "ARMS_DELTS"] };
+      if (legsLow) return { split: "upper_lower_upper_plus", templates: ["UPPER_A", "LOWER_FULL", "UPPER_B", "ARMS_DELTS"] };
       return { split: "upper_lower", templates: ["UPPER_A", "LOWER_A", "UPPER_B", "LOWER_B"] };
     case 5:
       if (novice) return { split: "full_body", templates: ["FULL_A", "FULL_B", "FULL_C", "FULL_A", "FULL_B"] };
-      if (legsLow) return { split: "upper_lower_push_pull_arms", templates: ["UPPER_A", "LOWER_A", "PUSH", "PULL", "ARMS_DELTS"] };
+      if (legsLow) return { split: "upper_lower_push_pull_arms", templates: ["UPPER_A", "LOWER_FULL", "PUSH", "PULL", "ARMS_DELTS"] };
       return { split: "upper_lower_ppl", templates: ["UPPER_A", "LOWER_A", "PUSH", "PULL", "LEGS"] };
     default:
       if (novice) return { split: "upper_lower", templates: ["UPPER_A", "LOWER_A", "UPPER_B", "LOWER_B", "UPPER_A", "LOWER_A"] };
-      if (legsLow) return { split: "ppl_upper_arms", templates: ["PUSH", "PULL", "LOWER_A", "UPPER_B", "ARMS_DELTS", "PULL"] };
+      if (legsLow) return { split: "ppl_upper_arms", templates: ["PUSH", "PULL", "LOWER_FULL", "UPPER_B", "ARMS_DELTS", "PULL"] };
       return { split: "push_pull_legs", templates: ["PUSH", "PULL", "LEGS", "PUSH", "PULL", "LEGS"] };
   }
 }

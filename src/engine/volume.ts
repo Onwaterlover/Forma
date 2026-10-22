@@ -32,5 +32,6 @@ const PRIO: Record<MusclePriority, number> = { high: 1.5, normal: 1, low: 0.6, m
 /** Weekly direct-equivalent set target used only to decide where extra sets help most. */
 export function weeklyTarget(p: TrainingProfile, m: Muscle): number {
   const t = BASE[p.experience] * GOAL[p.goal] * PRIO[p.priorities[m] ?? "normal"] * (MINOR.includes(m) ? 0.7 : 1);
-  return Math.max(2, Math.round(t * 10) / 10);
+  // Capped at 20: more weekly sets per muscle rarely add growth and mostly add fatigue.
+  return Math.min(20, Math.max(2, Math.round(t * 10) / 10));
 }

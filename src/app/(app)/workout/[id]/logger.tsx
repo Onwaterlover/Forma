@@ -1,4 +1,6 @@
 "use client";
+import { VerdictChip } from "@/components/verdict";
+import { verdictOf } from "@/engine/compare";
 import { ArrowDown, ArrowUp, Check, CircleHelp, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Pencil, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -458,7 +460,9 @@ export function WorkoutLogger({
             {swapOptions.map((ex) => (
               <li key={ex.id}>
                 <button type="button" className="w-full py-3 text-left hover:bg-surface-2" onClick={() => { if (sheet?.kind === "swap") swapTo(sheet.index, ex); setSheet(null); }}>
-                  <span className="block font-medium">{exName(ex, locale)}</span>
+                  <span className="flex flex-wrap items-center gap-x-1.5 font-medium">{exName(ex, locale)}
+                    {(() => { const cur = sheet?.kind === "swap" ? lookup(w.exercises[sheet.index]?.exerciseId ?? "") : undefined; return cur && profile ? <VerdictChip verdict={verdictOf(ex, cur, { profile, equipment: location?.equipment ?? [], library })} /> : null; })()}
+                  </span>
                   <span className="block text-xs text-muted">{ex.primary.map((m) => t(`muscles.${m}`)).join(", ")}</span>
                 </button>
               </li>

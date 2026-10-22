@@ -1,3 +1,4 @@
+import { score, type SelectContext } from "./select";
 import type { Exercise, Muscle } from "./types";
 
 /** One difference of an alternative versus the recommended exercise; `good` = in the alternative's favour. */
@@ -44,4 +45,26 @@ export function compareTo(alt: Exercise, rec: Exercise): Diff[] {
   if (alt.fatigue !== rec.fatigue) out.push(FATIGUE[alt.fatigue] < FATIGUE[rec.fatigue] ? { key: "lessTiring", good: true } : { key: "moreTiring", good: false });
   if (alt.mechanics !== rec.mechanics) out.push(alt.mechanics === "compound" ? { key: "moreMuscles", good: true } : { key: "targeted", good: true });
   return [...focus, ...(out.length ? out.slice(0, 2) : focus.length ? [] : [{ key: "similar", good: true } as Diff])];
+}
+
+export type Verdict = "same" | "slightly" | "much";
+
+/**
+ * How much is lost by doing `alt` instead of the recommended `rec`, as one short label. Judged on effectiveness
+ * for this person (goal, level, time) with the generator's own scoring; styles and likes are left out, since
+ * they are about taste, not about how well the exercise trains. Losing the main muscle or the ability to add
+ * load (past the beginner stage, for muscle or strength) always counts as a big difference.
+ */
+export function verdictOf(alt: Exercise, rec: Exercise, ctx: Pick<SelectContext, "profile" | "equipment" | "library">, priority: 1 | 2 | 3 = 2): Verdict {
+  const p = ctx.profile;
+  // Technique difficulty is shown separately ("harder"); for the verdict a beginner is judged like anyone else.
+  const judged = { ...p, styles: [], experience: p.experience === "beginner" ? ("intermediate" as const) : p.experience };
+  const full: SelectContext = { ...ctx, profile: judged, prefs: {}, usedInSession: new Set(), usedInWeek: new Map() };
+  // No main muscle in common: the slot would train something else.
+  if (rec.primary.length && !alt.primary.some((m) => rec.primary.includes(m))) return "much";
+  // No way to add load where the recommendation has one: a real loss for muscle or strength (a smaller one for beginners).
+  const loadDrop = (LOAD_RANK[alt.loading] ?? 1) <= 1 && (LOAD_RANK[rec.loading] ?? 1) >= 2 && (p.goal === "muscle" || p.goal === "strength");
+  const gap = score(rec, priority, full) - score(alt, priority, full);
+  if (gap >= 2.5 || (loadDrop && p.experience !== "beginner")) return "much";
+  return gap >= 1 || loadDrop ? "slightly" : "same";
 }

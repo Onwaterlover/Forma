@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui";
 import { substitutes } from "@/engine/select";
-import { compareTo } from "@/engine/compare";
+import { compareTo, verdictOf } from "@/engine/compare";
 import { traitsOf } from "@/engine/traits";
 import { DICTS, exName } from "@/i18n";
 import { pageCtx } from "@/lib/ctx";
@@ -23,13 +23,14 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
     return { id: exId, name: exName(ex, locale, exId), traits: [] as ReturnType<typeof traitsOf>, primary: ex?.primary ?? [], secondary: ex?.secondary ?? [] };
   };
   // Alternatives explain themselves by how they differ from the recommended exercise, not by repeating its traits.
-  const alternative = (exId: string, rec: string) => {
+  const alternative = (exId: string, rec: string, equipment: string[], priority: 1 | 2 | 3) => {
     const ex = lookup(exId);
     const base = lookup(rec);
+    const verdict = ex && base ? verdictOf(ex, base, { profile, equipment: equipment as never, library }, priority) : undefined;
     // Alternatives: what they train plus at most two differences, the most important first.
     const level = ex ? traitsOf(ex, prefs[exId], profile.experience).filter((tr) => tr === "forAdvanced" || tr === "tooEasy") : [];
     const diffs = ex && base ? compareTo(ex, base).filter((d) => d.key !== "similar") : [];
-    return { ...option(exId), traits: level.slice(0, Math.max(0, 2 - diffs.length)), diffs: diffs.slice(0, 2) };
+    return { ...option(exId), traits: level.slice(0, Math.max(0, 2 - diffs.length)), diffs: diffs.slice(0, 2), verdict };
   };
 
   const days: ReviewDay[] = plan.data.sessions.map((s) => {
@@ -45,7 +46,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
         const alts = original
           ? substitutes(original, { profile, prefs, library, equipment, excludeIds: inSession }).filter((x) => x.pattern === original.pattern).slice(0, 3)
           : [];
-        return { index, options: [option(e.exerciseId), ...alts.map((x) => alternative(x.id, e.exerciseId))] };
+        return { index, options: [option(e.exerciseId), ...alts.map((x) => alternative(x.id, e.exerciseId, equipment, e.priority))] };
       }),
     };
   });

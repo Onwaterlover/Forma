@@ -1,4 +1,6 @@
 "use client";
+import { VerdictChip } from "@/components/verdict";
+import { verdictOf } from "@/engine/compare";
 import { ArrowDown, ArrowUp, Minus, Plus, Repeat, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -279,7 +281,9 @@ export function PlanEditor({
               <li key={e.id}>
                 <button type="button" onClick={() => pick(e)} className="flex w-full items-center justify-between gap-3 py-3 text-left hover:bg-surface-2">
                   <span>
-                    <span className="block font-medium">{exName(e, locale)}</span>
+                    <span className="flex flex-wrap items-center gap-x-1.5 font-medium">{exName(e, locale)}
+                      {sheet?.mode === "swap" && sheetOriginal && <VerdictChip verdict={verdictOf(e, sheetOriginal, { profile: effProfile, equipment: sheetEquipment ?? [], library }, sheetSession!.exercises[sheet.index!]!.priority)} />}
+                    </span>
                     <span className="block text-xs text-muted">{e.primary.map((m) => t(`muscles.${m}`)).join(", ") || t(`patterns.${e.pattern}`)}</span>
                   </span>
                   {!ok && <span className="text-xs text-warning">{t("msg.equipment_unavailable", { exercise: "" }).replace(/^:\s*/, "")}</span>}

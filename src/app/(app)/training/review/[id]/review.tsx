@@ -4,13 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { applyReview } from "@/app/actions/training";
 import { useToast } from "@/components/client";
-import { Badge, Button, Card, cx } from "@/components/ui";
-import type { Diff } from "@/engine/compare";
+import { Badge, Button, Card, cx, Notice } from "@/components/ui";
+import { VerdictChip } from "@/components/verdict";
+import type { Diff, Verdict } from "@/engine/compare";
 import type { Trait } from "@/engine/traits";
 import type { Muscle } from "@/engine/types";
 import { useI18n } from "@/i18n/client";
 
-type Option = { id: string; name: string; traits: Trait[]; diffs?: Diff[]; primary: Muscle[]; secondary: Muscle[] };
+type Option = { id: string; name: string; traits: Trait[]; diffs?: Diff[]; primary: Muscle[]; secondary: Muscle[]; verdict?: Verdict };
 export type ReviewDay = { key: string; day: string; title: string; slots: { index: number; options: Option[] }[] };
 
 /**
@@ -88,7 +89,7 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
                       className="flex w-full items-start gap-3 px-4 py-3 text-left">
                       <span className="w-5 shrink-0 pt-0.5 text-sm tabular-nums text-muted">{s.index + 1}</span>
                       <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-x-2 font-medium">{c.name}{c.id === rec.id && <Badge tone="accent">{t("review.recommended")}</Badge>}</span>
+                        <span className="flex flex-wrap items-center gap-x-2 font-medium">{c.name}{c.id === rec.id ? <Badge tone="accent">{t("review.recommended")}</Badge> : <VerdictChip verdict={c.verdict} />}</span>
                         {c.primary.length > 0 && <span className="block text-xs text-text/80">{muscles(c)}</span>}
                         <span className="block text-xs text-muted">{why(c)}</span>
                       </span>
@@ -105,7 +106,7 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
                                 {o.id === c.id && <Check size={12} aria-hidden />}
                               </span>
                               <span className="min-w-0">
-                                <span className="block text-[15px]">{o.name}{o.id === rec.id && <span className="ml-1.5 text-xs text-accent">{t("review.recommended")}</span>}</span>
+                                <span className="flex flex-wrap items-center gap-x-1.5 text-[15px]">{o.name}{o.id === rec.id ? <span className="text-xs text-accent">{t("review.recommended")}</span> : <VerdictChip verdict={o.verdict} />}</span>
                                 {o.primary.length > 0 && <span className="block text-xs text-text/80">{muscles(o)}</span>}
                                 <span className="block text-xs text-muted">{why(o)}</span>
                               </span>
@@ -124,6 +125,26 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
       ) : (
         <>
           <h2 className="text-xl font-semibold">{t("review.summary")}</h2>
+          {/* One short verdict on all changes: a line when they barely matter, the big ones listed when they don't. */}
+          {(() => {
+            const changed = days.flatMap((d) => d.slots.map((s) => ({ s, c: chosen(s) }))).filter(({ s, c }) => c.id !== s.options[0]!.id);
+            if (!changed.length) return null;
+            const big = changed.filter(({ c }) => c.verdict === "much").filter(({ s }, i, a) => a.findIndex((x) => x.s.options[0]!.id === s.options[0]!.id) === i);
+            if (!big.length) return <p className="text-sm text-muted">{t("review.verdictOk")}</p>;
+            return (
+              <Notice tone="warning">
+                <p className="font-medium">{t("review.verdictMuch")}</p>
+                <ul className="mt-1 space-y-1">
+                  {big.map(({ s, c }) => (
+                    <li key={s.options[0]!.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="min-w-0">{c.name} <span className="text-muted">← {s.options[0]!.name}</span></span>
+                      <Button size="sm" variant="secondary" className="shrink-0" onClick={() => { const n = { ...choice }; delete n[s.options[0]!.id]; setChoice(n); }}>{t("review.restore")}</Button>
+                    </li>
+                  ))}
+                </ul>
+              </Notice>
+            );
+          })()}
           {days.map((d) => (
             <Card key={d.key} className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-accent">{d.day}</p>

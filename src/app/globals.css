@@ -143,3 +143,11 @@ dialog::backdrop {
   @page { size: A4; margin: 10mm; }
   html { font-size: 12px; }
 }
+
+/* While typing on a phone the keyboard covers the bottom; the tab bar would otherwise float above it and show
+   through under sheets. Hidden only while a text field has focus. */
+@media (max-width: 767px) {
+  html:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"]), textarea, select, [contenteditable="true"]):focus) nav[aria-label="Main"] {
+    display: none;
+  }
+}

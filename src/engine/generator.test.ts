@@ -4,6 +4,7 @@ import { estimateMinutes } from "./duration";
 import { isPossible, LOCATION_PRESETS } from "./equipment";
 import { EXERCISES, EXERCISE_BY_ID } from "./exercises";
 import { generatePlan, rebuildSession } from "./generator";
+import { verdictOf } from "./compare";
 import { defaultProfile, parseProfile } from "./profile";
 import { validatePlan } from "./validate";
 import type { Equipment, Exercise, ExercisePref, Location, Plan, TrainingProfile, Weekday } from "./types";
@@ -297,6 +298,21 @@ describe("workout generator", () => {
     expect(ids).not.toContain("table_row");
     // Dips cover the lower/mid chest, so the other press comes from an incline for the upper chest.
     expect(ids).toContain("incline_db_press");
+  });
+
+  it("swap verdicts: dips for a flat press are as good, a table row instead of a dumbbell row is much weaker", () => {
+    const eq = [...LOCATION_PRESETS.home_dumbbells!.equipment, "pullup_bar", "dip_bars"] as Equipment[];
+    const ctx = { profile: profile({ goal: "muscle", experience: "intermediate", styles: ["bodyweight"] }), equipment: eq, library: EXERCISES };
+    const ex = (id: string) => EXERCISE_BY_ID.get(id)!;
+    expect(verdictOf(ex("dip"), ex("db_bench_press"), ctx, 1)).toBe("same");
+    expect(verdictOf(ex("db_bench_press"), ex("dip"), ctx, 1)).toBe("same"); // a style is taste, not effectiveness
+    expect(verdictOf(ex("incline_db_press"), ex("db_bench_press"), ctx, 1)).toBe("same");
+    expect(verdictOf(ex("table_row"), ex("one_arm_db_row"), ctx, 1)).toBe("much");
+    expect(verdictOf(ex("db_lateral_raise"), ex("db_bench_press"), ctx, 1)).toBe("much"); // trains something else
+    expect(verdictOf(ex("romanian_deadlift_db"), ex("back_extension"), ctx, 1)).not.toBe("much"); // shares glutes/hamstrings
+    const beginner = { ...ctx, profile: profile({ goal: "muscle", experience: "beginner" }) };
+    expect(verdictOf(ex("bodyweight_squat"), ex("goblet_squat"), beginner, 1)).toBe("slightly");
+    expect(verdictOf(ex("romanian_deadlift_db"), ex("back_extension"), beginner, 1)).not.toBe("much");
   });
 
   it("with every day free, the chosen days include today (start right away)", () => {

@@ -106,8 +106,12 @@ export function Sheet({ open, onClose, title, children, wide, full }: { open: bo
     // Full-screen sheets follow the visible area: when the iPhone keyboard opens, the sheet shrinks to the space
     // above it instead of the page scrolling underneath and showing through.
     const vv = window.visualViewport;
+    // Other sheets do the same while the keyboard is up (they become full-screen until it closes), so nothing
+    // from the page behind shows between the sheet and the keyboard.
     const fit = () => {
-      if (!full || !vv || window.innerWidth >= 640) { d.style.height = ""; d.style.top = ""; return; }
+      const keyboard = !!vv && vv.height < window.innerHeight - 120;
+      if (!vv || window.innerWidth >= 640 || (!full && !keyboard)) { d.style.height = ""; d.style.top = ""; delete d.dataset.kb; return; }
+      if (!full) d.dataset.kb = "";
       d.style.height = `${vv.height}px`;
       d.style.top = `${vv.offsetTop}px`;
     };
@@ -132,12 +136,13 @@ export function Sheet({ open, onClose, title, children, wide, full }: { open: bo
       onClick={(e) => e.target === ref.current && onClose()}
       aria-label={title}
       className={cx(
-        "m-0 mt-auto w-full max-w-none rounded-t-3xl border border-border bg-surface p-0 text-text sm:m-auto sm:rounded-3xl",
+        "group m-0 mt-auto w-full max-w-none rounded-t-3xl border border-border bg-surface p-0 text-text sm:m-auto sm:rounded-3xl",
+        "data-[kb]:mt-0 data-[kb]:max-h-none data-[kb]:rounded-none data-[kb]:border-0",
         wide ? "sm:max-w-2xl" : "sm:max-w-lg",
         full && "max-sm:mt-0 max-sm:h-dvh max-sm:max-h-none max-sm:rounded-none max-sm:border-0",
       )}
     >
-      <div className={cx("flex flex-col", full ? "h-full sm:max-h-[88dvh]" : "max-h-[88dvh]")}>
+      <div className={cx("flex flex-col", full ? "h-full sm:max-h-[88dvh]" : "max-h-[88dvh] group-data-[kb]:h-full group-data-[kb]:max-h-none")}>
         <div className={cx("flex items-center justify-between gap-3 border-b border-border px-5 py-3.5", full && "max-sm:pt-[calc(0.875rem_+_env(safe-area-inset-top))]")}>
           <h2 className="text-base font-semibold">{title}</h2>
           <button type="button" onClick={onClose} className="-mr-2 grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface-2" aria-label="Close">
@@ -145,7 +150,7 @@ export function Sheet({ open, onClose, title, children, wide, full }: { open: bo
           </button>
         </div>
         {/* Closed sheets render nothing, so cameras, timers and forms inside them really stop. */}
-        <div className={cx("safe-bottom overflow-y-auto overscroll-contain px-5 py-4", full && "flex-1")}>{open ? children : null}</div>
+        <div className={cx("safe-bottom overflow-y-auto overscroll-contain px-5 py-4", full ? "flex-1" : "group-data-[kb]:flex-1")}>{open ? children : null}</div>
       </div>
     </dialog>
   );

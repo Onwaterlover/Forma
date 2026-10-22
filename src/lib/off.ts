@@ -68,17 +68,18 @@ async function lookupOff(userId: string, barcode: string, lang: "pl" | "de" | "e
 export async function searchRemote(userId: string, query: string, lang: "pl" | "de" | "en"): Promise<{ products: Product[] } | { error: OffError }> {
   const q = query.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 80);
   if (q.length < 2) return { products: [] };
-  // "v2": searches made before names were matched in English too were often empty; don't reuse them.
-  const key = `v2:${lang}:${q}`;
+  // "v3": searches made before names were matched in all three languages were often empty; don't reuse them.
+  const key = `v3:${lang}:${q}`;
   const hit = await cachedSearch(key, SEARCH_TTL);
   if (hit) return { products: await productsByBarcodes(userId, hit) };
   if (!buckets.search.take()) return { error: "rate_limited" };
   try {
     // The newer search service answers fast; the classic one is only a fallback (it is often overloaded).
     let raw: unknown[] = [];
-    // Many products keep their (Polish, German) name only in the main name field, which is indexed as English:
-    // searching the user's language alone matched just brands, so "golonka" found nothing.
-    const langs = lang === "en" ? "en" : `${lang},en`;
+    // Names in all three app languages: many products keep their (Polish, German) name only in the main name
+    // field, indexed as English ("golonka" found nothing in Polish alone), and the family shops in Polish and
+    // German stores whatever language the app is set to ("Schweinshaxe" on a Polish account).
+    const langs = "pl,de,en";
     try {
       const data = (await get(`https://search.openfoodfacts.org/search?q=${encodeURIComponent(q)}&page_size=24&langs=${langs}&fields=${OFF_FIELDS}`)) as { hits?: Record<string, unknown>[] } | null;
       raw = (data?.hits ?? []).map((h) => ({ ...h, brands: Array.isArray(h.brands) ? h.brands.join(",") : h.brands }));

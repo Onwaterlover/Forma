@@ -3,7 +3,7 @@ import Link from "next/link";
 import { startWorkout } from "@/app/actions/training";
 import { Badge, Card, LinkButton, Meter, SectionTitle } from "@/components/ui";
 import { nextSession } from "@/engine/adapt";
-import { fmt } from "@/i18n";
+import { fmt, prescriptionText } from "@/i18n";
 import { pageCtx, todayIso, weekdayOf } from "@/lib/ctx";
 import { currentTarget, diaryDay, getActivePlan, getProfile, postponedSince, inProgressWorkout, lastCompletedSessionKey, libraryFor, listWeights } from "@/lib/data";
 import { exName } from "@/i18n";
@@ -86,7 +86,7 @@ export default async function TodayPage() {
                 {next.exercises.map((e) => (
                   <li key={e.exerciseId} className="flex justify-between gap-3">
                     <span className="truncate">{exName(lookup(e.exerciseId), locale, e.exerciseId)}</span>
-                    <span className="shrink-0 tabular-nums text-muted">{e.sets} × {e.seconds ? `${e.seconds}s` : `${e.repMin}–${e.repMax}`}</span>
+                    <span className="shrink-0 tabular-nums text-muted">{prescriptionText(locale, e, profile?.experience === "beginner")}</span>
                   </li>
                 ))}
               </ul>

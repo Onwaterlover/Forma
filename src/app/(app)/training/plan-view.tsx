@@ -5,7 +5,7 @@ import { cx } from "@/components/ui";
 import { weekOrder } from "@/engine/plan-edit";
 import { BALANCED } from "@/engine/volume";
 import type { Exercise, Issue, Plan, TrainingProfile } from "@/engine/types";
-import { exName, fmt, renderMessage, type Locale, type T } from "@/i18n";
+import { exName, fmt, prescriptionText, renderMessage, type Locale, type T } from "@/i18n";
 import { DICTS } from "@/i18n";
 
 /** The plan as a clean, printable document: one block per training day, one line per exercise. */
@@ -84,7 +84,7 @@ export function PlanView({
                         {inSuperset && !prevSame && <span className="block text-xs font-medium text-accent print:text-[8.5px]">{t("plan.supersetWithNext", { n: label.replace(/[a-z]$/, "") })}</span>}
                         {e.grip && <span className="block text-xs text-muted print:text-[8.5px]">{t("plan.grip")} {t(`plan.grips.${e.grip}`)}</span>}
                       </span>
-                      <span className="text-right text-[15px] font-semibold tabular-nums print:text-[10.5px]">{e.sets} × {e.seconds ? `${e.seconds} s` : `${e.repMin}–${e.repMax}`}</span>
+                      <span className="text-right text-[15px] font-semibold tabular-nums print:text-[10.5px]">{prescriptionText(locale, e, profile?.experience === "beginner")}</span>
                     </li>
                   );
                 })}

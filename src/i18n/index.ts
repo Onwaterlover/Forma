@@ -69,3 +69,19 @@ export function renderMessage(
   }
   return t(`msg.${m.code}`, p);
 }
+
+/** "3 serie", "5 serii", "1 seria" (and en/de). */
+export function setsText(locale: Locale, n: number): string {
+  if (locale === "pl") return `${n} ${n === 1 ? "seria" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "serie" : "serii"}`;
+  if (locale === "de") return `${n} ${n === 1 ? "Satz" : "Sätze"}`;
+  return `${n} ${n === 1 ? "set" : "sets"}`;
+}
+
+/**
+ * What an exercise asks for: "3 × 8–12" for beginners, just "3 serie" for people who already train (they pick
+ * the weight themselves; the app still uses the range for its hints). Timed exercises always show the seconds.
+ */
+export function prescriptionText(locale: Locale, e: { sets: number; repMin: number; repMax: number; seconds?: number | null }, showRange: boolean): string {
+  if (e.seconds) return `${e.sets} × ${e.seconds} s`;
+  return showRange ? `${e.sets} × ${e.repMin}–${e.repMax}` : setsText(locale, e.sets);
+}

@@ -15,7 +15,7 @@ import { EXERCISES } from "@/engine/exercises";
 import type { Suggestion } from "@/engine/progression";
 import { substitutes } from "@/engine/select";
 import type { Exercise, ExercisePref, PlannedExercise, TrainingProfile } from "@/engine/types";
-import { exName, fmt, fmtRest } from "@/i18n";
+import { exName, fmt, fmtRest, prescriptionText } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { WorkoutExercise, WorkoutPayload, WorkoutSet } from "@/lib/data";
 
@@ -69,6 +69,9 @@ export function WorkoutLogger({
   const finished = w.status !== "in_progress";
   // A finished workout can be corrected afterwards; edits sync the same way as during the workout.
   const [editing, setEditing] = useState(false);
+  // Exercises where the "too light / too heavy" line was turned off (kept on this device).
+  const [hideRepHint, setHideRepHint] = useState<string[]>([]);
+  useEffect(() => { try { setHideRepHint(JSON.parse(localStorage.getItem("forma.repHintOff") ?? "[]")); } catch {} }, []);
   const readOnly = finished && !editing;
 
   // ── Persistence: local first, then server; newer data always wins ──────
@@ -310,7 +313,7 @@ export function WorkoutLogger({
                 <h2 className="text-lg font-semibold leading-snug">{e.name}</h2>
                 {tg && (
                   <p className="text-sm text-muted">
-                    {t("workout.target")}: <span className="tabular-nums">{tg.sets} × {tg.seconds ? `${tg.seconds} s` : `${tg.repMin}–${tg.repMax}`}</span>
+                    {t("workout.target")}: <span className="tabular-nums">{prescriptionText(locale, tg, profile?.experience === "beginner")}</span>
                     {tg.restSec > 0 && ` · ${t("plan.rest")} ${fmtRest(tg.restSec)}`}
                   </p>
                 )}
@@ -393,6 +396,21 @@ export function WorkoutLogger({
                     </button>
                   </div>
                 ))}
+                {(() => {
+                  // One line when the last finished working set is clearly off the range: well above means the
+                  // weight is too light (extra reps only cost time), well below means it's too heavy.
+                  if (!tg || timeBased || hideRepHint.includes(e.exerciseId)) return null;
+                  const last = [...e.sets].reverse().find((x) => x.completed && x.type !== "warmup" && x.reps !== null);
+                  if (!last?.reps) return null;
+                  const hint = last.reps > tg.repMax + 2 ? "tooLight" : last.reps < tg.repMin - 2 ? "tooHeavy" : null;
+                  if (!hint) return null;
+                  return (
+                    <p className="flex items-center justify-between gap-2 rounded-xl bg-warning-soft px-3 py-2 text-sm text-warning">
+                      <span>{t(`workout.${hint}`)}</span>
+                      <button type="button" className="shrink-0 text-xs font-medium underline" onClick={() => setHideRepHint((h) => { const n = [...h, e.exerciseId]; try { localStorage.setItem("forma.repHintOff", JSON.stringify(n)); } catch {} return n; })}>{t("workout.hideHint")}</button>
+                    </p>
+                  );
+                })()}
               </div>
             ) : (
               <Button full variant={e.completed ? "primary" : "secondary"} aria-pressed={e.completed} onClick={() => editEx(i, (x) => ({ ...x, completed: !x.completed, skipped: false }))}>

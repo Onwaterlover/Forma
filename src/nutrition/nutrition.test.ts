@@ -231,3 +231,14 @@ describe("food words in other languages", () => {
     expect(englishQuery("tofu")).toBeNull();
   });
 });
+
+describe("typical slices", () => {
+  it("knows ham, salami and cheese slices, and nothing for yogurt", async () => {
+    const { typicalSlice } = await import("./slices");
+    expect(typicalSlice("Szynka konserwowa plastry")).toBe(12);
+    expect(typicalSlice("Salami Milano")).toBe(6);
+    expect(typicalSlice("Ser Gouda light")).toBe(15);
+    expect(typicalSlice("Ser tostowy")).toBe(20);
+    expect(typicalSlice("Jogurt naturalny")).toBeNull();
+  });
+});

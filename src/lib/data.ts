@@ -510,7 +510,40 @@ export async function recentProducts(userId: string, limit = 20): Promise<(Produ
      WHERE ${VISIBLE} ORDER BY d.t DESC LIMIT ?`,
     [userId, userId, userId, limit],
   );
-  return rows.map((r) => ({ ...toProduct(r, userId), lastAmount: r.last_amount }));
+  const out = rows.map((r) => ({ ...toProduct(r, userId), lastAmount: r.last_amount }));
+  // Ingredients of recently logged meals/recipes stay here too, even when their own diary entries were
+  // deleted after saving them as one meal.
+  if (out.length < limit) {
+    const recent = await (await db()).all<{ recipe_id: string }>(
+      `SELECT recipe_id FROM diary_entries WHERE user_id = ? AND recipe_id IS NOT NULL GROUP BY recipe_id ORDER BY MAX(created_at) DESC LIMIT 5`, [userId]);
+    for (const { recipe_id } of recent) {
+      const rec = await getRecipe(userId, recipe_id);
+      for (const i of rec?.ingredients ?? []) {
+        if (out.length >= limit || !i.productId || out.some((p) => p.id === i.productId)) continue;
+        const p = await getProduct(userId, i.productId);
+        if (p) out.push({ ...p, lastAmount: i.grams });
+      }
+    }
+  }
+  return out;
+}
+
+/** Recently logged recipes / saved meals with how they were last logged (servings or grams). */
+export async function recentRecipes(userId: string, limit = 8): Promise<{ id: string; name: string; amount: number; mode: "servings" | "grams"; kcal: number | null; isMeal: boolean; at: string }[]> {
+  const rows = await (await db()).all<{ recipe_id: string; amount: number; basis: string; t: string }>(
+    `SELECT DISTINCT ON (recipe_id) recipe_id, amount, basis, created_at AS t FROM diary_entries
+     WHERE user_id = ? AND recipe_id IS NOT NULL ORDER BY recipe_id, created_at DESC`,
+    [userId],
+  );
+  const out = [];
+  for (const r of rows.sort((a, b) => b.t.localeCompare(a.t)).slice(0, limit)) {
+    const rec = await getRecipe(userId, r.recipe_id);
+    if (!rec) continue;
+    const mode = r.basis === "portion" ? "servings" as const : "grams" as const;
+    const per = mode === "servings" ? rec.calc.perServing.kcal : rec.calc.finalWeight ? (rec.calc.total.kcal ?? 0) / rec.calc.finalWeight : null;
+    out.push({ id: rec.id, name: rec.name, amount: r.amount, mode, kcal: per === null ? null : Math.round(per * r.amount), isMeal: rec.isMeal, at: r.t });
+  }
+  return out;
 }
 
 export async function favoriteProducts(userId: string): Promise<Product[]> {

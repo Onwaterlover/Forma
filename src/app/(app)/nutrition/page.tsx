@@ -1,5 +1,5 @@
 import { isIsoDate, pageCtx, shiftDate, todayIso, weekdayOf } from "@/lib/ctx";
-import { currentTarget, diaryDay, favoriteProducts, intakeHistory, listRecipes, recentProducts } from "@/lib/data";
+import { currentTarget, diaryDay, favoriteProducts, intakeHistory, listRecipes, recentProducts, recentRecipes } from "@/lib/data";
 import { WeeklyCheckin } from "./checkin";
 import { Assistant } from "@/components/assistant";
 import { aiProvider } from "@/lib/assistant";
@@ -15,8 +15,8 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
   // Last full week (Monday to Sunday) for the weekly check-in.
   const weekStart = shiftDate(today, -weekdayOf(today) - 7);
   const weekEnd = shiftDate(weekStart, 6);
-  const [day, target, recents, favorites, recipes, lastWeek] = await Promise.all([
-    diaryDay(user.id, date), currentTarget(user.id), recentProducts(user.id, 15), favoriteProducts(user.id), listRecipes(user.id), intakeHistory(user.id, weekStart),
+  const [day, target, recents, favorites, recipes, lastWeek, recentMeals] = await Promise.all([
+    diaryDay(user.id, date), currentTarget(user.id), recentProducts(user.id, 15), favoriteProducts(user.id), listRecipes(user.id), intakeHistory(user.id, weekStart), recentRecipes(user.id, 5),
   ]);
   const logged = lastWeek.filter((d) => d.date <= weekEnd && d.kcal > 0);
   // Ask once: as soon as the week's days carry an answer, the card disappears.
@@ -35,6 +35,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
       complete={day.complete}
       target={target ? { kcal: target.kcal, protein: target.protein_g } : null}
       recents={recents}
+      recentMeals={recentMeals}
       favorites={favorites}
       recipes={recipes.map((r) => ({ id: r.id, name: r.name, isMeal: r.isMeal, servings: r.servings, finalWeight: r.calc.finalWeight, perServingKcal: r.calc.perServing.kcal, totalKcal: r.calc.total.kcal }))}
       showFiber={settings.showFiber}

@@ -3,14 +3,14 @@ import { ChevronLeft, ChevronRight, Copy, ListPlus, Plus, ScanBarcode, Search, S
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
-import { addProductEntry, copyFromYesterday, editEntry, markDay, productFor, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
+import { addProductEntry, addRecipeEntry, copyFromYesterday, editEntry, markDay, productFor, recipeFor, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
 import { Sheet, useToast } from "@/components/client";
 import { Button, Card, cx, Empty, Input, Meter, Select } from "@/components/ui";
 import { fmt, fmtDate } from "@/i18n";
 import { useI18n } from "@/i18n/client";
-import type { DiaryEntry, Product } from "@/lib/data";
+import type { DiaryEntry, Product, Recipe } from "@/lib/data";
 import type { Nutrients, NutrientKey } from "@/nutrition/calc";
-import { AddFood, AmountInput, mealNow, type RecipeLite } from "./add-food";
+import { AddFood, AmountInput, mealNow, servingsWithSlice, type RecipeLite } from "./add-food";
 
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
@@ -21,7 +21,7 @@ const shift = (iso: string, d: number) => {
 };
 
 export function Diary({
-  date, today, entries, totals, complete, target, recents, favorites, recipes, showFiber, assistant,
+  date, today, entries, totals, complete, target, recents, recentMeals = [], favorites, recipes, showFiber, assistant,
 }: {
   date: string;
   today: string;
@@ -30,6 +30,7 @@ export function Diary({
   complete: boolean | null;
   target: { kcal: number | null; protein: number | null } | null;
   recents: (Product & { lastAmount: number })[];
+  recentMeals?: { id: string; name: string; amount: number; mode: "servings" | "grams"; kcal: number | null; isMeal: boolean }[];
   favorites: Product[];
   recipes: RecipeLite[];
   showFiber: boolean;
@@ -41,12 +42,20 @@ export function Diary({
   const [adding, setAdding] = useState<null | { view: "search" | "scan"; product: (Product & { lastAmount?: number }) | null }>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   const [editServings, setEditServings] = useState<{ label: string; amount: number }[]>([]);
+  const [editRecipe, setEditRecipe] = useState<Recipe | null>(null);
+  useEffect(() => {
+    setEditRecipe(null);
+    if (!editing?.recipeId) return;
+    let live = true;
+    recipeFor(editing.recipeId).then((r) => { if (live) setEditRecipe(r); }).catch(() => {});
+    return () => { live = false; };
+  }, [editing?.id, editing?.recipeId]);
   // Servings of the entry's product (egg, slice…), so it can be edited in pieces too.
   useEffect(() => {
     setEditServings([]);
     if (!editing?.productId) return;
     let live = true;
-    productFor(editing.productId).then((p) => { if (live && p) setEditServings(p.servings); }).catch(() => {});
+    productFor(editing.productId).then((p) => { if (live && p) setEditServings(servingsWithSlice(p, t("nutrition.slice"))); }).catch(() => {});
     return () => { live = false; };
   }, [editing?.id, editing?.productId]);
   const [amount, setAmount] = useState<number | null>(null);
@@ -138,7 +147,7 @@ export function Diary({
                           {" · "}{t("nutrition.protein").slice(0, 1)} {fmt(locale, e.values.protein, 1)} · {t("nutrition.carbs").slice(0, 1)} {fmt(locale, e.values.carbs, 1)} · {t("nutrition.fat").slice(0, 1)} {fmt(locale, e.values.fat, 1)}
                         </span>
                       </span>
-                      <span className="shrink-0 font-medium tabular-nums">{e.values.kcal === null ? t("nutrition.missing") : `${fmt(locale, e.values.kcal)}`}</span>
+                      <span className="shrink-0 font-medium tabular-nums">{e.values.kcal === null ? t("nutrition.missing") : <>{fmt(locale, e.values.kcal)}<span className="ml-0.5 text-xs font-normal text-muted">kcal</span></>}</span>
                     </button>
                   </li>
                 ))}
@@ -147,6 +156,32 @@ export function Diary({
           ))}
           {totals.incomplete?.length ? <p className="text-xs text-muted">* {t("nutrition.incompleteValue")}</p> : null}
         </div>
+      )}
+
+      {/* Recently logged recipes and saved meals first (one tap logs them again), then products. */}
+      {recentMeals.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.recentMeals")}</h2>
+          <ul className="divide-y divide-border rounded-[var(--radius-card)] border border-border bg-surface px-3">
+            {recentMeals.map((m) => (
+              <li key={m.id} className="flex items-center gap-2">
+                <Link href={`/nutrition/recipes?open=${m.id}`} className="min-w-0 flex-1 py-2.5">
+                  <span className="block truncate text-[15px] font-medium">{m.name}</span>
+                  <span className="block text-xs text-muted"><span className="font-medium text-accent">{t(m.isMeal ? "nutrition.kindMeal" : "nutrition.kindRecipe")}</span> · {m.mode === "servings" ? `${fmt(locale, m.amount)} × ${t("nutrition.portion")}` : `${fmt(locale, m.amount)} g`}{m.kcal !== null ? ` · ${fmt(locale, m.kcal)} kcal` : ""}</span>
+                </Link>
+                <button type="button" disabled={pending} aria-label={`${t("common.add")} ${m.name}`}
+                  onClick={() => start(async () => {
+                    const r = await addRecipeEntry({ recipeId: m.id, amount: m.amount, mode: m.mode, date, meal: date === today ? mealNow() : null });
+                    toast({ text: r.error ? t("common.error") : `${t("common.saved")}: ${m.name}` });
+                    router.refresh();
+                  })}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent hover:bg-accent hover:text-accent-contrast">
+                  <Plus size={20} aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {recents.length > 0 && (
@@ -195,8 +230,18 @@ export function Diary({
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.name ?? ""}>
         {editing && (
           <div className="space-y-4">
-            {editing.basis !== "portion" && (
-              // Same input as when adding (pieces or grams/ml, wheel, quick amounts, "type it").
+            {editRecipe ? (
+              // A logged recipe or saved meal: its ingredients right away (grams of a whole dish make no sense here).
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{t("nutrition.ingredientsOf")}</p>
+                <ul className="divide-y divide-border rounded-xl border border-border px-3 text-sm">
+                  {editRecipe.ingredients.map((i, k) => (
+                    <li key={k} className="flex justify-between gap-3 py-2"><span className="min-w-0 truncate">{i.name}</span><span className="shrink-0 tabular-nums text-muted">{fmt(locale, i.grams)} g</span></li>
+                  ))}
+                </ul>
+                <Link href={`/nutrition/recipes?open=${editRecipe.id}`} className="inline-flex text-sm font-medium text-accent">{t("nutrition.editRecipe")}</Link>
+              </div>
+            ) : editing.basis !== "portion" && (
               <div className="space-y-3">
                 <AmountInput key={editServings.length} amount={amount} onChange={setAmount} basis={editing.basis} servings={editServings} />
               </div>
@@ -209,7 +254,7 @@ export function Diary({
               </Select>
             </label>
             <div className="flex gap-2">
-              <Button full disabled={pending || (editing.basis !== "portion" && !amount)} onClick={() => start(async () => { await editEntry(editing.id, { amount: editing.basis === "portion" ? undefined : amount!, meal: editing.meal }); setEditing(null); })}>{t("common.save")}</Button>
+              <Button full disabled={pending || (editing.basis !== "portion" && !editRecipe && !amount)} onClick={() => start(async () => { await editEntry(editing.id, { amount: editing.basis === "portion" || editRecipe ? undefined : amount!, meal: editing.meal }); setEditing(null); })}>{t("common.save")}</Button>
               <Button variant="danger" onClick={() => { remove(editing); setEditing(null); }}>{t("common.delete")}</Button>
             </div>
           </div>
@@ -231,7 +276,12 @@ export function Diary({
             ))}
           </ul>
           <Button full disabled={pending || !mealName.trim() || selected.length === 0}
-            onClick={() => start(async () => { const r = await saveMealFromEntries(date, selected, mealName); toast({ text: r.error ? t("common.error") : t("common.saved") }); if (!r.error) { setSaving(false); setMealName(""); } })}>
+            onClick={() => start(async () => {
+              const r = await saveMealFromEntries(date, selected, mealName);
+              // Saved: offer to add something that wasn't in the diary (opens the meal in Recipes).
+              toast(r.error ? { text: t("common.error") } : { text: t("common.saved"), action: { label: t("nutrition.addIngredientShort"), run: () => router.push(`/nutrition/recipes?open=${r.id}`) } });
+              if (!r.error) { setSaving(false); setMealName(""); }
+            })}>
             {t("common.save")}
           </Button>
         </div>

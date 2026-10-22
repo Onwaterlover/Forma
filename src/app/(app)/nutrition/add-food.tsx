@@ -8,6 +8,7 @@ import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product } from "@/lib/data";
 import { energyMismatch, medianOf, NUTRIENT_KEYS, scale, type NutrientKey } from "@/nutrition/calc";
+import { typicalSlice } from "@/nutrition/slices";
 import { Scanner } from "./scanner";
 
 export type RecipeLite = { id: string; name: string; isMeal: boolean; servings: number; finalWeight: number; perServingKcal: number | null; totalKcal: number | null };
@@ -115,6 +116,7 @@ export function AddFood({
           {view === "meals" && <MealsTab recipes={recipes} pending={pending} onLog={(r, amount, mode) => start(async () => {
             const res = await addRecipeEntry({ recipeId: r.id, amount, mode, date, meal });
             toast({ text: res.error ? t("common.error") : `${t("common.saved")}: ${r.name}` });
+            if (!res.error) onClose();
           })} />}
           {view === "custom" && <CustomFood barcode={barcodeForNew} prefill={prefill} onSaved={async (id) => {
             const prod = await productFor(id);
@@ -262,6 +264,13 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
   );
 }
 
+/** Product servings, plus "slice (≈ 12 g)" for sliced ham/cheese that came without one. */
+export function servingsWithSlice(p: Pick<Product, "servings" | "name" | "basis">, label: string) {
+  if (p.servings.length || p.basis !== "g") return p.servings;
+  const g = typicalSlice(p.name);
+  return g ? [{ label: `${label} (≈ ${g} g)`, amount: g }] : [];
+}
+
 export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }: { product: Product & { lastAmount?: number }; onAdd: (amount: number) => void; onBack: () => void; pending: boolean; meal?: ReactNode; onRescan?: () => void }) {
   const { t, locale } = useI18n();
   // Basic foods start at one piece (one egg); everything else at the last amount or 100 g.
@@ -300,7 +309,7 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
       </div>
       {energyMismatch(product.nutrients) && <Notice tone="warning">{t("nutrition.energyMismatch")}</Notice>}
       {meal}
-      <AmountInput amount={amount} onChange={setAmount} basis={product.basis} servings={product.servings} startPieces={startPieces} />
+      <AmountInput amount={amount} onChange={setAmount} basis={product.basis} servings={servingsWithSlice(product, t("nutrition.slice"))} startPieces={startPieces} />
       <div className="grid grid-cols-4 gap-1.5">
         {tile("kcal", t("common.kcal"))}
         {tile("protein", `${t("nutrition.protein")} (g)`)}

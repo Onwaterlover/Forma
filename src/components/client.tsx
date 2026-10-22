@@ -161,10 +161,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setItems((xs) => [...xs.slice(-2), { ...t, id }]);
     setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== id)), t.action ? 6000 : 3000);
   }, []);
+  // Shown as a popover so a toast sits above an open sheet (sheets are modal dialogs in the top layer);
+  // re-shown on each new toast so it stays above a sheet opened in the meantime.
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = box.current as (HTMLDivElement & { showPopover?: () => void; hidePopover?: () => void }) | null;
+    if (!el?.showPopover) return;
+    try {
+      if (el.matches(":popover-open")) el.hidePopover!();
+      if (items.length) el.showPopover();
+    } catch {}
+  }, [items]);
   return (
     <ToastCtx.Provider value={push}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(5rem_+_env(safe-area-inset-bottom))] z-50 flex flex-col items-center gap-2 px-4 md:bottom-6">
+      <div ref={box} popover="manual" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-auto bottom-[calc(5rem_+_env(safe-area-inset-bottom))] z-50 m-0 flex h-auto w-full flex-col items-center gap-2 overflow-visible border-0 bg-transparent p-0 px-4 md:bottom-6">
         {items.map((t) => (
           <div key={t.id} className="pointer-events-auto flex max-w-md items-center gap-3 rounded-xl bg-text px-4 py-3 text-sm text-bg shadow-lg">
             <span>{t.text}</span>

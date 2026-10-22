@@ -161,9 +161,9 @@ export async function saveMealFromEntries(day: string, entryIds: string[], name:
   const entries = (await diaryDay(user.id, day)).entries.filter((e) => entryIds.includes(e.id) && e.basis !== "portion");
   if (!entries.length) return { error: "invalid" };
   const ingredients = entries.map((e) => ({ productId: e.productId, name: e.name, grams: e.amount, nutrients: e.nutrients as Nutrients }));
-  await saveRecipe(user.id, { name: name.trim().slice(0, 80), ingredients, cookedYieldG: null, servings: 1, isMeal: true });
+  const id = await saveRecipe(user.id, { name: name.trim().slice(0, 80), ingredients, cookedYieldG: null, servings: 1, isMeal: true });
   revalidatePath("/nutrition", "layout");
-  return {};
+  return { id };
 }
 
 export async function removeRecipe(id: string) {
@@ -214,4 +214,10 @@ export async function averageProduct(raw: unknown): Promise<{ product?: Product;
   if (!r) return { error: "too_few" };
   done();
   return { product: r.product };
+}
+
+/** A recipe or saved meal of this user (to show its ingredients from the diary). */
+export async function recipeFor(id: string) {
+  const user = await requireUser();
+  return typeof id === "string" && id.length <= 64 ? await getRecipe(user.id, id) : null;
 }

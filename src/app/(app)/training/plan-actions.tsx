@@ -1,5 +1,5 @@
 "use client";
-import { BookOpen, ChevronRight, CircleHelp, FileInput, History, MoreHorizontal, Plus, Printer, SlidersHorizontal, ThumbsDown, Trash2 } from "lucide-react";
+import { BookOpen, ChevronRight, CircleHelp, FileInput, MoreHorizontal, Plus, Printer, SlidersHorizontal, ThumbsDown, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition, type ReactNode } from "react";
 import { deletePlanAction, regenerateWithFeedback, type PlanFeedback } from "@/app/actions/training";
@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n/client";
 const REASONS: PlanFeedback["reasons"] = ["too_long", "too_short", "fewer_days", "more_days", "more_upper", "more_lower", "too_hard", "more_machines", "more_free", "more_bodyweight"];
 
 /**
- * Everything around the plan behind one "⋯" button, kept to five entries: history, exercises, how-to,
+ * Everything around the plan behind one "⋯" button, kept short: exercises, how-to,
  * print/PDF and "New plan…" (wizard, import, or adjusting the current plan). Deleting lives on the edit page.
  */
 export function PlanMenu({ planId, exercises, library, feedback, logging, hasProfile }: {
@@ -45,7 +45,6 @@ export function PlanMenu({ planId, exercises, library, feedback, logging, hasPro
 
       <Sheet open={sheet === "menu"} onClose={() => setSheet(null)} title={t("plan.title")}>
         <ul className="-mx-2 divide-y divide-border">
-          {logging && item(<History size={18} aria-hidden />, t("workout.history"), { href: "/training/history" })}
           {item(<BookOpen size={18} aria-hidden />, t("library.title"), { href: "/training/exercises" })}
           {item(<CircleHelp size={18} aria-hidden />, t("plan.howToAny"), { onClick: () => setSheet("howto") })}
           {planId && item(<Printer size={18} aria-hidden />, t("plan.print"), { onClick: () => { setSheet(null); setTimeout(() => window.print(), 150); } })}

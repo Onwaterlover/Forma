@@ -1,7 +1,7 @@
 import { Bars, Sparkline, TrendChart } from "@/components/charts";
-import { Camera, ChevronRight } from "lucide-react";
+import { Camera, Check, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { Card, Empty, LinkButton, Notice, PageHeader, SectionTitle } from "@/components/ui";
+import { Card, cx, Empty, LinkButton, Notice, PageHeader, SectionTitle } from "@/components/ui";
 import { bestPoint, exerciseTrend, personalRecords } from "@/engine/progression";
 import { exName, fmt, fmtDate } from "@/i18n";
 import { pageCtx, shiftDate, todayIso } from "@/lib/ctx";
@@ -109,7 +109,13 @@ export default async function ProgressPage() {
 
       <SectionTitle>{t("progress.bodyweight")}</SectionTitle>
       <Card className="space-y-4">
-        <WeightForm today={today} known={Object.fromEntries(weights.map((w) => [w.date, w.kg]))} />
+        <WeightForm today={today} known={Object.fromEntries(weights.map((w) => [w.date, w.kg]))} when={Object.fromEntries(weights.flatMap((w) => {
+          // Time of day of the weigh-in (only when it was entered on that day): before 12 morning, from 18 evening.
+          const local = new Date(w.created_at).toLocaleString("sv-SE", { timeZone: process.env.APP_TIME_ZONE || "Europe/Warsaw" });
+          if (local.slice(0, 10) !== w.date) return [];
+          const h = Number(local.slice(11, 13));
+          return [[w.date, h < 12 ? "morning" : h >= 18 ? "evening" : "day"]];
+        }))} />
         {trend.length === 0 ? (
           <p className="text-sm text-muted">{t("progress.noWeight")}</p>
         ) : (
@@ -185,12 +191,28 @@ export default async function ProgressPage() {
 
       {settings.modules.training && (
         <>
-          <SectionTitle>{t("progress.workoutsPerWeek")}</SectionTitle>
-          <Card><Bars data={perWeek} label={t("progress.workoutsPerWeek")} refLine={planned || null} /></Card>
+          <SectionTitle>{t("progress.thisWeek")}</SectionTitle>
+          {/* One circle per planned workout, ticked when done; a short average instead of a bar chart. */}
+          <Card>
+            <div className="flex flex-wrap items-center gap-2" aria-label={t("progress.weeklyWorkouts", { done: thisWeek, planned })}>
+              {Array.from({ length: Math.max(planned, thisWeek) }, (_, i) => (
+                <span key={i} className={cx("grid h-9 w-9 place-items-center rounded-full border", i < thisWeek ? "border-accent bg-accent text-accent-contrast" : "border-border text-muted")}>
+                  {i < thisWeek ? <Check size={18} aria-hidden /> : null}
+                </span>
+              ))}
+              <span className="ml-1 text-sm">{planned ? t("progress.weeklyWorkouts", { done: thisWeek, planned }) : t("progress.doneThisWeek", { n: thisWeek })}</span>
+            </div>
+            <p className="mt-2 text-xs text-muted">{t("progress.avgPerWeek", { n: fmt(locale, perWeek.slice(0, -1).reduce((a, w) => a + w.value, 0) / 7, 1) })}</p>
+          </Card>
 
-          <SectionTitle>{t("progress.records")}</SectionTitle>
-          {records.length === 0 ? <Empty>{t("progress.noRecords")}</Empty> : (
-            <Card className="overflow-hidden p-0 sm:p-0">
+          {records.length > 0 && (
+            // Folded away by default: useful now and then, not every day.
+            <details className="group mt-6">
+              <summary className="flex cursor-pointer list-none items-center justify-between rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-sm font-medium">
+                {t("progress.records")} ({records.length})
+                <ChevronRight size={16} className="text-muted transition-transform group-open:rotate-90" aria-hidden />
+              </summary>
+            <Card className="mt-2 overflow-hidden p-0 sm:p-0">
               <ul className="divide-y divide-border">{records.slice(0, 8).map(recordRow)}</ul>
               {records.length > 8 && (
                 <details className="group border-t border-border">
@@ -203,6 +225,7 @@ export default async function ProgressPage() {
               )}
               <p className="border-t border-border px-4 py-3 text-xs text-muted">{t("progress.e1rmNote")}</p>
             </Card>
+            </details>
           )}
         </>
       )}

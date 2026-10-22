@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n/client";
  * Same weigh-ins as the quick field on "Today". The form shows what is saved for the chosen day, and the list
  * of recent weigh-ins lets you fix or delete one without remembering its date.
  */
-export function WeightForm({ today, known }: { today: string; known: Record<string, number> }) {
+export function WeightForm({ today, known, when = {} }: { today: string; known: Record<string, number>; when?: Record<string, string> }) {
   const { t, locale } = useI18n();
   const toast = useToast();
   const router = useRouter();
@@ -61,7 +61,7 @@ export function WeightForm({ today, known }: { today: string; known: Record<stri
                 {/* Tap the row to load it into the form above for a correction. */}
                 <button type="button" className="flex min-w-0 flex-1 items-center justify-between gap-3 py-2 text-left text-sm"
                   onClick={() => { setDate(d); setKg(v); document.getElementById("weight-kg")?.focus(); }}>
-                  <span>{d === today ? t("common.today") : fmtDate(locale, d, { weekday: "short", day: "numeric", month: "short" })}</span>
+                  <span>{d === today ? t("common.today") : fmtDate(locale, d, { weekday: "short", day: "numeric", month: "short" })}{when[d] && <span className="text-muted"> · {t(`progress.when.${when[d]}`)}</span>}</span>
                   <span className="inline-flex items-center gap-2 tabular-nums">{fmt(locale, v, 1)} kg<Pencil size={14} className="text-muted" aria-hidden /></span>
                 </button>
                 <button type="button" aria-label={`${t("common.delete")} ${d}`} disabled={pending} onClick={() => remove(d)}

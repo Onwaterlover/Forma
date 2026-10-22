@@ -785,11 +785,15 @@ export async function setTarget(userId: string, t: { kcal: number | null; protei
 }
 
 export async function listWeights(userId: string, fromDate = "0000") {
-  return (await db()).all<{ date: string; kg: number }>("SELECT date, kg FROM bodyweight WHERE user_id = ? AND date >= ? ORDER BY date", [userId, fromDate]);
+  return (await db()).all<{ date: string; kg: number; created_at: string }>("SELECT date, kg, created_at FROM bodyweight WHERE user_id = ? AND date >= ? ORDER BY date", [userId, fromDate]);
 }
 
-export async function addWeight(userId: string, date: string, kg: number) {
-  await (await db()).run("INSERT INTO bodyweight (user_id, date, kg, created_at) VALUES (?, ?, ?, ?) ON CONFLICT (user_id, date) DO UPDATE SET kg = excluded.kg", [userId, date, kg, nowIso()]);
+/** `now`: weighed just now (today's entry), so the time is kept and shows as morning/evening. */
+export async function addWeight(userId: string, date: string, kg: number, now = false) {
+  await (await db()).run(
+    `INSERT INTO bodyweight (user_id, date, kg, created_at) VALUES (?, ?, ?, ?) ON CONFLICT (user_id, date) DO UPDATE SET kg = excluded.kg${now ? ", created_at = excluded.created_at" : ""}`,
+    [userId, date, kg, nowIso()],
+  );
 }
 
 export async function deleteWeight(userId: string, date: string) {

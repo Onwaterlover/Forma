@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react";
+import { History, Pencil } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, Empty, LinkButton, Notice, PageHeader, SectionTitle } from "@/components/ui";
 import { userFacing, validatePlan } from "@/engine/validate";
@@ -29,9 +29,10 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     <>
       <PageHeader stack title={plan?.name ?? t("plan.title")} subtitle={plan ? `${t(`split.${plan.data.split}`, {})} · ${t("plan.perWeek", { n: plan.data.sessions.length })}` : undefined}
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {aiProvider() && <Assistant scope="training" date={todayIso()} enabled={settings.ai} provider={aiProvider()!} />}
             {plan && <LinkButton href={`/training/plan/${plan.id}`} variant="secondary" size="sm"><Pencil size={16} aria-hidden />{t("common.edit")}</LinkButton>}
+            {settings.logWorkouts && <LinkButton href="/training/history" variant="secondary" size="sm"><History size={16} aria-hidden />{t("workout.history")}</LinkButton>}
             <PlanMenu planId={plan?.id ?? null} exercises={exercises} library={library} feedback={!!profile} logging={settings.logWorkouts} hasProfile={!!profile} />
           </div>
         } />

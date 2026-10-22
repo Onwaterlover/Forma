@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { isLocale } from "@/i18n";
 import { createInvite, destroySession, hashPassword, requireUser, verifyPassword } from "@/lib/auth";
-import { isIsoDate } from "@/lib/ctx";
+import { isIsoDate, todayIso } from "@/lib/ctx";
 import { addWeight, changePassword, deleteInvite, deleteUser, listInvites, deleteWeight, passwordHash, saveMeasurement, saveSettings, setLocale, type SettingsPatch } from "@/lib/data";
 import { MEASUREMENT_MAX_CM, MEASUREMENT_MIN_CM, MEASUREMENT_SITES, type MeasurementSite } from "@/lib/measurements";
 import { parseDecimal } from "@/nutrition/calc";
@@ -58,7 +58,7 @@ export async function logWeight(date: string, kgRaw: string | number) {
   const user = await requireUser();
   const kg = parseDecimal(kgRaw);
   if (!isIsoDate(date) || kg === null || kg <= 20 || kg >= 400) return { error: "invalid" };
-  await addWeight(user.id, date, Math.round(kg * 10) / 10);
+  await addWeight(user.id, date, Math.round(kg * 10) / 10, date === todayIso());
   revalidatePath("/progress");
   revalidatePath("/");
   return {};

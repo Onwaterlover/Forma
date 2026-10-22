@@ -54,11 +54,11 @@ export default async function TodayPage() {
           <SectionTitle>{t("today.nextWorkout")}</SectionTitle>
           {running && logging ? (
             <Card className="flex items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium">{running.name}</p>
                 <Badge tone="accent">{t("workout.inProgress")}</Badge>
               </div>
-              <LinkButton href={`/workout/${running.id}`}><Play size={18} aria-hidden />{t("workout.resume")}</LinkButton>
+              <LinkButton href={`/workout/${running.id}`} className="shrink-0 whitespace-nowrap"><Play size={18} aria-hidden />{t("workout.resume")}</LinkButton>
             </Card>
           ) : next && plan ? (
             <Card>

@@ -260,7 +260,8 @@ export function WorkoutLogger({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <p className="text-3xl font-semibold tabular-nums tracking-tight" role="timer" aria-label={t("workout.elapsed")}>{clock(elapsed)}</p>
+            {/* The running clock differs by a few seconds between server and phone; that is expected, not a mismatch. */}
+            <p className="text-3xl font-semibold tabular-nums tracking-tight" role="timer" aria-label={t("workout.elapsed")} suppressHydrationWarning>{clock(elapsed)}</p>
             {!finished && <Button size="sm" onClick={() => setSheet({ kind: "finish" })}>{t("common.done")}</Button>}
           </div>
         </div>

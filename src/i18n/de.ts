@@ -310,7 +310,7 @@ export const de: Dict = {
     week: "Trainings diese Woche: {n} von {planned}.", weekNoPlan: "Trainings diese Woche: {n}.", close: "Fertig", empty: "Keine Sätze erfasst.",
   },
   assistant: {
-    open: "Assistent", title: "Assistent", placeholder: "Was soll ich ändern oder was möchtest du wissen…", placeholderFood: "Was hast du gegessen?", placeholderPhoto: "Antworte oder ergänze Details…", send: "Senden", thinking: "Denke nach…", newChat: "Neues Gespräch", photo: "Essensfoto", takePhoto: "Foto machen", takePhotoShort: "Foto", describeShort: "Beschreiben", describe: "Mahlzeit beschreiben", photoPrompt: "Was ist auf diesem Foto? Trag es ins Tagebuch ein.", photoSent: "📷 Foto",
+    open: "Assistent", title: "Assistent", placeholder: "Schreib eine Nachricht…", placeholderFood: "Was hast du gegessen?", placeholderPhoto: "Details ergänzen…", send: "Senden", thinking: "Denke nach…", newChat: "Neues Gespräch", photo: "Essensfoto", takePhoto: "Foto machen", takePhotoShort: "Foto", describeShort: "Beschreiben", describe: "Mahlzeit beschreiben", photoPrompt: "Was ist auf diesem Foto? Trag es ins Tagebuch ein.", photoSent: "📷 Foto",
     apply: "Übernehmen", reject: "Nein, danke", applied: "Übernommen", rejected: "Verworfen",
     introTraining: "Ich kann deinen Plan ändern (Tage pro Woche, Übungen, Sätze, kg), eine Übung tauschen oder Trainingsfragen beantworten. Änderungen zeige ich dir immer zuerst zur Bestätigung.",
     introNutrition: "Ich trage Essen ins Tagebuch ein (Werte aus der Produktdatenbank, nie geschätzt) oder beantworte Fragen zur Ernährung. Einträge zeige ich dir immer zuerst zur Bestätigung.",

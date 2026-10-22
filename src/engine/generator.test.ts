@@ -5,6 +5,7 @@ import { isPossible, LOCATION_PRESETS } from "./equipment";
 import { EXERCISES, EXERCISE_BY_ID } from "./exercises";
 import { generatePlan, rebuildSession } from "./generator";
 import { verdictOf } from "./compare";
+import { splitFor } from "./templates";
 import { defaultProfile, parseProfile } from "./profile";
 import { validatePlan } from "./validate";
 import type { Equipment, Exercise, ExercisePref, Location, Plan, TrainingProfile, Weekday } from "./types";
@@ -313,6 +314,20 @@ describe("workout generator", () => {
     const beginner = { ...ctx, profile: profile({ goal: "muscle", experience: "beginner" }) };
     expect(verdictOf(ex("bodyweight_squat"), ex("goblet_squat"), beginner, 1)).toBe("slightly");
     expect(verdictOf(ex("romanian_deadlift_db"), ex("back_extension"), beginner, 1)).not.toBe("much");
+  });
+
+  it("a chosen split is used when it fits the number of sessions, otherwise the automatic one", () => {
+    const base = { experience: "intermediate" as const, goal: "muscle" as const };
+    expect(splitFor(profile({ ...base, splitPref: "ppl" }), 3).templates).toEqual(["PUSH", "PULL", "LEGS"]);
+    expect(splitFor(profile({ ...base, splitPref: "ppl" }), 6).split).toBe("push_pull_legs");
+    expect(splitFor(profile({ ...base, splitPref: "upper_lower" }), 4).split).toBe("upper_lower");
+    expect(splitFor(profile({ ...base, splitPref: "full_body" }), 4).templates).toEqual(["FULL_A", "FULL_B", "FULL_C", "FULL_A"]);
+    expect(splitFor(profile({ ...base, splitPref: "ppl" }), 2).split).toBe("full_body"); // PPL needs 3 sessions
+    expect(splitFor(profile({ ...base, splitPref: "auto" }), 4).split).toBe("upper_lower");
+    for (const splitPref of ["full_body", "upper_lower", "ppl"] as const) for (const n of [2, 3, 4, 5, 6]) {
+      const p = profile({ ...base, splitPref, sessionsPerWeek: n, week: week({ 0: ["gym"], 1: ["gym"], 2: ["gym"], 3: ["gym"], 4: ["gym"], 5: ["gym"] }), locations: [gym()] });
+      gen(p); // valid plan, no errors
+    }
   });
 
   it("with every day free, the chosen days include today (start right away)", () => {

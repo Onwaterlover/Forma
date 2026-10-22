@@ -38,7 +38,7 @@ export const de: Dict = {
     experienceQ: "Wie viel Erfahrung hast du?",
     exp: { beginner: "Anfänger/in", intermediate: "Etwas Erfahrung", advanced: "Erfahren" },
     expHint: { beginner: "Bisher wenig oder kein Krafttraining.", intermediate: "Ich kenne die Grundübungen und habe regelmäßig trainiert.", advanced: "Ich trainiere seit Jahren konsequent." },
-    sessionsQ: "Wie viele Einheiten pro Woche?", minutesQ: "Wie viel Zeit hast du ungefähr pro Einheit?", custom: "Andere",
+    splitQ: "Wie möchtest du dein Training aufteilen?", splitOpt: { auto: "Wähle für mich", full_body: "Ganzkörper", upper_lower: "Ober- / Unterkörper", ppl: "Push / Pull / Beine" }, splitOptHint: { auto: "Wir passen die Aufteilung an Einheiten, Zeit und Niveau an.", full_body: "Ganzer Körper in jeder Einheit. Am besten bei 2–3 Einheiten.", upper_lower: "Abwechselnd Ober- und Unterkörper. Gut bei 2–4 Einheiten.", ppl: "Drücken, Ziehen, Beine. Am besten bei 3 oder 6 Einheiten." }, splitFallback: "Diese Aufteilung passt nicht zu so vielen Einheiten — wir nehmen die empfohlene.", splitOnce: "Bei 3 Einheiten wird jeder Muskel einmal pro Woche trainiert; Ganzkörper oder Ober/Unter bringt meist mehr.", sessionsQ: "Wie viele Einheiten pro Woche?", minutesQ: "Wie viel Zeit hast du ungefähr pro Einheit?", custom: "Andere",
     sessionsHint: "Wir planen so viele Einheiten, wie deine Woche erlaubt — auch nur eine.",
     whereQ: "Wo trainierst du?", whereHint: "Du kannst mehrere Orte wählen. Jeder hat eigene Ausrüstung.",
     preset: { commercial_gym: "Fitnessstudio", home_dumbbells: "Zuhause — Kurzhanteln", home_gym: "Heimstudio", calisthenics_park: "Calisthenics-Park", bodyweight_only: "Ohne Ausrüstung" },
@@ -84,7 +84,7 @@ export const de: Dict = {
   split: {
     none: "Keiner", custom: "Eigener", imported: "Importiert", full_body: "Ganzkörper", upper_lower: "Ober- / Unterkörper", upper_lower_upper: "Oben / unten / oben", lower_upper_lower: "Unten / oben / unten",
     upper_lower_upper_plus: "Oben / unten / oben + Arme", upper_lower_ppl: "Oben / unten / Push / Pull / Beine", upper_lower_push_pull_arms: "Oben / unten / Push / Pull / Arme",
-    push_pull_legs: "Push / Pull / Beine", ppl_upper_arms: "Push / Pull / unten / oben / Arme",
+    ppl_upper: "Push / Pull / Beine / Oberkörper", ppl_upper_lower: "Push / Pull / Beine / Oberkörper / Unterkörper", push_pull_legs: "Push / Pull / Beine", ppl_upper_arms: "Push / Pull / unten / oben / Arme",
   },
   template: { FULL_A: "Ganzkörper A", FULL_B: "Ganzkörper B", FULL_C: "Ganzkörper C", UPPER_A: "Oberkörper A", UPPER_B: "Oberkörper B", LOWER_A: "Unterkörper A", LOWER_B: "Unterkörper B", LOWER_FULL: "Unterkörper", PUSH: "Push", PULL: "Pull", LEGS: "Beine", ARMS_DELTS: "Arme & Schultern", IMPORTED: "Training" },
   effort: {

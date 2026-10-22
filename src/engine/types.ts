@@ -130,6 +130,8 @@ export interface TrainingProfile {
   priorities: Partial<Record<Muscle, MusclePriority>>;
   sports: Sport[];
   supersets: "allow" | "avoid";
+  /** How the week is split; "auto" (default) lets the generator choose from days, level and priorities. */
+  splitPref?: "auto" | "full_body" | "upper_lower" | "ppl";
   conditioning?: boolean;
   /** Free-text notes for the assistant (injuries, dislikes); the generator does not read them. */
   notes?: string;

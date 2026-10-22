@@ -6,6 +6,7 @@ import { Chips, Choices, NumberField, Switch, useToast } from "@/components/clie
 import { Button, Card, cx, Input, Notice, Select, Textarea } from "@/components/ui";
 import { availableKinds, LOCATION_PRESETS } from "@/engine/equipment";
 import { EXERCISES } from "@/engine/exercises";
+import { autoSplit, splitFits, splitKind } from "@/engine/templates";
 import { BALANCED } from "@/engine/volume";
 import {
   EQUIPMENT, KINDS, type Equipment, type Goal, type Kind, type Location, type Muscle, type MusclePriority, type Sport, type StylePref, type TrainingProfile, type Weekday,
@@ -45,12 +46,13 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
   const [p, setP] = useState<TrainingProfile>(() => {
     // A new plan starts from your facts (places, days, time, level, sports) but not from earlier preferences:
     // goal, styles and priorities are asked fresh, so an old answer doesn't quietly shape every new plan.
-    if (initial) return { ...initial, goal: "unsure", styles: [], priorities: {}, excludedKinds: [] };
+    if (initial) return { ...initial, goal: "unsure", styles: [], priorities: {}, excludedKinds: [], splitPref: "auto" };
     const b = blank(t("onb.preset.commercial_gym"));
     [0, 2, 4].forEach((d) => (b.week[d] = { locations: ["gym"] }));
     return b;
   });
   const [step, setStep] = useState(0);
+  const recommendedSplit = splitKind(autoSplit(p, p.sessionsPerWeek).split);
   const [advanced, setAdvanced] = useState(false);
   const [preset, setPreset] = useState<PriorityPreset>(presetOf(p.priorities));
   const [openLoc, setOpenLoc] = useState<string | null>(null);
@@ -150,6 +152,18 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
               <NumberField min={10} max={180} className="w-24" value={p.sessionMinutes} onChange={(sessionMinutes) => up({ sessionMinutes })} aria-label={t("onb.minutesQ")} />
               <span className="text-muted">{t("common.min")}</span>
             </label>
+          </div>
+          <div>
+            {/* The split; the automatic choice for the current days, level and priorities is marked "recommended". */}
+            <h2 className="mb-3 text-lg font-semibold">{t("onb.splitQ")}</h2>
+            <Choices name={t("onb.splitQ")} value={p.splitPref ?? "auto"} onChange={(splitPref) => up({ splitPref })}
+              options={(["auto", "full_body", "upper_lower", "ppl"] as const).map((v) => ({
+                value: v,
+                label: <span className="flex flex-wrap items-center gap-x-2">{t(`onb.splitOpt.${v}`)}{v !== "auto" && v === recommendedSplit && <span className="text-xs font-medium text-accent">{t("review.recommended")}</span>}</span>,
+                hint: t(`onb.splitOptHint.${v}`),
+              }))} />
+            {p.splitPref && p.splitPref !== "auto" && !splitFits(p.splitPref, p.sessionsPerWeek) && <p className="mt-2 text-sm text-warning">{t("onb.splitFallback")}</p>}
+            {p.splitPref === "ppl" && p.sessionsPerWeek === 3 && <p className="mt-2 text-sm text-muted">{t("onb.splitOnce")}</p>}
           </div>
         </Card>
       )}

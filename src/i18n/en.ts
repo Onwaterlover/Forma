@@ -38,7 +38,7 @@ export const en: Dict = {
     experienceQ: "How much experience do you have?",
     exp: { beginner: "Beginner", intermediate: "Some experience", advanced: "Experienced" },
     expHint: { beginner: "Little or no weight training so far.", intermediate: "I know the basic exercises and have trained regularly.", advanced: "I've trained consistently for years." },
-    sessionsQ: "How many workouts per week?", minutesQ: "Roughly how much time do you have per workout?", custom: "Other",
+    splitQ: "How do you want to split your training?", splitOpt: { auto: "Choose for me", full_body: "Full body", upper_lower: "Upper / lower", ppl: "Push / pull / legs" }, splitOptHint: { auto: "We match the split to your sessions, time and level.", full_body: "Whole body every session. Best with 2–3 sessions.", upper_lower: "Upper and lower in turn. Good with 2–4 sessions.", ppl: "Pushing, pulling, legs. Best with 3 or 6 sessions." }, splitFallback: "This split doesn't work with this many sessions — we'll use the recommended one.", splitOnce: "With 3 sessions each muscle is trained once a week; full body or upper/lower usually gets more out of it.", sessionsQ: "How many workouts per week?", minutesQ: "Roughly how much time do you have per workout?", custom: "Other",
     sessionsHint: "We plan as many sessions as your week allows — even just one.",
     whereQ: "Where do you train?", whereHint: "Pick as many places as you like. Each has its own equipment.",
     preset: { commercial_gym: "Gym", home_dumbbells: "Home — dumbbells", home_gym: "Home gym", calisthenics_park: "Calisthenics park", bodyweight_only: "No equipment" },
@@ -84,7 +84,7 @@ export const en: Dict = {
   split: {
     none: "None", custom: "Custom", imported: "Imported", full_body: "Full body", upper_lower: "Upper / lower", upper_lower_upper: "Upper / lower / upper", lower_upper_lower: "Lower / upper / lower",
     upper_lower_upper_plus: "Upper / lower / upper + arms", upper_lower_ppl: "Upper / lower / push / pull / legs", upper_lower_push_pull_arms: "Upper / lower / push / pull / arms",
-    push_pull_legs: "Push / pull / legs", ppl_upper_arms: "Push / pull / lower / upper / arms",
+    ppl_upper: "Push / pull / legs / upper", ppl_upper_lower: "Push / pull / legs / upper / lower", push_pull_legs: "Push / pull / legs", ppl_upper_arms: "Push / pull / lower / upper / arms",
   },
   template: { FULL_A: "Full body A", FULL_B: "Full body B", FULL_C: "Full body C", UPPER_A: "Upper A", UPPER_B: "Upper B", LOWER_A: "Lower A", LOWER_B: "Lower B", LOWER_FULL: "Lower", PUSH: "Push", PULL: "Pull", LEGS: "Legs", ARMS_DELTS: "Arms & shoulders", IMPORTED: "Workout" },
   effort: {

@@ -37,7 +37,7 @@ export const pl = {
     experienceQ: "Jakie masz doświadczenie?",
     exp: { beginner: "Początkujący", intermediate: "Trochę już ćwiczyłem/am", advanced: "Doświadczony/a" },
     expHint: { beginner: "Mało lub wcale nie trenowałem/am z ciężarami.", intermediate: "Znam podstawowe ćwiczenia i trenowałem/am regularnie.", advanced: "Trenuję systematycznie od lat." },
-    sessionsQ: "Ile treningów w tygodniu?", minutesQ: "Ile mniej więcej masz czasu na trening?", custom: "Inne",
+    splitQ: "Jak chcesz dzielić treningi?", splitOpt: { auto: "Wybierz za mnie", full_body: "Całe ciało (FBW)", upper_lower: "Góra / dół", ppl: "Push / pull / nogi" }, splitOptHint: { auto: "Dobierzemy podział do liczby treningów, czasu i Twojego poziomu.", full_body: "Całe ciało na każdym treningu. Najlepsze przy 2–3 treningach.", upper_lower: "Na zmianę góra i dół. Dobre przy 2–4 treningach.", ppl: "Pchanie, ciągnięcie, nogi. Najlepsze przy 3 lub 6 treningach." }, splitFallback: "Przy tej liczbie treningów ten podział nie pasuje — ułożymy podział polecany.", splitOnce: "Przy 3 treningach każda partia będzie trenowana raz w tygodniu; całe ciało albo góra/dół zwykle dają więcej.", sessionsQ: "Ile treningów w tygodniu?", minutesQ: "Ile mniej więcej masz czasu na trening?", custom: "Inne",
     sessionsHint: "Planujemy tyle sesji, ile pozwala Twój kalendarz — nawet jedną.",
     whereQ: "Gdzie trenujesz?", whereHint: "Możesz wybrać kilka miejsc. Każde ma własny sprzęt.",
     preset: { commercial_gym: "Siłownia", home_dumbbells: "Dom — hantle", home_gym: "Domowa siłownia", calisthenics_park: "Park do kalisteniki", bodyweight_only: "Bez sprzętu" },
@@ -83,7 +83,7 @@ export const pl = {
   split: {
     none: "Brak", custom: "Własny", imported: "Zaimportowany", full_body: "Całe ciało", upper_lower: "Góra / dół", upper_lower_upper: "Góra / dół / góra", lower_upper_lower: "Dół / góra / dół",
     upper_lower_upper_plus: "Góra / dół / góra + ramiona", upper_lower_ppl: "Góra / dół / push / pull / nogi", upper_lower_push_pull_arms: "Góra / dół / push / pull / ramiona",
-    push_pull_legs: "Push / pull / nogi", ppl_upper_arms: "Push / pull / dół / góra / ramiona",
+    ppl_upper: "Push / pull / nogi / góra", ppl_upper_lower: "Push / pull / nogi / góra / dół", push_pull_legs: "Push / pull / nogi", ppl_upper_arms: "Push / pull / dół / góra / ramiona",
   },
   template: { FULL_A: "Całe ciało A", FULL_B: "Całe ciało B", FULL_C: "Całe ciało C", UPPER_A: "Góra A", UPPER_B: "Góra B", LOWER_A: "Dół A", LOWER_B: "Dół B", LOWER_FULL: "Dół", PUSH: "Push", PULL: "Pull", LEGS: "Nogi", ARMS_DELTS: "Ramiona i barki", IMPORTED: "Trening" },
   effort: {

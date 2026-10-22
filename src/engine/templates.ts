@@ -109,7 +109,38 @@ export function priorityOf(p: TrainingProfile, m: Muscle): MusclePriority {
 
 const isLow = (x: MusclePriority) => x === "low" || x === "maintain";
 
+export type SplitKind = "full_body" | "upper_lower" | "ppl";
+/** Which kind of split a split name is (the automatic choice is shown as "recommended" in the interview). */
+export const splitKind = (split: string): SplitKind => (/push|ppl/.test(split) ? "ppl" : /upper|lower/.test(split) ? "upper_lower" : "full_body");
+
+/** Whether a chosen split can be built for n sessions (otherwise the automatic one is used). */
+export const splitFits = (kind: SplitKind, n: number) => (kind === "ppl" ? n >= 3 : kind === "upper_lower" ? n >= 2 : true);
+
+/**
+ * The week's templates: the person's chosen split when it can be built for this many sessions,
+ * otherwise (or with "auto") the automatic choice.
+ */
 export function splitFor(p: TrainingProfile, n: number): { split: string; templates: string[] } {
+  const auto = autoSplit(p, n);
+  const pref = p.splitPref ?? "auto";
+  const k = Math.max(1, Math.min(n, 6));
+  if (pref === "auto" || splitKind(auto.split) === pref || !splitFits(pref, k)) return auto;
+  const cycle = (ts: string[]) => Array.from({ length: k }, (_, i) => ts[i % ts.length]!);
+  if (pref === "full_body") return { split: "full_body", templates: cycle(["FULL_A", "FULL_B", "FULL_C"]) };
+  if (pref === "upper_lower") {
+    if (k === 3) {
+      const legsHigh = LOWER.some((m) => priorityOf(p, m) === "high") && !UPPER.some((m) => priorityOf(p, m) === "high");
+      return legsHigh ? { split: "lower_upper_lower", templates: ["LOWER_A", "UPPER_A", "LOWER_B"] } : { split: "upper_lower_upper", templates: ["UPPER_A", "LOWER_FULL", "UPPER_B"] };
+    }
+    return { split: "upper_lower", templates: cycle(["UPPER_A", "LOWER_A", "UPPER_B", "LOWER_B"]) };
+  }
+  if (k === 4) return { split: "ppl_upper", templates: ["PUSH", "PULL", "LEGS", "UPPER_A"] };
+  if (k === 5) return { split: "ppl_upper_lower", templates: ["PUSH", "PULL", "LEGS", "UPPER_A", "LOWER_A"] };
+  return { split: "push_pull_legs", templates: cycle(["PUSH", "PULL", "LEGS"]) };
+}
+
+/** The automatic split from the number of sessions, level and muscle priorities. */
+export function autoSplit(p: TrainingProfile, n: number): { split: string; templates: string[] } {
   const legsLow = LOWER.every((m) => isLow(priorityOf(p, m)));
   const legsHigh = LOWER.some((m) => priorityOf(p, m) === "high");
   const upperHigh = UPPER.some((m) => priorityOf(p, m) === "high");

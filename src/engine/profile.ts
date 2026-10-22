@@ -41,6 +41,7 @@ export const profileSchema = z.object({
     )
     .max(10),
   supersets: z.enum(["allow", "avoid"]),
+  splitPref: z.enum(["auto", "full_body", "upper_lower", "ppl"]).optional(),
   conditioning: z.boolean().optional(),
   notes: z.string().max(500).optional(),
 });

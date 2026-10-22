@@ -309,7 +309,7 @@ export const pl = {
     week: "Treningi w tym tygodniu: {n} z {planned}.", weekNoPlan: "Treningi w tym tygodniu: {n}.", close: "Gotowe", empty: "Nie zapisano żadnej serii.",
   },
   assistant: {
-    open: "Asystent", title: "Asystent", placeholder: "Napisz, co zmienić albo o co zapytać…", placeholderFood: "Np. 2 jajka i kromka chleba na śniadanie", placeholderPhoto: "Odpowiedz albo dopisz szczegóły…", send: "Wyślij", thinking: "Myślę…", newChat: "Nowa rozmowa", photo: "Zdjęcie jedzenia", takePhoto: "Zrób zdjęcie", takePhotoShort: "Zdjęcie", describeShort: "Opisz", describe: "Opisz posiłek", photoPrompt: "Co jest na tym zdjęciu? Dodaj to do dziennika.", photoSent: "📷 Zdjęcie",
+    open: "Asystent", title: "Asystent", placeholder: "Napisz, co zmienić albo o co zapytać…", placeholderFood: "Co zjadłeś?", placeholderPhoto: "Odpowiedz albo dopisz szczegóły…", send: "Wyślij", thinking: "Myślę…", newChat: "Nowa rozmowa", photo: "Zdjęcie jedzenia", takePhoto: "Zrób zdjęcie", takePhotoShort: "Zdjęcie", describeShort: "Opisz", describe: "Opisz posiłek", photoPrompt: "Co jest na tym zdjęciu? Dodaj to do dziennika.", photoSent: "📷 Zdjęcie",
     apply: "Zastosuj", reject: "Nie, dzięki", applied: "Zastosowano", rejected: "Odrzucono",
     introTraining: "Mogę zmienić Twój plan (dni w tygodniu, ćwiczenia, serie, kg), zamienić ćwiczenie albo odpowiedzieć na pytanie o trening. Każdą zmianę najpierw pokazuję do zatwierdzenia.",
     introNutrition: "Dodam jedzenie do dziennika (wartości biorę z bazy produktów, nie zgaduję) albo odpowiem na pytanie o jedzenie. Każdy wpis najpierw pokazuję do zatwierdzenia.",

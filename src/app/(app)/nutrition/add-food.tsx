@@ -236,6 +236,21 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
 export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }: { product: Product & { lastAmount?: number }; onAdd: (amount: number) => void; onBack: () => void; pending: boolean; meal?: ReactNode; onRescan?: () => void }) {
   const { t, locale } = useI18n();
   const [amount, setAmount] = useState<number | null>(product.lastAmount ?? product.servings[0]?.amount ?? 100);
+  // Pieces: any product with a serving (egg, slice, cup…) can be entered as a count instead of grams.
+  // Starts in pieces when the last amount was whole pieces, or for basic foods used for the first time.
+  const [unit, setUnit] = useState<number | null>(() => {
+    const first = product.servings[0];
+    if (!first) return null;
+    if (product.lastAmount) {
+      const i = product.servings.findIndex((s) => Number.isInteger(product.lastAmount! / s.amount) && product.lastAmount! / s.amount <= 20);
+      return i >= 0 ? i : null;
+    }
+    return product.source === "generic" ? 0 : null;
+  });
+  const [count, setCount] = useState<number | null>(() => (unit !== null && amount ? amount / product.servings[unit]!.amount : 1));
+  const pieceLabel = (label: string) => label.replace(/^1\s+/, "");
+  const choosePieces = (i: number) => { setUnit(i); setCount(1); setAmount(product.servings[i]!.amount); };
+  const changeCount = (c: number | null) => { setCount(c); setAmount(c && c > 0 ? Math.round(c * product.servings[unit!]!.amount * 10) / 10 : null); };
   const [fav, setFav] = useState(!!product.favorite);
   const v = scale(product.nutrients, amount ?? 0);
   // Compact tiles instead of a five-row table, so the whole card fits a phone screen without scrolling.
@@ -269,11 +284,31 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
       </div>
       {energyMismatch(product.nutrients) && <Notice tone="warning">{t("nutrition.energyMismatch")}</Notice>}
       {meal}
-      <AmountWheel value={amount} onChange={setAmount} unit={product.basis} />
-      <div className="flex flex-wrap gap-2">
-        {product.servings.map((s) => <Button key={s.label} size="sm" variant="secondary" onClick={() => setAmount(s.amount)}>{s.label}</Button>)}
-        {presets.map((g) => <Button key={g} size="sm" variant="secondary" onClick={() => setAmount(g)}>{g} {product.basis}</Button>)}
-      </div>
+      {product.servings.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("nutrition.unit")}>
+          <Button size="sm" variant={unit === null ? "primary" : "secondary"} aria-pressed={unit === null} onClick={() => setUnit(null)}>{product.basis}</Button>
+          {product.servings.map((sv, i) => (
+            <Button key={sv.label} size="sm" variant={unit === i ? "primary" : "secondary"} aria-pressed={unit === i} onClick={() => choosePieces(i)}>
+              {pieceLabel(sv.label)}
+            </Button>
+          ))}
+        </div>
+      )}
+      {unit !== null ? (
+        <div className="flex items-center justify-center gap-3 py-2">
+          <Button variant="secondary" aria-label="−" disabled={!count || count <= 0.5} onClick={() => changeCount(Math.max(0.5, (count ?? 1) - (count && count <= 1 ? 0.5 : 1)))}>−</Button>
+          <div className="w-24"><DecimalInput aria-label={pieceLabel(product.servings[unit]!.label)} value={count} onChange={changeCount} className="h-12 text-center text-2xl font-semibold" /></div>
+          <Button variant="secondary" aria-label="+" onClick={() => changeCount((count ?? 0) < 1 ? 1 : (count ?? 0) + 1)}>+</Button>
+          <span className="text-sm text-muted tabular-nums">= {fmt(locale, amount ?? 0)} {product.basis}</span>
+        </div>
+      ) : (
+        <>
+          <AmountWheel value={amount} onChange={setAmount} unit={product.basis} />
+          <div className="flex flex-wrap gap-2">
+            {presets.map((g) => <Button key={g} size="sm" variant="secondary" onClick={() => setAmount(g)}>{g} {product.basis}</Button>)}
+          </div>
+        </>
+      )}
       <div className="grid grid-cols-4 gap-1.5">
         {tile("kcal", t("common.kcal"))}
         {tile("protein", `${t("nutrition.protein")} (g)`)}
@@ -402,7 +437,7 @@ function wheelValues(extra: number | null): number[] {
 }
 
 /** Scroll wheel for the amount (like a phone's time picker); a tap on "type it" switches to the keyboard. */
-function AmountWheel({ value, onChange, unit }: { value: number | null; onChange: (v: number) => void; unit: string }) {
+export function AmountWheel({ value, onChange, unit }: { value: number | null; onChange: (v: number) => void; unit: string }) {
   const { t } = useI18n();
   const [typing, setTyping] = useState(false);
   const ref = useRef<HTMLDivElement>(null);

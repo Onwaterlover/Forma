@@ -4,13 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
 import { addProductEntry, copyFromYesterday, editEntry, markDay, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
-import { DecimalInput, Sheet, useToast } from "@/components/client";
+import { Sheet, useToast } from "@/components/client";
 import { Button, Card, cx, Empty, Input, Meter, Select } from "@/components/ui";
 import { fmt, fmtDate } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { DiaryEntry, Product } from "@/lib/data";
 import type { Nutrients, NutrientKey } from "@/nutrition/calc";
-import { AddFood, mealNow, type RecipeLite } from "./add-food";
+import { AddFood, AmountWheel, mealNow, type RecipeLite } from "./add-food";
 
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
@@ -187,10 +187,8 @@ export function Diary({
         {editing && (
           <div className="space-y-4">
             {editing.basis !== "portion" && (
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">{t("nutrition.amount")} ({editing.basis})</span>
-                <DecimalInput value={amount} onChange={setAmount} autoFocus />
-              </label>
+              // Same wheel as when adding, with "type it" for an exact number.
+              <AmountWheel value={amount} onChange={setAmount} unit={editing.basis} />
             )}
             <label className="block space-y-1.5">
               <span className="text-sm font-medium">{t("nutrition.mealLabel")}</span>

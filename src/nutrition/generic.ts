@@ -29,18 +29,21 @@ const SERVING = {
   piece: { pl: "1 sztuka (średnia)", en: "1 piece (medium)", de: "1 Stück (mittel)" },
   handful: { pl: "1 garść", en: "1 handful", de: "1 Handvoll" },
   can: { pl: "1 puszka (odsączona)", en: "1 can (drained)", de: "1 Dose (abgetropft)" },
+  white: { pl: "1 białko", en: "1 egg white", de: "1 Eiweiß" },
+  cup: { pl: "1 kubeczek", en: "1 pot", de: "1 Becher" },
+  fillet: { pl: "1 filet", en: "1 fillet", de: "1 Filet" },
 } satisfies Record<string, Record<Locale, string>>;
 
 const F: Row[] = [
   // Eggs and dairy
   { key: "egg", names: { pl: "Jajko kurze, surowe", en: "Egg, whole, raw", de: "Hühnerei, roh" }, aliases: "jajko jajka jaja jajo jajek ei eier egg eggs", n: [143, 12.6, 0.7, 9.5, 0], servings: [["egg", 50]] },
   { key: "egg_boiled", names: { pl: "Jajko gotowane", en: "Egg, hard-boiled", de: "Ei, gekocht" }, aliases: "jajko jajka jaja gotowane na twardo ei eier gekocht egg boiled", state: "cooked", n: [155, 12.6, 1.1, 10.6, 0], servings: [["egg", 50]] },
-  { key: "egg_white", names: { pl: "Białko jaja", en: "Egg white", de: "Eiweiß (Eiklar)" }, aliases: "bialko jaja bialka jaj eiklar eiweiss egg white", n: [52, 10.9, 0.7, 0.2, 0] },
+  { key: "egg_white", names: { pl: "Białko jaja", en: "Egg white", de: "Eiweiß (Eiklar)" }, aliases: "bialko jaja bialka jaj eiklar eiweiss egg white", n: [52, 10.9, 0.7, 0.2, 0], servings: [["white", 33]] },
   { key: "milk_32", names: { pl: "Mleko 3,2%", en: "Milk, whole (3.2%)", de: "Vollmilch (3,5 %)" }, aliases: "mleko milch milk", basis: "ml", n: [61, 3.2, 4.8, 3.3, 0], servings: [["glass", 250]] },
   { key: "milk_2", names: { pl: "Mleko 2%", en: "Milk, 2%", de: "Milch, 2 %" }, aliases: "mleko milch milk", basis: "ml", n: [50, 3.3, 4.8, 2.0, 0], servings: [["glass", 250]] },
   { key: "milk_05", names: { pl: "Mleko 0,5%", en: "Skimmed milk", de: "Magermilch" }, aliases: "mleko chude odtluszczone milch milk skim", basis: "ml", n: [34, 3.4, 5.0, 0.1, 0], servings: [["glass", 250]] },
-  { key: "yogurt", names: { pl: "Jogurt naturalny (ok. 1,5–2%)", en: "Plain yogurt, low fat", de: "Naturjoghurt (1,5 %)" }, aliases: "jogurt joghurt yogurt yoghurt naturalny natur", n: [63, 5.3, 7.0, 1.6, 0] },
-  { key: "skyr", names: { pl: "Skyr naturalny", en: "Skyr, plain", de: "Skyr natur" }, aliases: "skyr", n: [63, 11.0, 4.0, 0.2, 0] },
+  { key: "yogurt", names: { pl: "Jogurt naturalny (ok. 1,5–2%)", en: "Plain yogurt, low fat", de: "Naturjoghurt (1,5 %)" }, aliases: "jogurt joghurt yogurt yoghurt naturalny natur", n: [63, 5.3, 7.0, 1.6, 0], servings: [["cup", 150]] },
+  { key: "skyr", names: { pl: "Skyr naturalny", en: "Skyr, plain", de: "Skyr natur" }, aliases: "skyr", n: [63, 11.0, 4.0, 0.2, 0], servings: [["cup", 150]] },
   { key: "quark_half", names: { pl: "Twaróg półtłusty", en: "Quark, half-fat", de: "Quark, Halbfett" }, aliases: "twarog twarozek ser bialy quark topfen cottage", n: [133, 18.7, 3.7, 4.7, 0] },
   { key: "quark_lean", names: { pl: "Twaróg chudy", en: "Quark, low fat", de: "Magerquark" }, aliases: "twarog chudy ser bialy quark magerquark", n: [99, 19.8, 3.5, 0.5, 0] },
   { key: "gouda", names: { pl: "Ser żółty (gouda)", en: "Gouda cheese", de: "Gouda" }, aliases: "ser zolty gouda kase cheese", n: [356, 24.9, 2.2, 27.4, 0], servings: [["slice", 15]] },
@@ -56,15 +59,15 @@ const F: Row[] = [
   { key: "pasta_cooked", names: { pl: "Makaron, ugotowany", en: "Pasta, cooked", de: "Nudeln, gekocht" }, aliases: "makaron ugotowany nudeln gekocht pasta cooked", state: "cooked", n: [158, 5.8, 29.1, 0.9, 1.8] },
   { key: "bread", names: { pl: "Chleb pszenny", en: "White bread", de: "Weißbrot" }, aliases: "chleb pieczywo bulka tost brot weissbrot toast bread", n: [265, 9.0, 46.3, 3.2, 2.7], servings: [["slice", 35]] },
   { key: "bread_rye", names: { pl: "Chleb żytni", en: "Rye bread", de: "Roggenbrot" }, aliases: "chleb zytni razowy pieczywo roggenbrot brot rye bread", n: [259, 8.5, 42.5, 3.3, 5.8], servings: [["slice", 35]] },
-  { key: "potato", names: { pl: "Ziemniaki, surowe", en: "Potatoes, raw", de: "Kartoffeln, roh" }, aliases: "ziemniak ziemniaki kartofle kartoffel kartoffeln potato potatoes", n: [77, 2.0, 15.3, 0.1, 2.2] },
-  { key: "potato_boiled", names: { pl: "Ziemniaki gotowane", en: "Potatoes, boiled", de: "Kartoffeln, gekocht" }, aliases: "ziemniak ziemniaki gotowane kartoffeln gekocht salzkartoffeln potato boiled", state: "cooked", n: [87, 1.9, 18.3, 0.1, 1.8] },
-  { key: "sweet_potato", names: { pl: "Batat, surowy", en: "Sweet potato, raw", de: "Süßkartoffel, roh" }, aliases: "batat bataty slodki ziemniak susskartoffel sweet potato", n: [86, 1.6, 17.1, 0.1, 3.0] },
+  { key: "potato", names: { pl: "Ziemniaki, surowe", en: "Potatoes, raw", de: "Kartoffeln, roh" }, aliases: "ziemniak ziemniaki kartofle kartoffel kartoffeln potato potatoes", n: [77, 2.0, 15.3, 0.1, 2.2], servings: [["piece", 150]] },
+  { key: "potato_boiled", names: { pl: "Ziemniaki gotowane", en: "Potatoes, boiled", de: "Kartoffeln, gekocht" }, aliases: "ziemniak ziemniaki gotowane kartoffeln gekocht salzkartoffeln potato boiled", state: "cooked", n: [87, 1.9, 18.3, 0.1, 1.8], servings: [["piece", 150]] },
+  { key: "sweet_potato", names: { pl: "Batat, surowy", en: "Sweet potato, raw", de: "Süßkartoffel, roh" }, aliases: "batat bataty slodki ziemniak susskartoffel sweet potato", n: [86, 1.6, 17.1, 0.1, 3.0], servings: [["piece", 200]] },
   { key: "buckwheat", names: { pl: "Kasza gryczana, sucha", en: "Buckwheat groats, dry", de: "Buchweizen, roh" }, aliases: "kasza gryczana buchweizen buckwheat", n: [346, 11.7, 64.6, 2.7, 10.3], servings: [["bag", 100]] },
   { key: "buckwheat_cooked", names: { pl: "Kasza gryczana, ugotowana", en: "Buckwheat, cooked", de: "Buchweizen, gekocht" }, aliases: "kasza gryczana ugotowana buchweizen gekocht buckwheat cooked", state: "cooked", n: [92, 3.4, 17.2, 0.6, 2.7] },
   { key: "millet", names: { pl: "Kasza jaglana, sucha", en: "Millet, dry", de: "Hirse, roh" }, aliases: "kasza jaglana proso hirse millet", n: [378, 11.0, 64.3, 4.2, 8.5], servings: [["bag", 100]] },
   { key: "couscous", names: { pl: "Kuskus, suchy", en: "Couscous, dry", de: "Couscous, roh" }, aliases: "kuskus couscous", n: [376, 12.8, 72.4, 0.6, 5.0] },
   // Meat, fish, plant protein
-  { key: "chicken_breast", names: { pl: "Pierś z kurczaka, surowa", en: "Chicken breast, raw", de: "Hähnchenbrust, roh" }, aliases: "piers z kurczaka kurczak filet drob hahnchenbrust haehnchen huhn chicken breast", n: [120, 22.5, 0, 2.6, 0] },
+  { key: "chicken_breast", names: { pl: "Pierś z kurczaka, surowa", en: "Chicken breast, raw", de: "Hähnchenbrust, roh" }, aliases: "piers z kurczaka kurczak filet drob hahnchenbrust haehnchen huhn chicken breast", n: [120, 22.5, 0, 2.6, 0], servings: [["fillet", 200]] },
   { key: "chicken_breast_cooked", names: { pl: "Pierś z kurczaka, pieczona", en: "Chicken breast, roasted", de: "Hähnchenbrust, gebraten" }, aliases: "piers z kurczaka pieczona smazona grillowana kurczak hahnchenbrust gebraten chicken breast cooked", state: "cooked", n: [165, 31.0, 0, 3.6, 0] },
   { key: "chicken_thigh", names: { pl: "Udko z kurczaka bez skóry, surowe", en: "Chicken thigh, skinless, raw", de: "Hähnchenschenkel ohne Haut, roh" }, aliases: "udko kurczak podudzie hahnchenschenkel chicken thigh", n: [119, 19.7, 0, 3.9, 0] },
   { key: "beef_10", names: { pl: "Wołowina mielona (10% tł.), surowa", en: "Ground beef 10% fat, raw", de: "Rinderhack (10 % Fett), roh" }, aliases: "wolowina mielona mieso mielone rinderhack hackfleisch ground beef mince", n: [176, 20.0, 0, 10.0, 0] },
@@ -104,7 +107,7 @@ const F: Row[] = [
 ];
 
 /** Bump when values change: rows are re-written once on the next start. */
-export const GENERIC_VERSION = "generic-1";
+export const GENERIC_VERSION = "generic-2";
 
 export function genericRows() {
   return F.flatMap((f, rank) => (["pl", "en", "de"] as const).map((locale) => {

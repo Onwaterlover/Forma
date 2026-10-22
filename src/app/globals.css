@@ -151,3 +151,13 @@ dialog::backdrop {
     display: none;
   }
 }
+
+/* A full-screen sheet on a phone: the page behind is hidden (sheets and toasts stay visible). */
+@media (max-width: 639px) {
+  html.sheet-cover body {
+    visibility: hidden;
+  }
+  html.sheet-cover :is(dialog[open], [popover]) {
+    visibility: visible;
+  }
+}

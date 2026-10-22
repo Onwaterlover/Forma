@@ -109,9 +109,16 @@ export function Sheet({ open, onClose, title, children, wide, full }: { open: bo
     // Other sheets do the same while the keyboard is up (they become full-screen until it closes), so nothing
     // from the page behind shows between the sheet and the keyboard.
     const fit = () => {
+      const phone = window.innerWidth < 640;
       const keyboard = !!vv && vv.height < window.innerHeight - 120;
-      if (!vv || window.innerWidth >= 640 || (!full && !keyboard)) { d.style.height = ""; d.style.top = ""; delete d.dataset.kb; return; }
+      // While a sheet fills the phone screen the page behind is hidden outright: the see-through iPhone keyboard
+      // has nothing to show through.
+      root.classList.toggle("sheet-cover", phone && (full || keyboard));
+      if (!vv || !phone || (!full && !keyboard)) { d.style.height = ""; d.style.top = ""; delete d.dataset.kb; return; }
       if (!full) d.dataset.kb = "";
+      // iOS pans the page to the focused field when the keyboard opens (it looks like zooming in); pin it back to
+      // the top, the sheet already fits above the keyboard.
+      if (keyboard && (window.scrollY || vv.offsetTop)) window.scrollTo(0, 0);
       d.style.height = `${vv.height}px`;
       d.style.top = `${vv.offsetTop}px`;
     };
@@ -120,6 +127,7 @@ export function Sheet({ open, onClose, title, children, wide, full }: { open: bo
     vv?.addEventListener("scroll", fit);
     return () => {
       root.style.overflow = "";
+      root.classList.remove("sheet-cover");
       vv?.removeEventListener("resize", fit);
       vv?.removeEventListener("scroll", fit);
     };

@@ -73,9 +73,16 @@ export async function searchRemote(userId: string, query: string, lang: "pl" | "
   if (hit) return { products: await productsByBarcodes(userId, hit) };
   if (!buckets.search.take()) return { error: "rate_limited" };
   try {
-    const url = `${BASE}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=${lang}&fields=${OFF_FIELDS}`;
-    const data = (await get(url)) as { products?: unknown[] } | null;
-    const drafts = (data?.products ?? []).map((p) => mapOffProduct(p, lang)).filter((d): d is ProductDraft => !!d && !d.warnings.includes("no_nutrition"));
+    // The newer search service answers fast; the classic one is only a fallback (it is often overloaded).
+    let raw: unknown[] = [];
+    try {
+      const data = (await get(`https://search.openfoodfacts.org/search?q=${encodeURIComponent(q)}&page_size=24&langs=${lang}&fields=${OFF_FIELDS}`)) as { hits?: Record<string, unknown>[] } | null;
+      raw = (data?.hits ?? []).map((h) => ({ ...h, brands: Array.isArray(h.brands) ? h.brands.join(",") : h.brands }));
+    } catch {
+      const data = (await get(`${BASE}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=${lang}&fields=${OFF_FIELDS}`)) as { products?: unknown[] } | null;
+      raw = data?.products ?? [];
+    }
+    const drafts = raw.map((p) => mapOffProduct(p, lang)).filter((d): d is ProductDraft => !!d && !d.warnings.includes("no_nutrition"));
     for (const d of drafts) await upsertOffProduct(d);
     const codes = drafts.map((d) => d.barcode);
     await storeSearch(key, codes);

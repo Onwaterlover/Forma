@@ -1,5 +1,6 @@
 import "server-only";
 import { GENERIC_VERSION, genericRows } from "@/nutrition/generic";
+import { alternatives } from "@/nutrition/synonyms";
 import type { Locale } from "@/i18n";
 import { EXERCISES } from "@/engine/exercises";
 import { parseProfile } from "@/engine/profile";
@@ -485,11 +486,13 @@ const plain = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\
  */
 export async function searchProducts(userId: string, q: string, limit = 25, locale: Locale = "pl"): Promise<Product[]> {
   await ensureGenerics();
+  // Every word must match, each through any of its forms: shortened ending, or a translation ("wędzone" → smoked).
   const terms = plain(q).replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean).slice(0, 5)
-    .map((t) => (t.length >= 5 ? t.slice(0, -1) : t));
+    .map((t) => [...new Set([t.length >= 5 ? t.slice(0, -1) : t, ...alternatives(t).slice(1)])]);
   if (!terms.length) return [];
-  const where = terms.map(() => `(${PLAIN.replace("%s", "p.name")} LIKE ? OR ${PLAIN.replace("%s", "coalesce(p.brand,'')")} LIKE ? OR coalesce(p.aliases,'') LIKE ?)`).join(" AND ");
-  const args = terms.flatMap((t) => [`%${t}%`, `%${t}%`, `% ${t}%`]);
+  const one = `(${PLAIN.replace("%s", "p.name")} LIKE ? OR ${PLAIN.replace("%s", "coalesce(p.brand,'')")} LIKE ? OR coalesce(p.aliases,'') LIKE ?)`;
+  const where = terms.map((alts) => `(${alts.map(() => one).join(" OR ")})`).join(" AND ");
+  const args = terms.flatMap((alts) => alts.flatMap((t) => [`%${t}%`, `%${t}%`, `% ${t}%`]));
   const rows = await (await db()).all<ProductRow>(
     `SELECT p.*, ${FAV}, (SELECT MAX(d.created_at) FROM diary_entries d WHERE d.user_id = ? AND d.product_id = p.id) AS last_used
      FROM food_products p WHERE ${VISIBLE} AND (p.source <> 'generic' OR p.id LIKE ?) AND ${where}

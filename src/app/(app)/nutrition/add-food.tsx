@@ -86,7 +86,7 @@ export function AddFood({
     <Sheet open={open} onClose={onClose} title={title} wide full>
       {picked ? (
         // From "Recent" on the diary page the sheet only exists for this product, so adding closes it.
-        <AmountPicker product={picked} pending={pending} onBack={() => (product ? onClose() : setPicked(null))} onAdd={(amount) => add(picked, amount, !!product)}
+        <AmountPicker product={picked} pending={pending} onBack={() => (product ? onClose() : setPicked(null))} onAdd={(amount) => add(picked, amount, !!product || scanned)}
           onRescan={scanned ? () => { setPicked(null); setScanned(false); setView("scan"); } : undefined}
           meal={<MealSelect meal={meal} onChange={setMeal} />} />
       ) : (
@@ -205,7 +205,7 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
   const seq = useRef(0);
 
   const [searched, setSearched] = useState(false);
-  // Local search as you type; when it finds little, Open Food Facts is asked too once typing pauses (cached server-side).
+  // One search: own + basic foods as you type, then Open Food Facts right after (cached server-side), merged into one list.
   useEffect(() => {
     setRemote(null);
     setError(null);
@@ -218,7 +218,7 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
       const found: Product[] = r.products ?? [];
       setLocal(found);
       setSearched(true);
-      if (found.length < 3 && q.trim().length >= 3) searchRemote(found, id);
+      if (q.trim().length >= 3) searchRemote(found, id);
     }, 450);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -236,7 +236,7 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
 
   return (
     <div className="space-y-3">
-      <form onSubmit={(e) => { e.preventDefault(); if (q.trim().length >= 2) searchRemote(); }} className="flex gap-2">
+      <form onSubmit={(e) => e.preventDefault()} className="flex gap-2">
         <Input type="search" autoFocus placeholder={t("nutrition.search")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("nutrition.search")} />
         <Button type="button" variant="secondary" onClick={onScan} aria-label={t("nutrition.scan")}><ScanBarcode size={20} aria-hidden /></Button>
       </form>
@@ -244,17 +244,18 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
       {q.trim().length >= 2 && (
         <>
           <AverageOffer query={q} items={[...local, ...(remote ?? [])]} onPick={onPick} />
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.localResults")}</p>
-          {searched ? <ProductList items={local} onPick={onPick} /> : <p className="py-3 text-center text-sm text-muted">{t("common.loading")}</p>}
-          {remote === null ? (
-            <Button variant="secondary" full disabled={loading} onClick={() => searchRemote()}>{loading ? t("nutrition.searchingRemote") : t("nutrition.searchRemote")}</Button>
-          ) : (
-            <>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.remoteResults")}</p>
-              <ProductList items={remote} onPick={onPick} />
-            </>
-          )}
-          {error && <Notice tone="warning">{error}</Notice>}
+          {(() => {
+            const all = [...local, ...(remote ?? [])];
+            if (!searched) return <p className="py-3 text-center text-sm text-muted">{t("common.loading")}</p>;
+            if (!all.length && loading) return <p className="py-3 text-center text-sm text-muted">{t("nutrition.searchingRemote")}</p>;
+            if (!all.length) return <p className="py-4 text-center text-sm text-muted">{error ?? t("nutrition.nothingFound")}</p>;
+            return (
+              <>
+                <ProductList items={all} onPick={onPick} />
+                {loading && <p className="py-2 text-center text-xs text-muted">{t("nutrition.searchingRemote")}</p>}
+              </>
+            );
+          })()}
         </>
       )}
     </div>
@@ -490,8 +491,21 @@ export function AmountWheel({ value, onChange, unit }: { value: number | null; o
     requestAnimationFrame(() => ref.current?.scrollTo({ top: list.indexOf(value) * ROW, behavior: "smooth" }));
   }, [value, values]);
 
+  // Position the wheel only once it is actually laid out (a sheet may still be opening); until then scroll
+  // events are ignored, otherwise the wheel would report its top value (5) and overwrite the saved amount.
+  const ready = useRef(false);
   useEffect(() => {
-    if (value !== null && ref.current) ref.current.scrollTop = Math.max(0, values.indexOf(value)) * ROW;
+    ready.current = false;
+    let tries = 0;
+    const place = () => {
+      const el = ref.current;
+      if (!el) return;
+      if (el.clientHeight === 0 && tries++ < 30) return void requestAnimationFrame(place);
+      if (value !== null) el.scrollTop = Math.max(0, values.indexOf(value)) * ROW;
+      requestAnimationFrame(() => { ready.current = true; });
+    };
+    place();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typing]);
 
   if (typing) {
@@ -512,6 +526,7 @@ export function AmountWheel({ value, onChange, unit }: { value: number | null; o
         <div ref={ref} role="listbox" aria-label={t("nutrition.amount")} tabIndex={0}
           className="no-scrollbar relative h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
           onScroll={(e) => {
+            if (!ready.current) return;
             const el = e.currentTarget;
             cancelAnimationFrame(frame.current);
             frame.current = requestAnimationFrame(() => {

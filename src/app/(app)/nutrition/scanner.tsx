@@ -76,6 +76,14 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
   const [state, setState] = useState<"starting" | "scanning" | "found" | "paused" | "denied" | "insecure" | "error">("starting");
   const [frozen, setFrozen] = useState<string | null>(null);
   const [run, setRun] = useState(0);
+  // After ~3 s without a code, a short tip appears (tilt, distance, light).
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    setSlow(false);
+    if (state !== "scanning") return;
+    const h = setTimeout(() => setSlow(true), 3000);
+    return () => clearTimeout(h);
+  }, [state, run]);
   const [manual, setManual] = useState("");
   const [invalid, setInvalid] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
@@ -194,7 +202,7 @@ export function Scanner({ onCode }: { onCode: (code: string, format?: string) =>
         <div className="relative overflow-hidden rounded-2xl bg-black">
           <video ref={video} className="aspect-[4/3] w-full object-cover" muted playsInline autoPlay />
           <div aria-hidden className="pointer-events-none absolute inset-x-4 top-1/2 h-28 -translate-y-1/2 rounded-xl border-2 border-white/80" />
-          <p className="absolute inset-x-0 bottom-2 text-center text-sm text-white/90">{state === "starting" ? t("common.loading") : t("nutrition.scanning")}</p>
+          <p className="absolute inset-x-0 bottom-2 px-3 text-center text-sm text-white/90">{state === "starting" ? t("common.loading") : slow ? t("nutrition.scanTip") : t("nutrition.scanning")}</p>
         </div>
       )}
       {state === "paused" && <Button full variant="secondary" onClick={() => { setState("starting"); setRun((n) => n + 1); }}>{t("nutrition.scanResume")}</Button>}

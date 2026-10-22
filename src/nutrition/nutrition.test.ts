@@ -217,3 +217,17 @@ describe("average of similar products", () => {
     expect(medianOf([p(null, 1), p(100, 2)])).toBeNull();
   });
 });
+
+describe("food words in other languages", () => {
+  it("finds translations as alternatives and builds an English query", async () => {
+    const { alternatives, englishQuery } = await import("./synonyms");
+    expect(alternatives("wędzone")).toEqual(expect.arrayContaining(["smoked", "gerauchert"]));
+    expect(alternatives("maliny")).toEqual(expect.arrayContaining(["raspberr", "himbeer"]));
+    expect(alternatives("makaron")).toContain("pasta");
+    expect(alternatives("mąka")).toContain("flour");
+    expect(alternatives("olej").every((a) => a.length >= 3)).toBe(true);
+    expect(englishQuery("tofu wędzone")).toBe("tofu smoked");
+    expect(englishQuery("maliny mrożone")).toBe("raspberr frozen");
+    expect(englishQuery("tofu")).toBeNull();
+  });
+});

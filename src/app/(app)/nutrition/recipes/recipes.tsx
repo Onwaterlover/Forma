@@ -35,7 +35,7 @@ export function Recipes({ recipes }: { recipes: Recipe[] }) {
       const r = await fetch(`/api/food/search?q=${encodeURIComponent(q)}`).then((x) => x.json()).catch(() => ({ products: [] }));
       if (!live) return;
       setFound(r.products ?? []);
-      if ((r.products ?? []).length < 3 && q.trim().length >= 3) searchOff(r.products ?? [], () => live);
+      if (q.trim().length >= 3) searchOff(r.products ?? [], () => live);
     }, 450);
     return () => { live = false; clearTimeout(h); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,19 +96,17 @@ export function Recipes({ recipes }: { recipes: Recipe[] }) {
               {q.trim().length >= 2 && (
                 // Always says what happened: searching, found (tap to add), or nothing found.
                 <div className="mt-2 max-h-72 overflow-y-auto rounded-xl border border-border px-3">
-                  {found === null ? <p className="py-3 text-sm text-muted">{t("common.loading")}</p> : <ProductList items={found} onPick={addIngredient} />}
-                  {remote && remote.length > 0 && (
-                    <>
-                      <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.remoteResults")}</p>
-                      <ProductList items={remote} onPick={addIngredient} />
-                    </>
-                  )}
-                  {found !== null && remote === null && (
-                    <Button variant="secondary" full className="my-2" disabled={remoteState === "loading"} onClick={() => searchOff(found)}>
-                      {remoteState === "loading" ? t("nutrition.searchingRemote") : t("nutrition.searchRemote")}
-                    </Button>
-                  )}
-                  {remoteState === "error" && <p className="pb-2 text-sm text-warning">{t("nutrition.unavailable")}</p>}
+                  {(() => {
+                    const all = [...(found ?? []), ...(remote ?? [])];
+                    if (found === null) return <p className="py-3 text-sm text-muted">{t("common.loading")}</p>;
+                    if (!all.length) return <p className="py-3 text-sm text-muted">{remoteState === "loading" ? t("nutrition.searchingRemote") : remoteState === "error" ? t("nutrition.unavailable") : t("nutrition.nothingFound")}</p>;
+                    return (
+                      <>
+                        <ProductList items={all} onPick={addIngredient} />
+                        {remoteState === "loading" && <p className="py-2 text-center text-xs text-muted">{t("nutrition.searchingRemote")}</p>}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>

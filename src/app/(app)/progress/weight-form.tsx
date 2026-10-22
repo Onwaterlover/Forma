@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { logWeight } from "@/app/actions/general";
+import { logWeight, removeWeight } from "@/app/actions/general";
 import { DecimalInput, useToast } from "@/components/client";
 import { Button, Input } from "@/components/ui";
 import { useI18n } from "@/i18n/client";
@@ -33,6 +33,15 @@ export function WeightForm({ today, known }: { today: string; known: Record<stri
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted">kg</span>
       </div>
       <Button type="submit" variant="secondary" disabled={pending || kg === null}>{t("common.save")}</Button>
+      {/* A wrong or too-early weigh-in can be removed for the chosen day. */}
+      {known[date] !== undefined && (
+        <Button variant="ghost" className="text-danger!" disabled={pending} onClick={() => confirm(t("progress.deleteWeightConfirm")) && start(async () => {
+          await removeWeight(date);
+          setKg(null);
+          toast({ text: t("common.deleted") });
+          router.refresh();
+        })}>{t("common.delete")}</Button>
+      )}
     </form>
   );
 }

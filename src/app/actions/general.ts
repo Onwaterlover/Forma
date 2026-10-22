@@ -60,6 +60,7 @@ export async function removeWeight(date: string) {
   const user = await requireUser();
   if (isIsoDate(date)) await deleteWeight(user.id, date);
   revalidatePath("/progress");
+  revalidatePath("/");
 }
 
 const cm = z.number().gt(MEASUREMENT_MIN_CM).lt(MEASUREMENT_MAX_CM).nullable().transform((v) => (v === null ? null : Math.round(v * 10) / 10));

@@ -246,7 +246,7 @@ export const en: Dict = {
   },
   progress: {
     title: "Progress", bodyweight: "Bodyweight", addWeight: "Add or correct a weigh-in", trend: "Trend", raw: "Weigh-ins", weeklyChange: "{kg} kg / week (trend)",
-    chartSoon: "The chart appears from the second weigh-in. Weigh yourself in the morning a few times a week – on the Today screen.", noWeight: "No weigh-ins yet. A few per week is enough — a single reading says little.", fluctuation: "Weight fluctuates 1–2 kg day to day (water, food in the gut, salt). Watch the trend, not single days.",
+    deleteWeightConfirm: "Delete the weigh-in for this day?", chartSoon: "The chart appears from the second weigh-in. Weigh yourself in the morning a few times a week – on the Today screen.", noWeight: "No weigh-ins yet. A few per week is enough — a single reading says little.", fluctuation: "Weight fluctuates 1–2 kg day to day (water, food in the gut, salt). Watch the trend, not single days.",
     training: "Training", workoutsPerWeek: "Workouts per week", records: "Records", maxLoad: "Heaviest weight", e1rm: "Estimated 1RM", e1rmNote: "An Epley-formula estimate, not a measured maximum.",
     repsAt: "{reps} reps × {weight} kg", noRecords: "Records appear once you log sets in detailed mode.", calories: "Calories (last 14 days)", avg: "average {n} kcal",
     weekly: "Weekly summary", weeklyNoChange: "Your current plan is working. No change is needed.", weeklyLowData: "Not enough data this week to draw conclusions.",

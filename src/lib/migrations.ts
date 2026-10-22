@@ -276,6 +276,16 @@ WHERE ep.pref = 'favorite' AND EXISTS (
 )
 `,
   },
+  {
+    // Basic foods without a barcode (see src/nutrition/generic.ts), searchable by aliases in every language.
+    version: 5,
+    sql: `
+ALTER TABLE food_products DROP CONSTRAINT food_products_source_check;
+ALTER TABLE food_products ADD CONSTRAINT food_products_source_check CHECK (source IN ('off','custom','generic'));
+ALTER TABLE food_products ADD COLUMN aliases text;
+ALTER TABLE food_products ADD COLUMN sort_rank integer
+`,
+  },
 ];
 // Row Level Security is enabled with no policies: Supabase's public API keys can read nothing.
 // The app connects as the database owner on the server and enforces per-user access in src/lib/data.ts.

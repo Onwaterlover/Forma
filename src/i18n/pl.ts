@@ -218,7 +218,7 @@ export const pl = {
     cookedYield: "Waga po ugotowaniu (g)", cookedYieldHint: "Opcjonalnie — wtedy wartości na 100 g dotyczą gotowej potrawy.", servings: "Liczba porcji", logServings: "Porcje", logGrams: "Gramy",
     perServing: "na porcję", total: "Razem", meal: { breakfast: "Śniadanie", lunch: "Obiad", dinner: "Kolacja", snack: "Przekąska" }, mealLabel: "Posiłek", noMeal: "Bez kategorii",
     name: "Nazwa", brand: "Marka", basis: "Jednostka", kcalOnly: "Kalorie", quickName: "Opis (np. „obiad na mieście”)", favorite: "Ulubiony", unfavorite: "Usuń z ulubionych",
-    edit: "Zmień ilość", copied: "Skopiowano {n} pozycji", noEntriesYesterday: "Wczoraj nic nie wpisano.", sourceCustom: "własny", sourceOff: "Open Food Facts", lastAmount: "ostatnio {n}",
+    edit: "Zmień ilość", copied: "Skopiowano {n} pozycji", noEntriesYesterday: "Wczoraj nic nie wpisano.", sourceCustom: "własny", sourceGeneric: "Produkt podstawowy (tabele USDA)", searchingRemote: "Szukam w Open Food Facts…", sourceOff: "Open Food Facts", lastAmount: "ostatnio {n}",
     help: "Szukaj, skanuj lub wybierz z ostatnich. Wartości historyczne nie zmienią się, gdy produkt zostanie później poprawiony.",
   },
   targets: {

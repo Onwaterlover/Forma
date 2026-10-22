@@ -14,5 +14,5 @@ export async function GET(req: Request) {
     const r = await searchRemote(user.id, q, user.locale);
     return NextResponse.json(r);
   }
-  return NextResponse.json({ products: await searchProducts(user.id, q) });
+  return NextResponse.json({ products: await searchProducts(user.id, q, 25, user.locale) });
 }

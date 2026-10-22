@@ -9,6 +9,7 @@ import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product, Recipe } from "@/lib/data";
 import { recipe as calc } from "@/nutrition/calc";
+import { ProductList } from "../add-food";
 
 type Draft = { id?: string; name: string; ingredients: { productId: string | null; name: string; grams: number | null; nutrients: Product["nutrients"] }[]; cookedYieldG: number | null; servings: number | null; isMeal: boolean };
 
@@ -18,14 +19,40 @@ export function Recipes({ recipes }: { recipes: Recipe[] }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [q, setQ] = useState("");
-  const [found, setFound] = useState<Product[]>([]);
+  const [found, setFound] = useState<Product[] | null>(null);
+  const [remote, setRemote] = useState<Product[] | null>(null);
+  const [remoteState, setRemoteState] = useState<"idle" | "loading" | "error">("idle");
   const [pending, start] = useTransition();
 
+  // Same search as adding food: own + basic foods as you type; Open Food Facts on request or when little is found.
   useEffect(() => {
-    if (q.trim().length < 2) return setFound([]);
-    const h = setTimeout(() => fetch(`/api/food/search?q=${encodeURIComponent(q)}`).then((r) => r.json()).then((r) => setFound(r.products ?? [])).catch(() => {}), 250);
-    return () => clearTimeout(h);
+    setFound(null);
+    setRemote(null);
+    setRemoteState("idle");
+    if (q.trim().length < 2) return;
+    let live = true;
+    const h = setTimeout(async () => {
+      const r = await fetch(`/api/food/search?q=${encodeURIComponent(q)}`).then((x) => x.json()).catch(() => ({ products: [] }));
+      if (!live) return;
+      setFound(r.products ?? []);
+      if ((r.products ?? []).length < 3 && q.trim().length >= 3) searchOff(r.products ?? [], () => live);
+    }, 450);
+    return () => { live = false; clearTimeout(h); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
+  const searchOff = async (have: Product[], live = () => true) => {
+    setRemoteState("loading");
+    const r = await fetch(`/api/food/search?q=${encodeURIComponent(q)}&remote=1`).then((x) => x.json()).catch(() => ({ error: "x" }));
+    if (!live()) return;
+    if (r.error) return setRemoteState("error");
+    setRemoteState("idle");
+    setRemote((r.products ?? []).filter((p: Product) => !have.some((x) => x.id === p.id)));
+  };
+  const addIngredient = (p: Product) => {
+    if (!draft) return;
+    setDraft({ ...draft, ingredients: [...draft.ingredients, { productId: p.id, name: p.name, grams: p.servings[0]?.amount ?? 100, nutrients: p.nutrients }] });
+    setQ("");
+  };
 
   const preview = draft ? calc(draft.ingredients.map((i) => ({ ...i, grams: i.grams ?? 0 })), { cookedYieldG: draft.cookedYieldG, servings: draft.servings ?? 1 }) : null;
 
@@ -66,17 +93,23 @@ export function Recipes({ recipes }: { recipes: Recipe[] }) {
                 ))}
               </ul>
               <Input className="mt-3" type="search" placeholder={t("nutrition.addIngredient")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("nutrition.addIngredient")} />
-              {found.length > 0 && (
-                <ul className="mt-2 max-h-48 divide-y divide-border overflow-y-auto rounded-xl border border-border">
-                  {found.map((p) => (
-                    <li key={p.id}>
-                      <button type="button" className="w-full px-3 py-2 text-left text-sm hover:bg-surface-2"
-                        onClick={() => { setDraft({ ...draft, ingredients: [...draft.ingredients, { productId: p.id, name: p.name, grams: 100, nutrients: p.nutrients }] }); setQ(""); }}>
-                        {p.name} {p.state && <span className="text-muted">({t(`nutrition.state.${p.state}`)})</span>} <span className="text-muted">· {fmt(locale, p.nutrients.kcal)} kcal/100</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              {q.trim().length >= 2 && (
+                // Always says what happened: searching, found (tap to add), or nothing found.
+                <div className="mt-2 max-h-72 overflow-y-auto rounded-xl border border-border px-3">
+                  {found === null ? <p className="py-3 text-sm text-muted">{t("common.loading")}</p> : <ProductList items={found} onPick={addIngredient} />}
+                  {remote && remote.length > 0 && (
+                    <>
+                      <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.remoteResults")}</p>
+                      <ProductList items={remote} onPick={addIngredient} />
+                    </>
+                  )}
+                  {found !== null && remote === null && (
+                    <Button variant="secondary" full className="my-2" disabled={remoteState === "loading"} onClick={() => searchOff(found)}>
+                      {remoteState === "loading" ? t("nutrition.searchingRemote") : t("nutrition.searchRemote")}
+                    </Button>
+                  )}
+                  {remoteState === "error" && <p className="pb-2 text-sm text-warning">{t("nutrition.unavailable")}</p>}
+                </div>
               )}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

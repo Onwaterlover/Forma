@@ -141,7 +141,7 @@ function MealSelect({ meal, onChange }: { meal: string | null; onChange: (m: str
   );
 }
 
-function ProductList({ items, onPick, onQuick, pending }: { items: (Product & { lastAmount?: number })[]; onPick: (p: Product) => void; onQuick?: (p: Product, amount: number) => void; pending?: boolean }) {
+export function ProductList({ items, onPick, onQuick, pending }: { items: (Product & { lastAmount?: number })[]; onPick: (p: Product) => void; onQuick?: (p: Product, amount: number) => void; pending?: boolean }) {
   const { t, locale } = useI18n();
   if (!items.length) return <p className="py-4 text-center text-sm text-muted">{t("nutrition.noResults")}</p>;
   return (
@@ -149,7 +149,7 @@ function ProductList({ items, onPick, onQuick, pending }: { items: (Product & { 
       {items.map((p) => (
         <li key={p.id} className="flex items-center gap-2">
           <button type="button" onClick={() => onPick(p)} className="min-w-0 flex-1 py-3 text-left">
-            <span className="block truncate font-medium">{p.name}{p.state && <span className="ml-1.5 text-xs font-normal text-muted">({t(`nutrition.state.${p.state}`)})</span>}</span>
+            <span className="block truncate font-medium">{p.name}{p.state && p.source !== "generic" && <span className="ml-1.5 text-xs font-normal text-muted">({t(`nutrition.state.${p.state}`)})</span>}</span>
             <span className="block truncate text-xs text-muted">
               {p.brand ? `${p.brand} · ` : ""}{p.nutrients.kcal === null ? t("nutrition.missing") : `${fmt(locale, p.nutrients.kcal)} kcal`} / 100 {p.basis}
               {p.lastAmount ? ` · ${t("nutrition.lastAmount", { n: `${fmt(locale, p.lastAmount)} ${p.basis}` })}` : ""}
@@ -177,26 +177,34 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
   const [loading, setLoading] = useState(false);
   const seq = useRef(0);
 
-  // Debounced local search only; the remote database is queried on explicit request.
+  const [searched, setSearched] = useState(false);
+  // Local search as you type; when it finds little, Open Food Facts is asked too once typing pauses (cached server-side).
   useEffect(() => {
     setRemote(null);
     setError(null);
+    setSearched(false);
     if (q.trim().length < 2) return setLocal([]);
     const id = ++seq.current;
     const h = setTimeout(async () => {
       const r = await fetch(`/api/food/search?q=${encodeURIComponent(q)}`).then((x) => x.json()).catch(() => ({ products: [] }));
-      if (id === seq.current) setLocal(r.products ?? []);
-    }, 250);
+      if (id !== seq.current) return;
+      const found: Product[] = r.products ?? [];
+      setLocal(found);
+      setSearched(true);
+      if (found.length < 3 && q.trim().length >= 3) searchRemote(found, id);
+    }, 450);
     return () => clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
-  const searchRemote = async () => {
+  const searchRemote = async (have: Product[] = local, id = seq.current) => {
     setLoading(true);
     setError(null);
     const r = await fetch(`/api/food/search?q=${encodeURIComponent(q)}&remote=1`).then((x) => x.json()).catch(() => ({ error: "unavailable" }));
+    if (id !== seq.current) return;
     setLoading(false);
     if (r.error) setError(r.error === "rate_limited" ? t("nutrition.rateLimited") : t("nutrition.unavailable"));
-    else setRemote((r.products ?? []).filter((p: Product) => !local.some((l) => l.id === p.id)));
+    else setRemote((r.products ?? []).filter((p: Product) => !have.some((l) => l.id === p.id)));
   };
 
   return (
@@ -209,9 +217,9 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
       {q.trim().length >= 2 && (
         <>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.localResults")}</p>
-          <ProductList items={local} onPick={onPick} />
+          {searched ? <ProductList items={local} onPick={onPick} /> : <p className="py-3 text-center text-sm text-muted">{t("common.loading")}</p>}
           {remote === null ? (
-            <Button variant="secondary" full disabled={loading} onClick={searchRemote}>{loading ? t("common.loading") : t("nutrition.searchRemote")}</Button>
+            <Button variant="secondary" full disabled={loading} onClick={() => searchRemote()}>{loading ? t("nutrition.searchingRemote") : t("nutrition.searchRemote")}</Button>
           ) : (
             <>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.remoteResults")}</p>
@@ -253,7 +261,7 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
       <div className="flex flex-wrap items-center gap-2">
         {product.brand && <Badge>{product.brand}</Badge>}
         {product.state && <Badge tone="accent">{t(`nutrition.state.${product.state}`)}</Badge>}
-        <Badge>{product.source === "off" ? t("nutrition.sourceOff") : t("nutrition.sourceCustom")}</Badge>
+        <Badge>{product.source === "off" ? t("nutrition.sourceOff") : product.source === "generic" ? t("nutrition.sourceGeneric") : t("nutrition.sourceCustom")}</Badge>
         <button type="button" aria-pressed={fav} className="ml-auto inline-flex h-9 items-center gap-1 rounded-lg px-2 text-sm text-muted hover:bg-surface-2"
           onClick={() => { setFav(!fav); toggleFavorite(product.id, !fav); }}>
           <Star size={16} className={fav ? "fill-current text-warning" : ""} aria-hidden />{fav ? t("nutrition.unfavorite") : t("nutrition.favorite")}

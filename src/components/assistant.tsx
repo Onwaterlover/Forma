@@ -157,7 +157,7 @@ export function Assistant({ scope, date, enabled, provider, review }: { scope: "
                 <div key={mi} className={cx("flex flex-col gap-2", m.role === "user" ? "items-end" : "items-start")}>
                   {m.photo && <img src={m.photo} alt="" className="max-h-48 rounded-2xl object-cover" />}
                   <p className={cx(
-                    "max-w-[90%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed",
+                    "max-w-[90%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed",
                     m.role === "user" ? "bg-accent-soft" : "bg-surface-2",
                     m.error && "text-danger",
                   )}>{m.text}</p>

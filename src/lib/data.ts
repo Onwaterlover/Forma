@@ -1,4 +1,6 @@
 import "server-only";
+import { GENERIC_VERSION, genericRows } from "@/nutrition/generic";
+import type { Locale } from "@/i18n";
 import { EXERCISES } from "@/engine/exercises";
 import { parseProfile } from "@/engine/profile";
 import type { Exercise, ExercisePref, Grip, Plan, TrainingProfile } from "@/engine/types";
@@ -351,7 +353,7 @@ export async function deleteWorkout(userId: string, id: string) {
 // ── Food products ────────────────────────────────────────────────────────
 export interface Product {
   id: string;
-  source: "off" | "custom";
+  source: "off" | "custom" | "generic";
   barcode: string | null;
   name: string;
   brand: string | null;
@@ -363,7 +365,7 @@ export interface Product {
   favorite?: boolean;
 }
 
-type ProductRow = { id: string; owner_user_id: string | null; source: "off" | "custom"; barcode: string | null; name: string; brand: string | null; basis: "g" | "ml"; state: "raw" | "cooked" | null; nutrients: string; servings: string; fav?: number | null };
+type ProductRow = { id: string; owner_user_id: string | null; source: "off" | "custom" | "generic"; barcode: string | null; name: string; brand: string | null; basis: "g" | "ml"; state: "raw" | "cooked" | null; nutrients: string; servings: string; fav?: number | null };
 
 const toProduct = (r: ProductRow, userId: string): Product => ({
   id: r.id, source: r.source, barcode: r.barcode, name: r.name, brand: r.brand, basis: r.basis, state: r.state,
@@ -437,16 +439,49 @@ export async function copyFamilyProduct(userId: string, barcode: string): Promis
   return getProduct(userId, id);
 }
 
-export async function searchProducts(userId: string, q: string, limit = 25): Promise<Product[]> {
-  const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 5);
+// Basic foods are written once per version (one cheap check per server start).
+let genericsReady: Promise<void> | null = null;
+function ensureGenerics() {
+  return (genericsReady ??= (async () => {
+    const d = await db();
+    const rows = genericRows();
+    const have = await d.get<{ n: number }>("SELECT COUNT(*) AS n FROM food_products WHERE source = 'generic' AND fetched_at = ?", [GENERIC_VERSION]);
+    if (Number(have?.n) === rows.length) return;
+    const now = nowIso();
+    await d.tx(async (q) => {
+      for (const r of rows) {
+        await q.run(
+          `INSERT INTO food_products (id, owner_user_id, source, barcode, name, brand, basis, state, nutrients, servings, fetched_at, updated_at, aliases, sort_rank)
+           VALUES (?, NULL, 'generic', NULL, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (id) DO UPDATE SET name = excluded.name, basis = excluded.basis, state = excluded.state, nutrients = excluded.nutrients,
+             servings = excluded.servings, fetched_at = excluded.fetched_at, updated_at = excluded.updated_at, aliases = excluded.aliases, sort_rank = excluded.sort_rank`,
+          [r.id, r.name, r.basis, r.state, JSON.stringify(r.nutrients), JSON.stringify(r.servings), GENERIC_VERSION, now, r.aliases, r.rank],
+        );
+      }
+    });
+  })().catch((e) => { genericsReady = null; throw e; }));
+}
+
+// Lower-case without Polish/German letters, the same way on both sides of the comparison.
+const PLAIN = "translate(lower(%s), 'ąćęłńóśźżäöüé', 'acelnoszzaoue')";
+const plain = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").replace(/ß/g, "ss");
+
+/**
+ * Search own, scanned and basic foods. Ignores Polish/German letters and simple word endings
+ * ("jajka" finds "jajko", "maka" finds "Mąka"); basic foods show in the user's language.
+ */
+export async function searchProducts(userId: string, q: string, limit = 25, locale: Locale = "pl"): Promise<Product[]> {
+  await ensureGenerics();
+  const terms = plain(q).replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean).slice(0, 5)
+    .map((t) => (t.length >= 5 ? t.slice(0, -1) : t));
   if (!terms.length) return [];
-  const where = terms.map(() => "(lower(p.name) LIKE ? OR lower(coalesce(p.brand,'')) LIKE ?)").join(" AND ");
-  const args = terms.flatMap((t) => [`%${t}%`, `%${t}%`]);
+  const where = terms.map(() => `(${PLAIN.replace("%s", "p.name")} LIKE ? OR ${PLAIN.replace("%s", "coalesce(p.brand,'')")} LIKE ? OR coalesce(p.aliases,'') LIKE ?)`).join(" AND ");
+  const args = terms.flatMap((t) => [`%${t}%`, `%${t}%`, `% ${t}%`]);
   const rows = await (await db()).all<ProductRow>(
     `SELECT p.*, ${FAV}, (SELECT MAX(d.created_at) FROM diary_entries d WHERE d.user_id = ? AND d.product_id = p.id) AS last_used
-     FROM food_products p WHERE ${VISIBLE} AND ${where}
-     ORDER BY fav DESC NULLS LAST, last_used DESC NULLS LAST, (p.owner_user_id IS NULL), length(p.name) LIMIT ?`,
-    [userId, userId, userId, ...args, limit],
+     FROM food_products p WHERE ${VISIBLE} AND (p.source <> 'generic' OR p.id LIKE ?) AND ${where}
+     ORDER BY fav DESC NULLS LAST, last_used DESC NULLS LAST, (p.source = 'generic') DESC, (coalesce(p.state, '') = 'cooked'), p.sort_rank NULLS LAST, (p.owner_user_id IS NULL), length(p.name) LIMIT ?`,
+    [userId, userId, userId, `gen\\_${locale}\\_%`, ...args, limit],
   );
   return rows.map((r) => toProduct(r, userId));
 }

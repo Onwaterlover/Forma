@@ -269,4 +269,16 @@ describe("progress photos", () => {
     await data.deletePlan(B, other);
     expect(await data.getPlan(A, other)).toBeTruthy();
   });
+
+  it("finds basic foods by everyday words, without Polish letters, in the user's language", async () => {
+    const first = async (q: string, locale: "pl" | "de" = "pl") => (await data.searchProducts(A, q, 5, locale))[0]?.name;
+    expect(await first("jajka")).toBe("Jajko kurze, surowe");
+    expect(await first("maka")).toBe("Mąka pszenna (typ 450–650)");
+    expect(await first("mąki")).toBe("Mąka pszenna (typ 450–650)");
+    expect(await first("oliwa")).toBe("Oliwa z oliwek");
+    expect(await first("ryz ugotowany")).toBe("Ryż biały, ugotowany");
+    expect(await first("Eier", "de")).toBe("Hühnerei, roh");
+    // Basic foods of other languages don't show up twice.
+    expect((await data.searchProducts(A, "jajko", 25, "pl")).filter((p) => p.id.startsWith("gen_de_"))).toEqual([]);
+  });
 });

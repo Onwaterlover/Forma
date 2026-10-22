@@ -5,7 +5,7 @@ import type { Effort, Exercise, PlannedExercise, Progression, TrainingProfile } 
 export const REST = {
   heavyCompound: 150,
   compound: 120,
-  isolation: 75,
+  isolation: 90,
   minCompound: 90,
   minIsolation: 60,
 };

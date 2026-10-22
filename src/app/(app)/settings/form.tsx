@@ -66,7 +66,6 @@ export function SettingsForm({
         </div>
         <div className="divide-y divide-border">
           <Switch checked={settings.restTimer} label={t("settings.restTimer")} onChange={(restTimer) => set({ restTimer })} />
-          {settings.restTimer && <Switch checked={settings.autoTimer} label={t("settings.autoTimer")} onChange={(autoTimer) => set({ autoTimer })} />}
           <Switch checked={settings.showEffort} label={t("settings.effort")} onChange={(showEffort) => set({ showEffort })} />
           <Switch checked={settings.showFiber} label={t("settings.fiber")} onChange={(showFiber) => set({ showFiber })} />
           <Switch checked={settings.showMacroTargets} label={t("settings.macroTargets")} hint={t("settings.macroTargetsHint")} onChange={(showMacroTargets) => set({ showMacroTargets })} />

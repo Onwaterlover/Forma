@@ -127,7 +127,7 @@ export function WorkoutLogger({
     if (rest && restLeft <= 0 && !buzzed.current) {
       buzzed.current = true;
       try { navigator.vibrate?.([200, 100, 200]); } catch {}
-      setTimeout(() => setRest(null), 4000);
+      setRest(null);
     }
   }, [rest, restLeft]);
   const startRest = (sec: number) => {
@@ -339,7 +339,7 @@ export function WorkoutLogger({
                 {e.sets.length > 0 && (
                   <div className={cx("grid items-center gap-2 text-xs text-muted", settings.showEffort ? "grid-cols-[2rem_1fr_1fr_3.5rem_3rem]" : "grid-cols-[2rem_1fr_1fr_3rem]")}>
                     <span>#</span>
-                    <span>{noWeight ? "" : `${t("workout.weight")} ${unit(e.loading)}`}</span>
+                    <span>{noWeight ? "" : e.loading === "bodyweight_plus" ? t("workout.extraLoad") : `${t("workout.weight")} ${unit(e.loading)}`}</span>
                     <span>{timeBased ? t("workout.sec") : t("workout.reps")}</span>
                     {settings.showEffort && <span>{t("workout.rir")}</span>}
                     <span />
@@ -353,7 +353,9 @@ export function WorkoutLogger({
                     </button>
                     {noWeight ? <span /> : (
                       <DecimalInput aria-label={`${t("workout.weight")} ${j + 1}`} value={s.weightKg} disabled={readOnly} placeholder="—"
-                        onChange={(v) => editSet(i, j, { weightKg: v })} className={cx("h-12 text-lg", s.completed && "border-accent/40 bg-accent-soft")} />
+                        // The same weight goes straight into the following sets of this kind that are still open
+                        // (empty, or holding what this set held a moment ago), so it is typed once per exercise.
+                        onChange={(v) => editEx(i, (x) => ({ ...x, sets: x.sets.map((y, k) => (k === j || (k > j && !y.completed && y.type === s.type && (y.weightKg === null || y.weightKg === s.weightKg)) ? { ...y, weightKg: v } : y)) }))} className={cx("h-12 text-lg", s.completed && "border-accent/40 bg-accent-soft")} />
                     )}
                     <input
                       aria-label={`${timeBased ? t("workout.sec") : t("workout.reps")} ${j + 1}`}
@@ -384,7 +386,7 @@ export function WorkoutLogger({
                           sets: x.sets.map((y, k) => (k === j ? { ...y, ...patch } : k > j && !y.completed && y.weightKg === null && s.weightKg !== null ? { ...y, weightKg: s.weightKg } : y)),
                         }));
                         if (completing && tg?.restSec) setLastRest(tg.restSec);
-                        if (completing && settings.restTimer && settings.autoTimer && tg?.restSec) startRest(tg.restSec);
+                        if (completing && settings.restTimer && tg?.restSec) startRest(tg.restSec);
                       }}
                       className={cx("grid h-12 w-full place-items-center rounded-xl border", s.completed ? "border-accent bg-accent text-accent-contrast" : "border-border text-muted hover:bg-surface-2")}>
                       <Check size={18} aria-hidden />
@@ -407,9 +409,11 @@ export function WorkoutLogger({
             {!readOnly && (
               <div className="flex items-center gap-1 border-t border-border pt-2">
                 {w.mode === "detailed" && (
-                  <Button variant="ghost" size="sm" onClick={() => editEx(i, (x) => ({ ...x, sets: [...x.sets, newSet(w, i, x.sets.length, x.sets.at(-1)?.weightKg ?? null)] }))}><Plus size={15} aria-hidden />{t("workout.addSet").replace("+ ", "")}</Button>
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => editEx(i, (x) => ({ ...x, sets: [...x.sets, newSet(w, i, x.sets.length, x.sets.at(-1)?.weightKg ?? null)] }))}><Plus size={15} aria-hidden />{t("workout.addSet").replace("+ ", "")}</Button>
+                    <Button variant="ghost" size="sm" disabled={e.sets.length === 0} onClick={() => editEx(i, (x) => ({ ...x, sets: x.sets.slice(0, -1) }))}><Minus size={15} aria-hidden />{t("workout.removeSet").replace("− ", "")}</Button>
+                  </>
                 )}
-                <Button variant="ghost" size="sm" onClick={() => setSheet({ kind: "swap", index: i })}><Repeat size={15} aria-hidden />{t("workout.swap")}</Button>
                 <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSheet({ kind: "exercise", index: i })} aria-label={t("common.more")}><MoreHorizontal size={18} aria-hidden /></Button>
               </div>
             )}
@@ -495,7 +499,7 @@ export function WorkoutLogger({
           const act = (fn: () => void) => () => { fn(); setSheet(null); };
           return (
             <div className="grid grid-cols-2 gap-2">
-              {w.mode === "detailed" && <Button variant="secondary" disabled={e.sets.length === 0} onClick={act(() => editEx(i, (x) => ({ ...x, sets: x.sets.slice(0, -1) })))}><Minus size={16} aria-hidden />{t("workout.removeSet").replace("− ", "")}</Button>}
+              <Button variant="secondary" onClick={() => setSheet({ kind: "swap", index: i })}><Repeat size={16} aria-hidden />{t("workout.swap")}</Button>
               <Button variant="secondary" onClick={act(() => editEx(i, (x) => ({ ...x, skipped: !x.skipped, completed: false })))}><SkipForward size={16} aria-hidden />{e.skipped ? t("common.undo") : t("workout.skip")}</Button>
               <Button variant="secondary" onClick={act(() => setNotesOpen(i))}><NotebookPen size={16} aria-hidden />{t("workout.notes")}</Button>
               <Button variant="secondary" disabled={i === 0} onClick={act(() => mutate((x) => { const xs = [...x.exercises]; [xs[i - 1], xs[i]] = [xs[i]!, xs[i - 1]!]; return { ...x, exercises: xs }; }))}><ArrowUp size={16} aria-hidden />↑</Button>

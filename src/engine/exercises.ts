@@ -316,6 +316,12 @@ export const EXERCISES: Exercise[] = [
     machineType: "selectorized", mechanics: "compound", skill: 1, fatigue: "moderate", stable: true, loading: "total",
     cuePl: "Uchwyty na wysokości barków, plecy przy oparciu.", cueEn: "Handles at shoulder height, back on the pad.",
   }),
+  ex("handstand_push_up", {
+    pl: "Pompki w staniu na rękach (HSPU)", en: "Handstand push-up", de: "Handstand-Liegestütz", aliases: ["hspu", "handstand"],
+    primary: ["front_delts"], secondary: ["triceps", "side_delts"], pattern: "v_push", equipment: [], kind: "bodyweight", mechanics: "compound",
+    skill: 3, fatigue: "moderate", stable: false, loading: "bodyweight",
+    cuePl: "Przy ścianie, ciało napięte; opuść głowę kontrolowanie przed dłonie i wypchnij się w górę.", cueEn: "Against a wall, body tight; lower the head under control in front of the hands and press back up.",
+  }),
   ex("pike_push_up", {
     pl: "Pompki w pozycji pike", en: "Pike push-up", de: "Pike Push-up",
     primary: ["front_delts"], secondary: ["triceps", "side_delts"], pattern: "v_push", equipment: [], kind: "bodyweight", mechanics: "compound",
@@ -529,6 +535,12 @@ export const EXERCISES: Exercise[] = [
     primary: ["triceps"], secondary: [], pattern: "elbow_ext", equipment: ["cable"], kind: "cable", mechanics: "isolation", skill: 1,
     fatigue: "low", stable: true, loading: "total", smallMuscle: true,
     cuePl: "Tyłem do wyciągu, łokcie przy głowie, prostuj w przód.", cueEn: "Back to the cable, elbows by the head, extend forward.",
+  }),
+  ex("db_triceps_kickback", {
+    pl: "Wyprosty ramion z hantlą w opadzie (kickback)", en: "Dumbbell triceps kickback", de: "Kurzhantel-Kickback (Trizeps)", aliases: ["kickback", "kickbacki"],
+    primary: ["triceps"], secondary: [], pattern: "elbow_ext", equipment: [...DB], kind: "dumbbell", mechanics: "isolation", skill: 1,
+    fatigue: "low", stable: false, loading: "per_dumbbell", smallMuscle: true,
+    cuePl: "Tułów pochylony, biodra w tył, łokieć przy ciele; prostuj rękę do tyłu, ramię nieruchomo.", cueEn: "Torso bent, hips back, elbow tucked; straighten the arm backwards, upper arm still.",
   }),
   ex("db_overhead_extension", {
     pl: "Prostowanie ramion z hantlą nad głową", en: "Dumbbell overhead triceps extension", de: "Kurzhantel-Trizepsstrecken über Kopf",

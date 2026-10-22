@@ -56,7 +56,8 @@ export function score(ex: Exercise, priority: 1 | 2 | 3, ctx: SelectContext): nu
     const matches = styles.some((st) =>
       st === "machines" ? MACHINE_KINDS.includes(ex.kind) : st === "free" ? FREE_KINDS.includes(ex.kind) : ex.kind === "bodyweight" || ex.kind === "band",
     );
-    s += matches ? 2 : -0.75;
+    // A light tilt only: the most effective option for the goal still wins; the others stay as alternatives.
+    s += matches ? 1 : -0.25;
   }
   // One side at a time doubles the time per set; prefer a two-sided equivalent when one exists.
   if (ex.unilateral) s -= 0.75;
@@ -72,13 +73,17 @@ export function score(ex: Exercise, priority: 1 | 2 | 3, ctx: SelectContext): nu
     if (ex.kind === "bodyweight" && LOWER_BODY.has(ex.pattern)) s -= 0.75;
     // Main slots should hold a substantial lift, not a low-demand accessory.
     if (p.experience !== "beginner" && priority === 1 && ex.mechanics === "compound" && ex.fatigue !== "low") s += 0.75;
+    // Easy bodyweight moves (table row, push-up) are too light as main upper-body work past the beginner stage.
+    if (p.experience !== "beginner" && priority <= 2 && ex.kind === "bodyweight" && ex.fatigue === "low" && !LOWER_BODY.has(ex.pattern) && ex.pattern !== "core" && ex.pattern !== "conditioning") s -= 1.5;
     // Held weights cap leg loading quickly once someone is past the beginner stage.
     if (p.experience !== "beginner" && priority === 1 && LOWER_BODY.has(ex.pattern) && (ex.kind === "dumbbell" || ex.kind === "kettlebell")) s -= 0.5;
   }
 
-  // Beginners benefit from repeating the same lifts; others get a little variety across the week.
+  // Beginners benefit from repeating the same lifts; others get variety across the week (e.g. dips one day,
+  // a dumbbell press the next), strong enough to outweigh a style preference. Liked lifts may still repeat.
   const uses = ctx.usedInWeek.get(ex.id) ?? 0;
-  s += p.experience === "beginner" ? uses * 0.5 : -0.6 * uses;
+  const liked = ctx.prefs[ex.id] === "favorite" || ctx.prefs[ex.id] === "like";
+  s += p.experience === "beginner" ? uses * 0.5 : (liked ? -0.6 : -3) * uses;
   return s;
 }
 

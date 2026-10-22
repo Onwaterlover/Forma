@@ -288,6 +288,16 @@ describe("workout generator", () => {
     expect(plan.tradeoffs[0]).toEqual({ code: "fewer_days_than_requested", params: { requested: 5, available: 3 } });
   });
 
+  it("a bodyweight style doesn't repeat dips or pick table rows when dumbbells and a bench are there", () => {
+    const eq = [...LOCATION_PRESETS.home_dumbbells!.equipment, "pullup_bar", "dip_bars"] as Equipment[];
+    const p = profile({ goal: "muscle", experience: "intermediate", styles: ["bodyweight"], sessionsPerWeek: 4,
+      locations: [{ id: "h", name: "Home", kind: "home", equipment: eq }], week: week({ 0: ["h"], 1: ["h"], 3: ["h"], 4: ["h"] }) });
+    const ids = generatePlan({ profile: p }).sessions.flatMap((s) => s.exercises.map((e) => e.exerciseId));
+    expect(ids.filter((id) => id === "dip").length).toBeLessThanOrEqual(1);
+    expect(ids).not.toContain("table_row");
+    expect(ids.some((id) => id === "db_bench_press" || id === "incline_db_press")).toBe(true);
+  });
+
   it("with every day free, the chosen days include today (start right away)", () => {
     const all = week({ 0: ["gym"], 1: ["gym"], 2: ["gym"], 3: ["gym"], 4: ["gym"], 5: ["gym"], 6: ["gym"] });
     for (const startDay of [0, 1, 2, 3, 4, 5, 6] as Weekday[]) {

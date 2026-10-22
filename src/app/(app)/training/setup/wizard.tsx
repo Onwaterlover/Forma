@@ -43,7 +43,9 @@ export function SetupWizard({ initial, initialExclude = [] }: { initial: Trainin
   const toast = useToast();
   const days = DICTS[locale].days;
   const [p, setP] = useState<TrainingProfile>(() => {
-    if (initial) return initial;
+    // A new plan starts from your facts (places, days, time, level, sports) but not from earlier preferences:
+    // goal, styles and priorities are asked fresh, so an old answer doesn't quietly shape every new plan.
+    if (initial) return { ...initial, goal: "unsure", styles: [], priorities: {}, excludedKinds: [] };
     const b = blank(t("onb.preset.commercial_gym"));
     [0, 2, 4].forEach((d) => (b.week[d] = { locations: ["gym"] }));
     return b;

@@ -138,8 +138,11 @@ export function Sheet({ open, onClose, title, children, wide, full }: { open: bo
       className={cx(
         "group m-0 mt-auto w-full max-w-none rounded-t-3xl border border-border bg-surface p-0 text-text sm:m-auto sm:rounded-3xl",
         "data-[kb]:mt-0 data-[kb]:max-h-none data-[kb]:rounded-none data-[kb]:border-0",
+        // The iPhone keyboard is see-through: paint the sheet's colour around it (also under the keyboard),
+        // so the page behind doesn't show through.
+        "data-[kb]:shadow-[0_0_0_100vh_var(--surface)]",
         wide ? "sm:max-w-2xl" : "sm:max-w-lg",
-        full && "max-sm:mt-0 max-sm:h-dvh max-sm:max-h-none max-sm:rounded-none max-sm:border-0",
+        full && "max-sm:mt-0 max-sm:h-dvh max-sm:max-h-none max-sm:rounded-none max-sm:border-0 max-sm:shadow-[0_0_0_100vh_var(--surface)]",
       )}
     >
       <div className={cx("flex flex-col", full ? "h-full sm:max-h-[88dvh]" : "max-h-[88dvh] group-data-[kb]:h-full group-data-[kb]:max-h-none")}>

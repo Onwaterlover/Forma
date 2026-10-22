@@ -100,7 +100,7 @@ export const pl = {
     start: "Zacznij", edit: "Edytuj plan", regenerate: "Wygeneruj ponownie", profile: "Zmień odpowiedzi", versions: "Historia wersji", restore: "Przywróć",
     archive: "Archiwizuj", activate: "Ustaw jako aktywny", duplicate: "Duplikuj", rename: "Zmień nazwę", saveVersion: "Zapisz zmiany", plans: "Twoje plany",
     weekly: "Tygodniowa liczba serii (przybliżenie)", weeklyHint: "Seria liczy się jako 1 dla mięśnia głównego i 0,5 dla pomocniczego. To heurystyka planistyczna, nie pomiar.",
-    weight: "Ciężar (kg)", supersetWithNext: "Superseria z następnym ćwiczeniem", hideIssues: "Ukryj", newPlan: "Nowy plan…", tradeoffs: "Kompromisy", notes: "Uwagi", issues: "Wskazówki do planu", issuesHint: "Plan działa – to tylko podpowiedzi. Możesz je zostawić albo ukryć.", swap: "Zamień", remove: "Usuń", addExercise: "Dodaj ćwiczenie",
+    weight: "Ciężar (kg)", supersetWithNext: "Superseria: ćwiczenia {n}a i {n}b na zmianę", hideIssues: "Ukryj", newPlan: "Nowy plan…", tradeoffs: "Kompromisy", notes: "Uwagi", issues: "Wskazówki do planu", issuesHint: "Plan działa – to tylko podpowiedzi. Możesz je zostawić albo ukryć.", swap: "Zamień", remove: "Usuń", addExercise: "Dodaj ćwiczenie",
     moveDay: "Dzień", location: "Miejsce", noDay: "Elastycznie", superset: "Superseria", why: "Dlaczego taki plan?", flexibleDay: "dowolny dzień",
     version: "Wersja {n}", current: "aktualna", status: { active: "Aktywny", inactive: "Nieaktywny", archived: "Archiwum" },
     source: { generated: "Wygenerowany", manual: "Ręczny", imported: "Zaimportowany" }, newName: "Mój plan", generatedName: "Plan treningowy",

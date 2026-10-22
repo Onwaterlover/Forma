@@ -101,7 +101,7 @@ export const de: Dict = {
     start: "Starten", edit: "Plan bearbeiten", regenerate: "Neu generieren", profile: "Antworten ändern", versions: "Versionsverlauf", restore: "Wiederherstellen",
     archive: "Archivieren", activate: "Aktivieren", duplicate: "Duplizieren", rename: "Umbenennen", saveVersion: "Änderungen speichern", plans: "Deine Pläne",
     weekly: "Wöchentliche Sätze (Näherung)", weeklyHint: "Ein Satz zählt 1 für den Hauptmuskel und 0,5 für Hilfsmuskeln. Eine Planungsheuristik, keine Messung.",
-    weight: "Gewicht (kg)", supersetWithNext: "Supersatz mit der nächsten Übung", hideIssues: "Ausblenden", newPlan: "Neuer Plan …", tradeoffs: "Kompromisse", notes: "Hinweise", issues: "Tipps zum Plan", issuesHint: "Der Plan funktioniert – das sind nur Hinweise. Behalten oder ausblenden.", swap: "Tauschen", remove: "Entfernen", addExercise: "Übung hinzufügen",
+    weight: "Gewicht (kg)", supersetWithNext: "Supersatz: {n}a und {n}b im Wechsel", hideIssues: "Ausblenden", newPlan: "Neuer Plan …", tradeoffs: "Kompromisse", notes: "Hinweise", issues: "Tipps zum Plan", issuesHint: "Der Plan funktioniert – das sind nur Hinweise. Behalten oder ausblenden.", swap: "Tauschen", remove: "Entfernen", addExercise: "Übung hinzufügen",
     moveDay: "Tag", location: "Ort", noDay: "Flexibel", superset: "Supersatz", why: "Warum dieser Plan?", flexibleDay: "beliebiger Tag",
     version: "Version {n}", current: "aktuell", status: { active: "Aktiv", inactive: "Inaktiv", archived: "Archiv" },
     source: { generated: "Generiert", manual: "Manuell", imported: "Importiert" }, newName: "Mein Plan", generatedName: "Trainingsplan",

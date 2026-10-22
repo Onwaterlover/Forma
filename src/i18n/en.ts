@@ -101,7 +101,7 @@ export const en: Dict = {
     start: "Start", edit: "Edit plan", regenerate: "Regenerate", profile: "Change answers", versions: "Version history", restore: "Restore",
     archive: "Archive", activate: "Make active", duplicate: "Duplicate", rename: "Rename", saveVersion: "Save changes", plans: "Your plans",
     weekly: "Weekly sets (approximate)", weeklyHint: "A set counts 1 for the main muscle and 0.5 for helpers. A planning heuristic, not a measurement.",
-    weight: "Weight (kg)", supersetWithNext: "Superset with the next exercise", hideIssues: "Hide", newPlan: "New plan…", tradeoffs: "Trade-offs", notes: "Notes", issues: "Plan tips", issuesHint: "The plan works – these are only suggestions. Keep or hide them.", swap: "Swap", remove: "Remove", addExercise: "Add exercise",
+    weight: "Weight (kg)", supersetWithNext: "Superset: do {n}a and {n}b in turn", hideIssues: "Hide", newPlan: "New plan…", tradeoffs: "Trade-offs", notes: "Notes", issues: "Plan tips", issuesHint: "The plan works – these are only suggestions. Keep or hide them.", swap: "Swap", remove: "Remove", addExercise: "Add exercise",
     moveDay: "Day", location: "Place", noDay: "Flexible", superset: "Superset", why: "Why this plan?", flexibleDay: "any day",
     version: "Version {n}", current: "current", status: { active: "Active", inactive: "Inactive", archived: "Archived" },
     source: { generated: "Generated", manual: "Manual", imported: "Imported" }, newName: "My plan", generatedName: "Training plan",

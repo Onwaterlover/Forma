@@ -1,4 +1,4 @@
-import { Clock, Link2, MapPin } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import { startWorkout } from "@/app/actions/training";
 import { DismissibleNotice } from "@/components/dismissible";
 import { cx } from "@/components/ui";
@@ -70,16 +70,18 @@ export function PlanView({
                 {s.exercises.map((e, i) => {
                   const inSuperset = e.superset !== undefined && s.exercises.some((x, j) => j !== i && x.superset === e.superset);
                   const prevSame = inSuperset && i > 0 && s.exercises[i - 1]!.superset === e.superset;
+                  // Gym-style numbering: a superset shares one number with letters (2a, 2b), the rest count on.
+                  const label = numbering(s.exercises)[i]!;
                   return (
                     <li key={e.exerciseId} className={cx(
                       "grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 py-2.5 print:grid-cols-[0.9rem_1fr_auto] print:gap-x-1.5 print:py-[3px] print:text-[10.5px]",
                       // Superset members share an accent bar on the left, so the pair is visible at a glance.
                       inSuperset && "-ml-2 border-l-2 border-l-accent pl-2",
                     )}>
-                      <span className="text-sm tabular-nums text-muted">{prevSame ? <Link2 size={14} aria-label={t("plan.superset")} /> : i + 1}</span>
+                      <span className="text-sm tabular-nums text-muted">{label}</span>
                       <span className="min-w-0">
                         <span className="block text-[15px] font-medium leading-snug print:text-[10.5px] print:leading-tight">{exName(lookup(e.exerciseId), locale, e.exerciseId)}</span>
-                        {inSuperset && !prevSame && <span className="block text-xs font-medium text-accent print:text-[8.5px]">{t("plan.supersetWithNext")}</span>}
+                        {inSuperset && !prevSame && <span className="block text-xs font-medium text-accent print:text-[8.5px]">{t("plan.supersetWithNext", { n: label.replace(/[a-z]$/, "") })}</span>}
                         {e.grip && <span className="block text-xs text-muted print:text-[8.5px]">{t("plan.grip")} {t(`plan.grips.${e.grip}`)}</span>}
                       </span>
                       <span className="text-right text-[15px] font-semibold tabular-nums print:text-[10.5px]">{e.sets} × {e.seconds ? `${e.seconds} s` : `${e.repMin}–${e.repMax}`}</span>
@@ -128,4 +130,16 @@ export function PlanView({
       </details>
     </div>
   );
+}
+
+/** "1", "2a", "2b", "3": exercises of one superset share a number and get letters. */
+function numbering(exercises: { superset?: number }[]): string[] {
+  let n = 0;
+  let letter = 0;
+  return exercises.map((e, i) => {
+    const group = e.superset !== undefined && exercises.some((x, j) => j !== i && x.superset === e.superset);
+    const cont = group && i > 0 && exercises[i - 1]!.superset === e.superset;
+    if (!cont) { n++; letter = 0; }
+    return group ? `${n}${String.fromCharCode(97 + letter++)}` : String(n);
+  });
 }

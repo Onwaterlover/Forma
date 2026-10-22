@@ -966,3 +966,26 @@ export async function pendingSuggestion(userId: string, id: string): Promise<{ k
 export async function resolveSuggestion(userId: string, id: string, state: "accepted" | "rejected"): Promise<boolean> {
   return (await (await db()).run("UPDATE ai_suggestions SET state = ? WHERE id = ? AND user_id = ? AND state = 'pending'", [state, id, userId])) > 0;
 }
+
+/** Normalized form of a food search, the key an AI estimate is stored under. */
+export const estimateKey = (q: string) => plain(q).replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+
+/** An AI estimate made earlier for this search (shared by everyone: no owner). */
+export async function findAiEstimate(userId: string, q: string): Promise<Product | null> {
+  const r = await (await db()).get<ProductRow>(
+    `SELECT p.*, ${FAV} FROM food_products p WHERE p.source = 'custom' AND p.owner_user_id IS NULL AND p.aliases = ? LIMIT 1`,
+    [userId, `ai:${estimateKey(q)}`],
+  );
+  return r ? toProduct(r, userId) : null;
+}
+
+/** Stores an AI estimate for everyone; the name carries "≈" so it always reads as an estimate. */
+export async function saveAiEstimate(userId: string, q: string, e: { name: string; basis: "g" | "ml"; state: "raw" | "cooked" | null; nutrients: Nutrients }): Promise<Product> {
+  const id = newId();
+  const now = nowIso();
+  await (await db()).run(
+    "INSERT INTO food_products (id, owner_user_id, source, barcode, name, brand, basis, state, nutrients, servings, fetched_at, updated_at, aliases) VALUES (?, NULL, 'custom', NULL, ?, NULL, ?, ?, ?, '[]', NULL, ?, ?)",
+    [id, e.name.slice(0, 100), e.basis, e.state, JSON.stringify(e.nutrients), now, `ai:${estimateKey(q)}`],
+  );
+  return (await getProduct(userId, id))!;
+}

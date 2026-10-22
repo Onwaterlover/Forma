@@ -226,6 +226,7 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
+  const [estimating, setEstimating] = useState(false);
   const searchRemote = async (have: Product[] = local, id = seq.current) => {
     setLoading(true);
     setError(null);
@@ -234,6 +235,16 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
     setLoading(false);
     if (r.error) setError(r.error === "rate_limited" ? t("nutrition.rateLimited") : t("nutrition.unavailable"));
     else setRemote((r.products ?? []).filter((p: Product) => !have.some((l) => l.id === p.id)));
+    // Nothing that fits the words typed (only unrelated products, or none): an AI estimate of typical values,
+    // shown first and marked "≈". Stored, so the next search for it is instant.
+    const all: Product[] = [...have, ...(r.products ?? [])];
+    if (!all.some((p) => fits(p, q)) && q.trim().length >= 4) {
+      setEstimating(true);
+      const e = await fetch(`/api/food/estimate?q=${encodeURIComponent(q)}`).then((x) => x.json()).catch(() => ({ product: null }));
+      if (id !== seq.current) return;
+      setEstimating(false);
+      if (e.product) setRemote((x) => [e.product, ...(x ?? []).filter((p) => p.id !== e.product.id)]);
+    }
   };
 
   return (
@@ -249,12 +260,12 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
           {(() => {
             const all = [...local, ...(remote ?? [])];
             if (!searched) return <p className="py-3 text-center text-sm text-muted">{t("common.loading")}</p>;
-            if (!all.length && loading) return <p className="py-3 text-center text-sm text-muted">{t("nutrition.searchingRemote")}</p>;
+            if (!all.length && (loading || estimating)) return <p className="py-3 text-center text-sm text-muted">{estimating ? t("nutrition.estimating") : t("nutrition.searchingRemote")}</p>;
             if (!all.length) return <p className="py-4 text-center text-sm text-muted">{error ?? t("nutrition.nothingFound")}</p>;
             return (
               <>
                 <ProductList items={all} onPick={onPick} />
-                {loading && <p className="py-2 text-center text-xs text-muted">{t("nutrition.searchingRemote")}</p>}
+                {(loading || estimating) && <p className="py-2 text-center text-xs text-muted">{estimating ? t("nutrition.estimating") : t("nutrition.searchingRemote")}</p>}
               </>
             );
           })()}
@@ -575,4 +586,12 @@ export function AmountWheel({ value, onChange, unit }: { value: number | null; o
       </div>
     </div>
   );
+}
+
+/** Whether a product's name (or brand) contains every longer word of the search (first 4 letters, no accents). */
+function fits(p: Product, q: string): boolean {
+  const norm = (x: string) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").replace(/ß/g, "ss");
+  const hay = norm(`${p.name} ${p.brand ?? ""}`);
+  const words = norm(q).split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
+  return words.length > 0 && words.every((w) => hay.includes(w.slice(0, 4)));
 }

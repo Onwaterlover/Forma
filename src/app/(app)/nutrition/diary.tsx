@@ -2,15 +2,15 @@
 import { ChevronLeft, ChevronRight, Copy, ListPlus, Plus, ScanBarcode, Search, Settings2, Utensils } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type ReactNode } from "react";
-import { addProductEntry, copyFromYesterday, editEntry, markDay, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { addProductEntry, copyFromYesterday, editEntry, markDay, productFor, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
 import { Sheet, useToast } from "@/components/client";
 import { Button, Card, cx, Empty, Input, Meter, Select } from "@/components/ui";
 import { fmt, fmtDate } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { DiaryEntry, Product } from "@/lib/data";
 import type { Nutrients, NutrientKey } from "@/nutrition/calc";
-import { AddFood, AmountWheel, mealNow, type RecipeLite } from "./add-food";
+import { AddFood, AmountInput, mealNow, type RecipeLite } from "./add-food";
 
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
@@ -40,6 +40,15 @@ export function Diary({
   const router = useRouter();
   const [adding, setAdding] = useState<null | { view: "search" | "scan"; product: (Product & { lastAmount?: number }) | null }>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
+  const [editServings, setEditServings] = useState<{ label: string; amount: number }[]>([]);
+  // Servings of the entry's product (egg, slice…), so it can be edited in pieces too.
+  useEffect(() => {
+    setEditServings([]);
+    if (!editing?.productId) return;
+    let live = true;
+    productFor(editing.productId).then((p) => { if (live && p) setEditServings(p.servings); }).catch(() => {});
+    return () => { live = false; };
+  }, [editing?.id, editing?.productId]);
   const [amount, setAmount] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -187,8 +196,10 @@ export function Diary({
         {editing && (
           <div className="space-y-4">
             {editing.basis !== "portion" && (
-              // Same wheel as when adding, with "type it" for an exact number.
-              <AmountWheel value={amount} onChange={setAmount} unit={editing.basis} />
+              // Same input as when adding (pieces or grams/ml, wheel, quick amounts, "type it").
+              <div className="space-y-3">
+                <AmountInput key={editServings.length} amount={amount} onChange={setAmount} basis={editing.basis} servings={editServings} />
+              </div>
             )}
             <label className="block space-y-1.5">
               <span className="text-sm font-medium">{t("nutrition.mealLabel")}</span>

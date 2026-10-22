@@ -318,10 +318,11 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
           <Button size="sm" variant="ghost" className="shrink-0 whitespace-nowrap" onClick={onRescan}>{t("nutrition.rescan")}</Button>
         </div>
       )}
-      {(product.brand || product.state) && (
+      {/* Basic foods say raw/boiled/baked in the name; a generic "cooked" badge would only confuse (baked ≠ boiled). */}
+      {(product.brand || (product.state && product.source !== "generic")) && (
         <div className="flex flex-wrap items-center gap-2">
           {product.brand && <Badge>{product.brand}</Badge>}
-          {product.state && <Badge tone="accent">{t(`nutrition.state.${product.state}`)}</Badge>}
+          {product.state && product.source !== "generic" && <Badge tone="accent">{t(`nutrition.state.${product.state}`)}</Badge>}
         </div>
       )}
       {energyMismatch(product.nutrients) && <Notice tone="warning">{t("nutrition.energyMismatch")}</Notice>}

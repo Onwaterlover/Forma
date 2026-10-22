@@ -30,9 +30,9 @@ export const pl = {
       conditioning: "Poprawić kondycję", sport: "Wspierać inny sport", start: "Po prostu zacząć ćwiczyć", unsure: "Nie wiem — wybierz za mnie",
     },
     goalHint: {
-      muscle: "Więcej powtórzeń w umiarkowanym zakresie, nacisk na objętość.", strength: "Więcej pracy z cięższymi ciężarami w ćwiczeniach głównych.",
-      health: "Zrównoważony trening całego ciała.", conditioning: "Siła plus krótkie bloki wytrzymałościowe.",
-      sport: "Siła ogólna, która nie przeszkadza w Twoim sporcie.", start: "Proste ćwiczenia, nauka techniki, regularność.", unsure: "Dobry, uniwersalny punkt startowy.",
+      muscle: "Nacisk na objętość i więcej powtórzeń.", strength: "Cięższe ciężary w głównych ćwiczeniach.",
+      health: "Trening całego ciała, dobry na start.", conditioning: "Siła plus krótkie bloki wytrzymałościowe.",
+      sport: "Siła, która nie przeszkadza w sporcie.", start: "Proste ćwiczenia, nauka techniki, regularność.", unsure: "Dobry, uniwersalny punkt startowy.",
     },
     experienceQ: "Jakie masz doświadczenie?",
     exp: { beginner: "Początkujący", intermediate: "Trochę już ćwiczyłem/am", advanced: "Doświadczony/a" },

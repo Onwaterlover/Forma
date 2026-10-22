@@ -314,6 +314,13 @@ describe("workout generator", () => {
     const beginner = { ...ctx, profile: profile({ goal: "muscle", experience: "beginner" }) };
     expect(verdictOf(ex("bodyweight_squat"), ex("goblet_squat"), beginner, 1)).toBe("slightly");
     expect(verdictOf(ex("romanian_deadlift_db"), ex("back_extension"), beginner, 1)).not.toBe("much");
+    // Push-ups are not as good as dips or a dumbbell press, whatever goal was picked in the interview.
+    for (const goal of ["muscle", "unsure", "health"] as const) {
+      const c = { ...ctx, profile: profile({ goal, experience: "intermediate" }) };
+      expect(verdictOf(ex("push_up"), ex("dip"), c, 1)).toBe("much");
+      expect(verdictOf(ex("push_up"), ex("db_bench_press"), c, 1)).toBe("much");
+    }
+    expect(verdictOf(ex("push_up"), ex("db_bench_press"), beginner, 1)).toBe("slightly");
   });
 
   it("a chosen split is used when it fits the number of sessions, otherwise the automatic one", () => {

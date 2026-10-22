@@ -49,6 +49,12 @@ export function compareTo(alt: Exercise, rec: Exercise): Diff[] {
 
 export type Verdict = "same" | "slightly" | "much";
 
+// Easy bodyweight moves for the upper body (push-up, table row) soon turn into 20+ rep sets: in practice no load to add.
+const loadRank = (e: Exercise) =>
+  e.kind === "bodyweight" && e.fatigue === "low" && !["squat", "hinge", "single_leg", "knee_flex", "knee_ext", "hip_ext", "calf", "core", "conditioning"].includes(e.pattern)
+    ? 1
+    : (LOAD_RANK[e.loading] ?? 1);
+
 /**
  * How much is lost by doing `alt` instead of the recommended `rec`, as one short label. Judged on effectiveness
  * for this person (goal, level, time) with the generator's own scoring; styles and likes are left out, since
@@ -57,13 +63,15 @@ export type Verdict = "same" | "slightly" | "much";
  */
 export function verdictOf(alt: Exercise, rec: Exercise, ctx: Pick<SelectContext, "profile" | "equipment" | "library">, priority: 1 | 2 | 3 = 2): Verdict {
   const p = ctx.profile;
-  // Technique difficulty is shown separately ("harder"); for the verdict a beginner is judged like anyone else.
-  const judged = { ...p, styles: [], experience: p.experience === "beginner" ? ("intermediate" as const) : p.experience };
+  // Technique difficulty is shown separately ("harder"); for the verdict a beginner is judged like anyone else,
+  // and on how well the exercise builds muscle (strength and conditioning goals keep their own view).
+  const goal = p.goal === "strength" || p.goal === "conditioning" ? p.goal : ("muscle" as const);
+  const judged = { ...p, goal, styles: [], experience: p.experience === "beginner" ? ("intermediate" as const) : p.experience };
   const full: SelectContext = { ...ctx, profile: judged, prefs: {}, usedInSession: new Set(), usedInWeek: new Map() };
   // No main muscle in common: the slot would train something else.
   if (rec.primary.length && !alt.primary.some((m) => rec.primary.includes(m))) return "much";
   // No way to add load where the recommendation has one: a real loss for muscle or strength (a smaller one for beginners).
-  const loadDrop = (LOAD_RANK[alt.loading] ?? 1) <= 1 && (LOAD_RANK[rec.loading] ?? 1) >= 2 && (p.goal === "muscle" || p.goal === "strength");
+  const loadDrop = loadRank(alt) <= 1 && loadRank(rec) >= 2 && (goal === "muscle" || goal === "strength");
   const gap = score(rec, priority, full) - score(alt, priority, full);
   if (gap >= 2.5 || (loadDrop && p.experience !== "beginner")) return "much";
   return gap >= 1 || loadDrop ? "slightly" : "same";

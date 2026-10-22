@@ -31,9 +31,9 @@ export const de: Dict = {
       conditioning: "Kondition verbessern", sport: "Eine andere Sportart unterstützen", start: "Einfach mit Training anfangen", unsure: "Weiß nicht — wähle einen guten Start für mich",
     },
     goalHint: {
-      muscle: "Mittlere Wiederholungsbereiche, Fokus auf Volumen.", strength: "Mehr Arbeit mit schwereren Gewichten bei den Hauptübungen.",
-      health: "Ausgewogenes Ganzkörpertraining.", conditioning: "Kraft plus kurze Ausdauerblöcke.",
-      sport: "Allgemeine Kraft, die deinem Sport nicht im Weg steht.", start: "Einfache Übungen, Technik lernen, Regelmäßigkeit.", unsure: "Ein solider Allround-Start.",
+      muscle: "Fokus auf Volumen und mehr Wiederholungen.", strength: "Schwerere Gewichte bei den Hauptübungen.",
+      health: "Ganzkörpertraining, ein guter Start.", conditioning: "Kraft plus kurze Ausdauerblöcke.",
+      sport: "Kraft, die deinem Sport nicht im Weg steht.", start: "Einfache Übungen, Technik lernen, Regelmäßigkeit.", unsure: "Ein solider Allround-Start.",
     },
     experienceQ: "Wie viel Erfahrung hast du?",
     exp: { beginner: "Anfänger/in", intermediate: "Etwas Erfahrung", advanced: "Erfahren" },

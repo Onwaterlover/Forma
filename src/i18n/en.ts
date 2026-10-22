@@ -31,9 +31,9 @@ export const en: Dict = {
       conditioning: "Improve my conditioning", sport: "Support another sport", start: "Simply start exercising", unsure: "Not sure — pick a good start for me",
     },
     goalHint: {
-      muscle: "Moderate rep ranges with an emphasis on volume.", strength: "More work with heavier loads on the main lifts.",
-      health: "Balanced whole-body training.", conditioning: "Strength plus short conditioning blocks.",
-      sport: "General strength that doesn't get in the way of your sport.", start: "Simple exercises, learning technique, consistency.", unsure: "A solid all-round starting point.",
+      muscle: "Focus on volume and more reps.", strength: "Heavier weights on the main lifts.",
+      health: "Whole-body training, a good start.", conditioning: "Strength plus short conditioning blocks.",
+      sport: "Strength that doesn't get in the way of your sport.", start: "Simple exercises, learning technique, consistency.", unsure: "A solid all-round starting point.",
     },
     experienceQ: "How much experience do you have?",
     exp: { beginner: "Beginner", intermediate: "Some experience", advanced: "Experienced" },

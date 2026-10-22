@@ -14,7 +14,8 @@ import {
 import { DICTS, exName } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 
-const GOALS: Goal[] = ["muscle", "strength", "health", "conditioning", "sport", "start", "unsure"];
+// "start" and "unsure" plan like "health" (beginners get a gentler start anyway), so they are not asked separately.
+const GOALS: Goal[] = ["muscle", "strength", "health", "conditioning", "sport"];
 const PRESETS = Object.keys(LOCATION_PRESETS) as (keyof typeof LOCATION_PRESETS)[];
 const UPPER_PRIORITY: Partial<Record<Muscle, MusclePriority>> = { chest: "high", lats: "high", upper_back: "high", side_delts: "high", quads: "low", hamstrings: "low", glutes: "low", calves: "low" };
 const LOWER_PRIORITY: Partial<Record<Muscle, MusclePriority>> = { quads: "high", hamstrings: "high", glutes: "high" };

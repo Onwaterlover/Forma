@@ -6,6 +6,7 @@ import { pageCtx } from "@/lib/ctx";
 import { getActivePlan, getPrefs, getProfile, inProgressWorkout, libraryFor, listPlans } from "@/lib/data";
 import { PlanMenu } from "./plan-actions";
 import { PlanView } from "./plan-view";
+import { ReviewOffer } from "./review-offer";
 import { exName } from "@/i18n";
 import { Assistant } from "@/components/assistant";
 import { aiProvider } from "@/lib/assistant";
@@ -36,11 +37,8 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         } />
 
       {/* Right after confirming a plan from the wizard: an optional AI review (only on request). */}
-      {ready && plan && aiProvider() && (
-        <Notice tone="accent" className="mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
-          <span>{t("assistant.reviewOffer")}</span>
-          <Assistant scope="training" date={todayIso()} enabled={settings.ai} provider={aiProvider()!} review />
-        </Notice>
+      {(ready || plan?.source === "imported") && plan && aiProvider() && (
+        <ReviewOffer planId={plan.id} date={todayIso()} enabled={settings.ai} provider={aiProvider()!} />
       )}
 
       {running && settings.logWorkouts && (

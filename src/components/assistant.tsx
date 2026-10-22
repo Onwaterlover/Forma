@@ -10,7 +10,8 @@ import { useI18n } from "@/i18n/client";
 import type { Proposal } from "@/lib/assistant";
 
 type Card = Proposal & { state?: "busy" | "applied" | "rejected" | "failed"; error?: string };
-type Msg = { role: "user" | "assistant"; text: string; proposals?: Card[]; error?: boolean; photo?: string };
+/** `prompt`: what is sent to the AI when it differs from what the user sees (e.g. the long review instructions). */
+type Msg = { role: "user" | "assistant"; text: string; prompt?: string; proposals?: Card[]; error?: boolean; photo?: string };
 
 /** Downscale a meal photo in the browser (also drops EXIF/GPS) so it stays small enough to send. */
 async function shrink(file: File): Promise<string> {
@@ -28,7 +29,7 @@ async function shrink(file: File): Promise<string> {
  * Changes only happen when the user taps "Apply" on a proposal card.
  */
 /** `review`: renders a "Rate my plan" button that opens the chat and asks for a review of the current plan. */
-export function Assistant({ scope, date, enabled, provider, review }: { scope: "training" | "nutrition"; date: string; enabled: boolean; provider: "gemini" | "anthropic"; review?: boolean }) {
+export function Assistant({ scope, date, enabled, provider, review, onClose }: { scope: "training" | "nutrition"; date: string; enabled: boolean; provider: "gemini" | "anthropic"; review?: boolean; onClose?: () => void }) {
   const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -56,13 +57,13 @@ export function Assistant({ scope, date, enabled, provider, review }: { scope: "
   // The model only sees text, so proposal cards are summarised into the history with their outcome.
   const asHistory = (m: Msg) => ({
     role: m.role,
-    text: [m.photo ? `${t("assistant.photoSent")} ${m.text}` : m.text, ...(m.proposals ?? []).map((p) => `[${p.title}: ${p.lines.join("; ")} — ${p.state ?? "pending"}]`)].join("\n"),
+    text: [m.photo ? `${t("assistant.photoSent")} ${m.prompt ?? m.text}` : m.prompt ?? m.text, ...(m.proposals ?? []).map((p) => `[${p.title}: ${p.lines.join("; ")} — ${p.state ?? "pending"}]`)].join("\n"),
   });
 
-  const send = async (raw: string, shot?: string) => {
+  const send = async (raw: string, shot?: string, prompt?: string) => {
     const q = raw.trim() || (shot ? t("assistant.photoPrompt") : "");
     if (!q || busy) return;
-    const next: Msg[] = [...msgs, { role: "user", text: q, photo: shot }];
+    const next: Msg[] = [...msgs, { role: "user", text: q, prompt, photo: shot }];
     setMsgs(next);
     setText("");
     if (box.current) box.current.style.height = "";
@@ -98,7 +99,11 @@ export function Assistant({ scope, date, enabled, provider, review }: { scope: "
     }
   };
 
-  const examples = [1, 2, 3, 4].map((i) => t(`assistant.ex${scope === "training" ? "Training" : "Nutrition"}${i}`));
+  // Training: "rate my plan" is always the first suggestion, so the review stays reachable after the one-time offer.
+  const examples = [
+    ...(scope === "training" ? [t("assistant.reviewPlan")] : []),
+    ...[1, 2, 3, 4].map((i) => t(`assistant.ex${scope === "training" ? "Training" : "Nutrition"}${i}`)),
+  ];
   const photoMode = scope === "nutrition" && mode === "photo";
   const title = scope === "training" ? t("assistant.title") : photoMode ? t("assistant.photo") : t("assistant.describe");
   const takePhoto = () => fileRef.current?.click();
@@ -107,7 +112,7 @@ export function Assistant({ scope, date, enabled, provider, review }: { scope: "
   return (
     <>
       {review ? (
-        <Button size="sm" className="shrink-0" onClick={() => { setOpen(true); if (on && !msgs.length) send(t("assistant.reviewPrompt")); }}><Sparkles size={16} aria-hidden />{t("assistant.reviewPlan")}</Button>
+        <Button size="sm" className="shrink-0" onClick={() => { setOpen(true); if (on && !msgs.length) send(t("assistant.reviewPlan"), undefined, t("assistant.reviewPrompt")); }}><Sparkles size={16} aria-hidden />{t("assistant.reviewPlan")}</Button>
       ) : scope === "training" ? (
         <Button variant="secondary" size="sm" onClick={() => setOpen(true)}><Sparkles size={16} aria-hidden />{t("assistant.open")}</Button>
       ) : (
@@ -127,7 +132,7 @@ export function Assistant({ scope, date, enabled, provider, review }: { scope: "
             }} />
         </>
       )}
-      <Sheet open={open} onClose={() => setOpen(false)} title={title} wide full>
+      <Sheet open={open} onClose={() => { setOpen(false); onClose?.(); }} title={title} wide full>
         {!on ? (
           <div className="space-y-4">
             <p className="font-medium">{t("assistant.consentTitle")}</p>
@@ -152,7 +157,7 @@ export function Assistant({ scope, date, enabled, provider, review }: { scope: "
                   <p className="text-sm text-muted">{t(scope === "training" ? "assistant.introTraining" : "assistant.introNutrition")}</p>
                   <div className="flex flex-wrap gap-2">
                     {examples.map((e) => (
-                      <button key={e} type="button" onClick={() => send(e)} className="rounded-full border border-border px-3 py-1.5 text-left text-sm hover:bg-surface-2">{e}</button>
+                      <button key={e} type="button" onClick={() => (e === t("assistant.reviewPlan") ? send(e, undefined, t("assistant.reviewPrompt")) : send(e))} className="rounded-full border border-border px-3 py-1.5 text-left text-sm hover:bg-surface-2">{e}</button>
                     ))}
                   </div>
                 </>
@@ -166,7 +171,7 @@ export function Assistant({ scope, date, enabled, provider, review }: { scope: "
                     m.error && "text-danger",
                   )}>{m.text}</p>
                   {m.proposals?.map((c, pi) => (
-                    <div key={c.id} className="w-full max-w-[90%] rounded-2xl border border-accent/40 p-3.5">
+                    <div key={c.id} className="w-full max-w-[90%] min-w-0 rounded-2xl border border-accent/40 p-3.5 [overflow-wrap:anywhere]">
                       <p className="text-sm font-semibold">{c.title}</p>
                       <ul className="mt-1 space-y-0.5 text-sm">{c.lines.map((l, k) => <li key={k}>{l}</li>)}</ul>
                       <div className="mt-3 flex flex-wrap items-center gap-2">

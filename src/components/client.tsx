@@ -246,7 +246,7 @@ export function DecimalInput({
       }}
       onFocus={(e) => e.target.select()}
       className={cx(
-        "h-11 w-full rounded-xl border border-border bg-surface px-3 text-center text-[15px] tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25",
+        "h-11 w-full rounded-xl border border-border bg-surface px-3 text-center text-base sm:text-[15px] tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25",
         className,
       )}
     />

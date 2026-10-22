@@ -1,7 +1,7 @@
 import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, Empty, LinkButton, Notice, PageHeader, SectionTitle } from "@/components/ui";
-import { validatePlan } from "@/engine/validate";
+import { userFacing, validatePlan } from "@/engine/validate";
 import { pageCtx } from "@/lib/ctx";
 import { getActivePlan, getPrefs, getProfile, inProgressWorkout, libraryFor, listPlans } from "@/lib/data";
 import { PlanMenu } from "./plan-actions";
@@ -21,7 +21,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     getActivePlan(user.id), getProfile(user.id), libraryFor(user.id), listPlans(user.id), inProgressWorkout(user.id), getPrefs(user.id),
   ]);
   const plans = allPlans.filter((p) => p.id !== plan?.id && p.status !== "archived");
-  const issues = plan && profile && plan.source !== "imported" ? validatePlan({ plan: plan.data, profile, prefs, library }) : [];
+  const issues = plan && profile && plan.source !== "imported" ? userFacing(validatePlan({ plan: plan.data, profile, prefs, library })) : [];
 
   const exercises = plan ? [...new Set(plan.data.sessions.flatMap((s) => s.exercises.map((e) => e.exerciseId)))].map((id) => ({ id, name: exName(library.find((x) => x.id === id), locale, id) })) : [];
 

@@ -112,3 +112,10 @@ function checkSports(
 }
 
 export const hasErrors = (issues: Issue[]) => issues.some((i) => i.severity === "error");
+
+/**
+ * Volume bookkeeping (sets per muscle vs. priorities) is for the generator and the assistant, not for people:
+ * it can't be acted on and reads like jargon. Only problems someone can actually fix are shown in the app.
+ */
+const INTERNAL = new Set(["priority_not_met", "low_priority_exceeded", "volume_high", "many_sets", "muscle_untrained"]);
+export const userFacing = (issues: Issue[]) => issues.filter((i) => !INTERNAL.has(i.code));

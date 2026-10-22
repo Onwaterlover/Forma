@@ -295,7 +295,8 @@ describe("workout generator", () => {
     const ids = generatePlan({ profile: p }).sessions.flatMap((s) => s.exercises.map((e) => e.exerciseId));
     expect(ids.filter((id) => id === "dip").length).toBeLessThanOrEqual(1);
     expect(ids).not.toContain("table_row");
-    expect(ids.some((id) => id === "db_bench_press" || id === "incline_db_press")).toBe(true);
+    // Dips cover the lower/mid chest, so the other press comes from an incline for the upper chest.
+    expect(ids).toContain("incline_db_press");
   });
 
   it("with every day free, the chosen days include today (start right away)", () => {

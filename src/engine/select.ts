@@ -13,6 +13,7 @@ export interface SelectContext {
 const MACHINE_KINDS: Kind[] = ["machine", "cable", "smith"];
 const FREE_KINDS: Kind[] = ["barbell", "dumbbell", "kettlebell"];
 const PROGRESSABLE = new Set(["total", "per_dumbbell", "per_side", "bodyweight_plus", "assisted"]);
+const UPPER_CHEST = new Set(["incline_db_press"]);
 const LOWER_BODY = new Set<Pattern>(["squat", "hinge", "single_leg", "knee_flex", "knee_ext", "hip_ext", "calf"]);
 /**
  * Where bodyweight training holds up well. For rows, overhead pressing, legs and small isolation work
@@ -77,6 +78,12 @@ export function score(ex: Exercise, priority: 1 | 2 | 3, ctx: SelectContext): nu
     if (p.experience !== "beginner" && priority <= 2 && ex.kind === "bodyweight" && ex.fatigue === "low" && !LOWER_BODY.has(ex.pattern) && ex.pattern !== "core" && ex.pattern !== "conditioning") s -= 1.5;
     // Held weights cap leg loading quickly once someone is past the beginner stage.
     if (p.experience !== "beginner" && priority === 1 && LOWER_BODY.has(ex.pattern) && (ex.kind === "dumbbell" || ex.kind === "kettlebell")) s -= 0.5;
+  }
+
+  // Chest from two angles across the week: after a flat press or dips, an incline press covers the upper chest.
+  if (p.experience !== "beginner" && UPPER_CHEST.has(ex.id)) {
+    const pushes = [...ctx.usedInWeek.keys()].filter((id) => ctx.library.find((e) => e.id === id)?.pattern === "h_push");
+    if (pushes.length && !pushes.some((id) => UPPER_CHEST.has(id))) s += 1;
   }
 
   // Beginners benefit from repeating the same lifts; others get variety across the week (e.g. dips one day,

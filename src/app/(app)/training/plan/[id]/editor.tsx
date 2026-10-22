@@ -16,7 +16,7 @@ import { defaultProfile } from "@/engine/profile";
 import { matchesQuery, REGIONS, regionsOf, type Region } from "@/engine/regions";
 import { substitutes } from "@/engine/select";
 import type { Exercise, ExercisePref, Grip, Plan, PlannedExercise, PlannedSession, TrainingProfile, Weekday } from "@/engine/types";
-import { validatePlan } from "@/engine/validate";
+import { userFacing, validatePlan } from "@/engine/validate";
 import { DICTS, exName, fmtRest, renderMessage } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 
@@ -67,7 +67,7 @@ export function PlanEditor({
     if (then === "analyze") document.getElementById("plan-issues")?.scrollIntoView({ behavior: "smooth" });
   }, [then, planId, profile, router]);
 
-  const issues = useMemo(() => (profile ? validatePlan({ plan, profile, prefs, library }) : []), [plan, profile, prefs, library]);
+  const issues = useMemo(() => (profile ? userFacing(validatePlan({ plan, profile, prefs, library })) : []), [plan, profile, prefs, library]);
   const locName = (id: string) => profile?.locations.find((l) => l.id === id)?.name ?? id;
 
   const update = (key: string, fn: (s: PlannedSession) => PlannedSession) => {

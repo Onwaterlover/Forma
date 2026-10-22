@@ -35,6 +35,10 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
     workout.planId ? getPlan(user.id, workout.planId) : null, getProfile(user.id), getPrefs(user.id), getCustomExercises(user.id),
   ]);
   const originalIds = plan?.data.sessions.find((s) => s.key === workout.sessionKey)?.exercises.map((e) => e.exerciseId) ?? null;
+  // Superset pairs from the plan (exercise → group), so the workout shows them too.
+  const supersets: Record<string, number> = Object.fromEntries(
+    (plan?.data.sessions.find((s) => s.key === workout.sessionKey)?.exercises ?? []).filter((e) => e.superset !== undefined).map((e) => [e.exerciseId, e.superset!]),
+  );
 
   let summary = null;
   if (finished && workout.notes !== "skipped" && workout.notes !== "postponed") {
@@ -61,6 +65,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
         custom={custom}
         settings={{ restTimer: settings.restTimer, autoTimer: settings.autoTimer, showEffort: settings.showEffort, logMode: settings.logMode }}
         originalIds={originalIds}
+        supersets={supersets}
         summary={summary}
       />
     </>

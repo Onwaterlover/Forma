@@ -37,8 +37,9 @@ function newSet(w: WorkoutPayload, ei: number, j: number, weightKg: number | nul
 }
 
 export function WorkoutLogger({
-  initial, info, profile, prefs, custom, settings, originalIds, summary,
+  initial, info, profile, prefs, custom, settings, originalIds, summary, supersets = {},
 }: {
+  supersets?: Record<string, number>;
   initial: WorkoutPayload;
   info: Record<string, ExerciseInfo>;
   profile: TrainingProfile | null;
@@ -297,10 +298,15 @@ export function WorkoutLogger({
         const placeholderReps = (j: number) =>
           sug && (sug.kind === "add_reps" || sug.kind === "increase_load") ? sug.reps : inf?.last?.sets[j]?.r ?? tg?.repMin ?? null;
         const doneSets = e.sets.filter((s) => s.completed).length;
+        // Superset with the exercise next to it: accent bar on both cards and one short line saying which.
+        const group = supersets[e.exerciseId];
+        const withNext = group !== undefined && supersets[w.exercises[i + 1]?.exerciseId ?? ""] === group;
+        const withPrev = group !== undefined && supersets[w.exercises[i - 1]?.exerciseId ?? ""] === group;
         return (
-          <Card key={`${e.id}-${e.exerciseId}`} className={cx("space-y-3", e.skipped && "opacity-60")}>
+          <Card key={`${e.id}-${e.exerciseId}`} className={cx("space-y-3", e.skipped && "opacity-60", (withNext || withPrev) && "border-l-4 border-l-accent")}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
+                {(withNext || withPrev) && <p className="text-xs font-semibold text-accent">{t(withNext ? "workout.supersetNext" : "workout.supersetPrev")}</p>}
                 <h2 className="text-lg font-semibold leading-snug">{e.name}</h2>
                 {tg && (
                   <p className="text-sm text-muted">

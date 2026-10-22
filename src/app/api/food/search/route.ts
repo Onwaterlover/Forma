@@ -12,15 +12,17 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").slice(0, 80);
   if (url.searchParams.get("remote") === "1") {
-    const r = await searchRemote(user.id, q, user.locale);
-    // Little found ("tofu wędzone")? Ask again with the words translated to English ("smoked tofu").
-    const en = englishQuery(q);
-    if (en && (!("products" in r) || r.products.length < 5)) {
-      const r2 = await searchRemote(user.id, en, user.locale);
-      if ("products" in r2) {
-        const seen = new Set(("products" in r ? r.products : []).map((p) => p.id));
-        return NextResponse.json({ products: [...("products" in r ? r.products : []), ...r2.products.filter((p) => !seen.has(p.id))] });
-      }
+    let r = await searchRemote(user.id, q, user.locale);
+    // Little found? Ask again: without Polish/German letters ("żurek" finds nothing there, "zurek" does),
+    // then with the words translated to English ("tofu wędzone" → "smoked tofu").
+    const plain = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").replace(/Ł/g, "L").replace(/ß/g, "ss");
+    for (const alt of [plain !== q ? plain : null, englishQuery(q)]) {
+      if (!alt || ("products" in r && r.products.length >= 5)) continue;
+      const r2 = await searchRemote(user.id, alt, user.locale);
+      if (!("products" in r2)) continue;
+      const have = "products" in r ? r.products : [];
+      const seen = new Set(have.map((p) => p.id));
+      r = { products: [...have, ...r2.products.filter((p) => !seen.has(p.id))] };
     }
     return NextResponse.json(r);
   }

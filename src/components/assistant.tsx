@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { applySuggestion, askAssistant, rejectSuggestion } from "@/app/actions/assistant";
 import { updateSettings } from "@/app/actions/general";
 import { Sheet } from "@/components/client";
-import { Button, cx, Input } from "@/components/ui";
+import { Button, cx, inputClass } from "@/components/ui";
 import { useI18n } from "@/i18n/client";
 import type { Proposal } from "@/lib/assistant";
 
@@ -27,7 +27,8 @@ async function shrink(file: File): Promise<string> {
  * Training: one "Assistant" button. Food: two tiles, "Take photo" and "Describe meal", sharing one chat.
  * Changes only happen when the user taps "Apply" on a proposal card.
  */
-export function Assistant({ scope, date, enabled, provider }: { scope: "training" | "nutrition"; date: string; enabled: boolean; provider: "gemini" | "anthropic" }) {
+/** `review`: renders a "Rate my plan" button that opens the chat and asks for a review of the current plan. */
+export function Assistant({ scope, date, enabled, provider, review }: { scope: "training" | "nutrition"; date: string; enabled: boolean; provider: "gemini" | "anthropic"; review?: boolean }) {
   const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -38,6 +39,7 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
   const [mode, setMode] = useState<"chat" | "photo">("chat");
   const fileRef = useRef<HTMLInputElement>(null);
   const end = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
   }, [msgs, busy]);
@@ -59,6 +61,7 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
     const next: Msg[] = [...msgs, { role: "user", text: q, photo: shot }];
     setMsgs(next);
     setText("");
+    if (box.current) box.current.style.height = "";
     setBusy(true);
     try {
       const r = await askAssistant({ scope, date, history: next.filter((m) => !m.error).slice(-20).map(asHistory), image: shot?.split(",")[1] });
@@ -99,7 +102,9 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
 
   return (
     <>
-      {scope === "training" ? (
+      {review ? (
+        <Button size="sm" className="shrink-0" onClick={() => { setOpen(true); if (on && !msgs.length) send(t("assistant.reviewPrompt")); }}><Sparkles size={16} aria-hidden />{t("assistant.reviewPlan")}</Button>
+      ) : scope === "training" ? (
         <Button variant="secondary" size="sm" onClick={() => setOpen(true)}><Sparkles size={16} aria-hidden />{t("assistant.open")}</Button>
       ) : (
         <>
@@ -178,11 +183,15 @@ export function Assistant({ scope, date, enabled, provider }: { scope: "training
               {busy && <p className="w-fit animate-pulse rounded-2xl bg-surface-2 px-3.5 py-2.5 text-[15px] text-muted">{t("assistant.thinking")}</p>}
               <div ref={end} />
             </div>
-            <form className="sticky bottom-0 -mx-5 -mb-4 flex gap-2 border-t border-border bg-surface px-5 py-3" onSubmit={(e) => { e.preventDefault(); send(text); }}>
+            <form className="sticky bottom-0 -mx-5 -mb-4 flex items-end gap-2 border-t border-border bg-surface px-5 py-3" onSubmit={(e) => { e.preventDefault(); send(text); }}>
               {photoMode && msgs.length > 0 && (
                 <Button type="button" variant="secondary" disabled={busy} onClick={takePhoto} aria-label={t("assistant.takePhoto")}><Camera size={18} aria-hidden /></Button>
               )}
-              <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} maxLength={4000} aria-label={placeholder} />
+              {/* Wraps and grows up to ~5 lines, so a longer message stays readable while typing. */}
+              <textarea ref={box} value={text} rows={1} maxLength={4000} placeholder={placeholder} aria-label={placeholder}
+                onChange={(e) => { setText(e.target.value); const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 132)}px`; }}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && window.matchMedia("(pointer: fine)").matches) { e.preventDefault(); send(text); } }}
+                className={cx(inputClass, "h-auto min-h-11 resize-none py-2.5 leading-snug")} />
               <Button type="submit" disabled={busy || !text.trim()} aria-label={t("assistant.send")}><ArrowUp size={18} aria-hidden /></Button>
             </form>
           </div>

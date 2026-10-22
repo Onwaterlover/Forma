@@ -39,4 +39,10 @@ describe("plan edits by the assistant", () => {
     expect(run([{ op: "remove_session", session_key: "Z" }])).toHaveProperty("error");
     expect(run([{ op: "set_exercise", session_key: "A", exercise_id: "db_curl", sets: 40 }])).toHaveProperty("error");
   });
+  it("sets every rest in the plan to 2 minutes in one change", () => {
+    const r = run([{ op: "set_all_exercises", session_key: "*", rest_sec: 120 }]);
+    if ("error" in r) throw new Error(r.error);
+    expect(r.plan.sessions.flatMap((s) => s.exercises.map((e) => e.restSec))).toEqual([120, 120, 120, 120]);
+    expect(run([{ op: "set_all_exercises", session_key: "*", kg: 50 }])).toHaveProperty("error");
+  });
 });

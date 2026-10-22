@@ -1,6 +1,6 @@
 import { Pencil } from "lucide-react";
 import Link from "next/link";
-import { Badge, Card, Empty, LinkButton, PageHeader, SectionTitle } from "@/components/ui";
+import { Badge, Card, Empty, LinkButton, Notice, PageHeader, SectionTitle } from "@/components/ui";
 import { validatePlan } from "@/engine/validate";
 import { pageCtx } from "@/lib/ctx";
 import { getActivePlan, getPrefs, getProfile, inProgressWorkout, libraryFor, listPlans } from "@/lib/data";
@@ -13,7 +13,8 @@ import { todayIso } from "@/lib/ctx";
 
 export const dynamic = "force-dynamic";
 
-export default async function TrainingPage() {
+export default async function TrainingPage({ searchParams }: { searchParams: Promise<{ ready?: string }> }) {
+  const { ready } = await searchParams;
   const { user, locale, t, settings } = await pageCtx();
   const [plan, profile, library, allPlans, running, prefs] = await Promise.all([
     getActivePlan(user.id), getProfile(user.id), libraryFor(user.id), listPlans(user.id), inProgressWorkout(user.id), getPrefs(user.id),
@@ -25,7 +26,7 @@ export default async function TrainingPage() {
 
   return (
     <>
-      <PageHeader title={plan?.name ?? t("plan.title")} subtitle={plan ? `${t(`split.${plan.data.split}`, {})} · ${t("plan.perWeek", { n: plan.data.sessions.length })}` : undefined}
+      <PageHeader stack title={plan?.name ?? t("plan.title")} subtitle={plan ? `${t(`split.${plan.data.split}`, {})} · ${t("plan.perWeek", { n: plan.data.sessions.length })}` : undefined}
         action={
           <div className="flex gap-2">
             {aiProvider() && <Assistant scope="training" date={todayIso()} enabled={settings.ai} provider={aiProvider()!} />}
@@ -33,6 +34,14 @@ export default async function TrainingPage() {
             <PlanMenu planId={plan?.id ?? null} exercises={exercises} library={library} feedback={!!profile} logging={settings.logWorkouts} hasProfile={!!profile} />
           </div>
         } />
+
+      {/* Right after confirming a plan from the wizard: an optional AI review (only on request). */}
+      {ready && plan && aiProvider() && (
+        <Notice tone="accent" className="mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
+          <span>{t("assistant.reviewOffer")}</span>
+          <Assistant scope="training" date={todayIso()} enabled={settings.ai} provider={aiProvider()!} review />
+        </Notice>
+      )}
 
       {running && settings.logWorkouts && (
         <Card className="mb-4 flex items-center justify-between gap-3 print:hidden">
@@ -50,7 +59,7 @@ export default async function TrainingPage() {
       )}
 
       {plans.length > 0 && (
-        <div className="print:hidden">
+        <div className="mt-6 print:hidden">
           <SectionTitle>{t("plan.plans")}</SectionTitle>
           <ul className="divide-y divide-border rounded-[var(--radius-card)] border border-border bg-surface">
             {plans.map((p) => (

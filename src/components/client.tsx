@@ -102,8 +102,23 @@ export function Sheet({ open, onClose, title, children, wide, full }: { open: bo
     // Keep the page behind still while a sheet is open (iOS otherwise scrolls it under the finger).
     const root = document.documentElement;
     root.style.overflow = "hidden";
-    return () => { root.style.overflow = ""; };
-  }, [open]);
+    // Full-screen sheets follow the visible area: when the iPhone keyboard opens, the sheet shrinks to the space
+    // above it instead of the page scrolling underneath and showing through.
+    const vv = window.visualViewport;
+    const fit = () => {
+      if (!full || !vv || window.innerWidth >= 640) { d.style.height = ""; d.style.top = ""; return; }
+      d.style.height = `${vv.height}px`;
+      d.style.top = `${vv.offsetTop}px`;
+    };
+    fit();
+    vv?.addEventListener("resize", fit);
+    vv?.addEventListener("scroll", fit);
+    return () => {
+      root.style.overflow = "";
+      vv?.removeEventListener("resize", fit);
+      vv?.removeEventListener("scroll", fit);
+    };
+  }, [open, full]);
   return (
     <dialog
       ref={ref}

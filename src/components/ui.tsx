@@ -33,9 +33,10 @@ export function Card({ className, ...rest }: ComponentProps<"div">) {
   return <div {...rest} className={cx("rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-[var(--shadow)] sm:p-5", className)} />;
 }
 
-export function PageHeader({ title, subtitle, action, back }: { title: string; subtitle?: ReactNode; action?: ReactNode; back?: { href: string; label: string } }) {
+/** `stack`: on phones the actions go on their own row under the title, so a long title isn't squeezed into a narrow column. */
+export function PageHeader({ title, subtitle, action, back, stack }: { title: string; subtitle?: ReactNode; action?: ReactNode; back?: { href: string; label: string }; stack?: boolean }) {
   return (
-    <header className="mb-5 flex items-start justify-between gap-3 print:mb-2">
+    <header className={cx("mb-5 flex items-start justify-between gap-3 print:mb-2", stack && "max-sm:flex-col")}>
       <div className="min-w-0">
         {back && <div className="print:hidden"><BackButton href={back.href} label={back.label} /></div>}
         <h1 className="text-2xl font-semibold tracking-tight print:text-lg">{title}</h1>

@@ -66,7 +66,7 @@ ${scope === "training"
     ? `
 Training
 - Swap an exercise: call find_substitutes (add style if the user wants machines, free weights or bodyweight), pick the best fit, then call propose_swap. Prefer simple, stable options that match the user's level.
-- Changes to the current plan go through propose_plan_edit, all in ONE call with every change listed: training more or fewer times a week, doing a session twice (e.g. "4x a week, upper twice" with sessions Upper, Glutes A, Legs B: duplicate_session of Upper, placed where the user wants it in the rotation), removing or renaming a session, setting weekdays, adding/removing exercises (find ids with find_exercises), sets, reps, kg and rest. This keeps the user's own exercises and works for imported plans too.
+- Changes to the current plan go through propose_plan_edit, all in ONE call with every change listed: training more or fewer times a week, doing a session twice (e.g. "4x a week, upper twice" with sessions Upper, Glutes A, Legs B: duplicate_session of Upper, placed where the user wants it in the rotation), removing or renaming a session, setting weekdays, adding/removing exercises (find ids with find_exercises), sets, reps, kg and rest. For the same change everywhere ("every rest 2 minutes", "all exercises 3 sets") use one set_all_exercises with session_key "*" (or one session's key). This keeps the user's own exercises and works for imported plans too.
 - Read the request carefully and restate it in one short sentence before proposing. If something essential is ambiguous (which session, which day), ask one short question instead of guessing.
 - propose_plan_change regenerates the whole plan from the questionnaire. Use it only when the user wants a new plan built for them (e.g. "make it easier overall", "more machines everywhere") and a training profile exists.
 - An exercise that hurts: propose marking it "pain" and suggest a gentler alternative.
@@ -164,7 +164,7 @@ const TRAINING_TOOLS: BetaTool[] = [
         type: "array", minItems: 1, maxItems: 20,
         items: obj({
           op: { type: "string", enum: [...EDIT_OPS] },
-          session_key: str("Session key from the plan (for duplicate_session: the session to copy)"),
+          session_key: str("Session key from the plan (for duplicate_session: the session to copy; for set_all_exercises also \"*\" = whole plan)"),
           exercise_id: { type: ["string", "null"], description: "For add/remove/set_exercise" },
           name: { type: ["string", "null"], description: "New session name (rename, or name of the copy)" },
           day: { type: ["integer", "null"], description: "set_day: 0=Monday ... 6=Sunday, null=any day" },
@@ -311,6 +311,10 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
           case "day": return t("assistant.edit.day", { session: l.session, day: l.day === null ? t("plan.flexibleDay") : DICTS[c.locale].days.long[l.day]! });
           case "add": return t("assistant.edit.add", { session: l.session, exercise: ex(l.exerciseId) });
           case "remove": return t("assistant.edit.remove", { session: l.session, exercise: ex(l.exerciseId) });
+          case "set_all": return `${l.session ?? t("assistant.edit.wholePlan")}: ${t("assistant.edit.allExercises")} – ${[
+            l.sets ? `${l.sets} ${t("plan.sets")}` : "", l.reps ? `${l.reps[0]}–${l.reps[1]} ${t("plan.reps")}` : "",
+            l.rest !== undefined ? `${t("plan.rest")} ${l.rest} s` : "",
+          ].filter(Boolean).join(", ")}`;
           case "set": return `${l.session}: ${ex(l.exerciseId)} – ${[
             l.sets ? `${l.sets} ${t("plan.sets")}` : "", l.reps ? `${l.reps[0]}–${l.reps[1]} ${t("plan.reps")}` : "",
             l.kg ? `${fmt(c.locale, l.kg, 2)} kg` : "", l.rest !== undefined ? `${t("plan.rest")} ${l.rest} s` : "",

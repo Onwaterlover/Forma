@@ -100,7 +100,7 @@ export async function applyReview(planId: string, raw: unknown): Promise<{ error
     await savePlanVersion(user.id, planId, data, "review");
   }
   revalidatePath("/", "layout");
-  redirect("/training");
+  redirect("/training?ready=1");
 }
 
 export async function saveProfileOnly(raw: unknown, exclude?: string[]): Promise<{ error?: string }> {

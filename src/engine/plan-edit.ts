@@ -6,7 +6,7 @@ import { prescribe } from "./prescribe";
 
 export const EDIT_OPS = [
   "duplicate_session", "remove_session", "rename_session", "move_session", "set_day",
-  "add_exercise", "remove_exercise", "set_exercise",
+  "add_exercise", "remove_exercise", "set_exercise", "set_all_exercises",
 ] as const;
 export type EditOp = {
   op: (typeof EDIT_OPS)[number];
@@ -30,7 +30,8 @@ export type EditLine =
   | { kind: "remove_session" | "rename" | "move"; session: string; to?: string | number }
   | { kind: "day"; session: string; day: number | null }
   | { kind: "add" | "remove"; session: string; exerciseId: string }
-  | { kind: "set"; session: string; exerciseId: string; sets?: number; reps?: [number, number]; kg?: number; rest?: number };
+  | { kind: "set"; session: string; exerciseId: string; sets?: number; reps?: [number, number]; kg?: number; rest?: number }
+  | { kind: "set_all"; session: string | null; sets?: number; reps?: [number, number]; rest?: number };
 
 const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const label = (s: PlannedSession) => s.name ?? s.key;
@@ -44,6 +45,23 @@ export function applyPlanEdits(
   const at = (pos: number | null | undefined, len: number) => (pos && pos >= 1 ? Math.min(pos - 1, len) : len);
 
   for (const o of ops) {
+    // "Every rest 2 minutes": one change for all exercises of a session, or of the whole plan with session_key "*".
+    if (o.op === "set_all_exercises") {
+      if (o.kg != null) return { error: "kg differs per exercise; use set_exercise." };
+      const targets = o.session_key === "*" ? p.sessions : p.sessions.filter((x) => x.key === o.session_key);
+      if (!targets.length) return { error: `Unknown session_key "${o.session_key}". Use a key or "*" for the whole plan.` };
+      for (const t of targets) for (let i = 0; i < t.exercises.length; i++) {
+        const pe = setNumbers(t.exercises[i]!, o, now);
+        if ("error" in pe) return pe;
+        t.exercises[i] = pe;
+      }
+      lines.push({
+        kind: "set_all", session: o.session_key === "*" ? null : label(targets[0]!),
+        ...(o.sets ? { sets: o.sets } : {}), ...(o.rep_min || o.rep_max ? { reps: [o.rep_min ?? o.rep_max!, o.rep_max ?? o.rep_min!] as [number, number] } : {}),
+        ...(o.rest_sec != null ? { rest: o.rest_sec } : {}),
+      });
+      continue;
+    }
     const s = find(o.session_key);
     if (!s) return { error: `Unknown session_key "${o.session_key}". Valid: ${p.sessions.map((x) => x.key).join(", ")}` };
     switch (o.op) {

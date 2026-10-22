@@ -1,9 +1,10 @@
 import { Clock, Link2, MapPin } from "lucide-react";
 import { startWorkout } from "@/app/actions/training";
-import { cx, Notice } from "@/components/ui";
+import { DismissibleNotice } from "@/components/dismissible";
+import { cx } from "@/components/ui";
 import { BALANCED } from "@/engine/volume";
-import type { Effort, Exercise, Issue, Plan, TrainingProfile } from "@/engine/types";
-import { exName, fmt, fmtRest, renderMessage, type Locale, type T } from "@/i18n";
+import type { Exercise, Issue, Plan, TrainingProfile } from "@/engine/types";
+import { exName, fmt, renderMessage, type Locale, type T } from "@/i18n";
 import { DICTS } from "@/i18n";
 
 /** The plan as a clean, printable document: one block per training day, one line per exercise. */
@@ -29,22 +30,21 @@ export function PlanView({
 
   return (
     <div className="space-y-4">
-      {(errors.length > 0 || warnings.length > 0) && (
-        <Notice tone={errors.length ? "danger" : "warning"} className="print:hidden">
-          <p className="mb-1 font-medium">{t("plan.issues")}</p>
-          <ul className="list-disc space-y-0.5 pl-5">
-            {[...errors, ...warnings].slice(0, 8).map((i, k) => <li key={k}>{msg({ code: i.code, params: { ...i.params, ...(i.session ? { session: i.session } : {}), ...(i.exerciseId ? { exercise: i.exerciseId } : {}) } })}</li>)}
-          </ul>
-        </Notice>
-      )}
+      {(errors.length > 0 || warnings.length > 0) && (() => {
+        const lines = [...errors, ...warnings].slice(0, 8).map((i) => msg({ code: i.code, params: { ...i.params, ...(i.session ? { session: i.session } : {}), ...(i.exerciseId ? { exercise: i.exerciseId } : {}) } }));
+        // Warnings can be hidden ("I know, it's on purpose"); they come back only if the list changes. Errors stay.
+        return (
+          <DismissibleNotice tone={errors.length ? "danger" : "warning"} id={`issues:${planId}:${lines.join("|")}`} dismissible={!errors.length} closeLabel={t("plan.hideIssues")} className="print:hidden">
+            <p className="mb-1 font-medium">{t("plan.issues")}</p>
+            <ul className="list-disc space-y-0.5 pl-5">{lines.map((l, k) => <li key={k}>{l}</li>)}</ul>
+          </DismissibleNotice>
+        );
+      })()}
 
       {/* Printed: compact columns so a typical plan fits one A4 page. */}
       <div className={cx("grid gap-3 lg:grid-cols-2 print:gap-2", plan.sessions.length >= 5 ? "print:grid-cols-3" : "print:grid-cols-2")}>
         {plan.sessions.map((s) => {
-          // The most common effort cue is said once per day; only exceptions appear on the line itself.
-          const counts = new Map<Effort, number>();
-          for (const e of s.exercises) counts.set(e.effort, (counts.get(e.effort) ?? 0) + 1);
-          const mainEffort = [...counts].sort((a, b) => b[1] - a[1])[0]?.[0];
+          // Rest and effort cues are shown during the workout; the plan itself stays a clean list.
           return (
             <section key={s.key} className="break-inside-avoid rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 print:rounded-lg print:p-2.5">
               <header className="mb-2 flex items-start justify-between gap-3 print:mb-1">
@@ -64,26 +64,25 @@ export function PlanView({
               </header>
               <ol className="divide-y divide-border">
                 {s.exercises.map((e, i) => {
-                  const prevSame = i > 0 && e.superset !== undefined && s.exercises[i - 1]!.superset === e.superset;
-                  const details = [
-                    e.restSec > 0 && `${t("plan.rest")} ${fmtRest(e.restSec)}`,
-                    e.grip && `${t("plan.grip")} ${t(`plan.grips.${e.grip}`)}`,
-                    e.superset !== undefined && !prevSame && t("plan.superset"),
-                    e.effort !== mainEffort && t(`effort.${e.effort}`),
-                  ].filter(Boolean).join(" · ");
+                  const inSuperset = e.superset !== undefined && s.exercises.some((x, j) => j !== i && x.superset === e.superset);
+                  const prevSame = inSuperset && i > 0 && s.exercises[i - 1]!.superset === e.superset;
                   return (
-                    <li key={e.exerciseId} className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 py-2.5 print:grid-cols-[0.9rem_1fr_auto] print:gap-x-1.5 print:py-[3px] print:text-[10.5px]">
+                    <li key={e.exerciseId} className={cx(
+                      "grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 py-2.5 print:grid-cols-[0.9rem_1fr_auto] print:gap-x-1.5 print:py-[3px] print:text-[10.5px]",
+                      // Superset members share an accent bar on the left, so the pair is visible at a glance.
+                      inSuperset && "-ml-2 border-l-2 border-l-accent pl-2",
+                    )}>
                       <span className="text-sm tabular-nums text-muted">{prevSame ? <Link2 size={14} aria-label={t("plan.superset")} /> : i + 1}</span>
                       <span className="min-w-0">
                         <span className="block text-[15px] font-medium leading-snug print:text-[10.5px] print:leading-tight">{exName(lookup(e.exerciseId), locale, e.exerciseId)}</span>
-                        {details && <span className="block text-xs text-muted print:text-[8.5px]">{details}</span>}
+                        {inSuperset && !prevSame && <span className="block text-xs font-medium text-accent print:text-[8.5px]">{t("plan.supersetWithNext")}</span>}
+                        {e.grip && <span className="block text-xs text-muted print:text-[8.5px]">{t("plan.grip")} {t(`plan.grips.${e.grip}`)}</span>}
                       </span>
                       <span className="text-right text-[15px] font-semibold tabular-nums print:text-[10.5px]">{e.sets} × {e.seconds ? `${e.seconds} s` : `${e.repMin}–${e.repMax}`}</span>
                     </li>
                   );
                 })}
               </ol>
-              {mainEffort && <p className="mt-2 border-t border-border pt-2 text-xs text-muted print:mt-1 print:pt-1 print:text-[8.5px]">{t(`effort.${mainEffort}`)}</p>}
             </section>
           );
         })}
@@ -100,10 +99,13 @@ export function PlanView({
                 const v = plan.weeklySets[m] ?? 0;
                 const pr = profile?.priorities[m];
                 return (
-                  <li key={m} className="grid grid-cols-[8.5rem_1fr_2.5rem] items-center gap-2 text-sm">
-                    <span className="truncate">{t(`muscles.${m}`)}{pr && pr !== "normal" ? <span className="ml-1 text-xs text-muted">· {t(`onb.priorityLevel.${pr}`)}</span> : null}</span>
-                    <span className="h-2 overflow-hidden rounded-full bg-surface-2"><span className="block h-full rounded-full bg-accent" style={{ width: `${(v / maxSets) * 100}%` }} /></span>
-                    <span className="text-right tabular-nums text-muted">{fmt(locale, v, 1)}</span>
+                  // Name and number on one line, the bar below: nothing gets cut off on a phone.
+                  <li key={m} className="space-y-1 text-sm">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span>{t(`muscles.${m}`)}{pr && pr !== "normal" ? <span className="ml-1 text-xs text-muted">· {t(`onb.priorityLevel.${pr}`)}</span> : null}</span>
+                      <span className="tabular-nums text-muted">{fmt(locale, v, 1)}</span>
+                    </span>
+                    <span className="block h-1.5 overflow-hidden rounded-full bg-surface-2"><span className="block h-full rounded-full bg-accent" style={{ width: `${(v / maxSets) * 100}%` }} /></span>
                   </li>
                 );
               })}

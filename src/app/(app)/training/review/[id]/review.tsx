@@ -35,7 +35,7 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
   // What the exercise trains, in one short line: "Klatka · także triceps, przód barków".
   const lower = (s: string) => (locale === "de" ? s : s.toLowerCase());
   const muscles = (o: Option) => {
-    const main = o.primary.map((m) => t(`muscles.${m}`)).join(", ");
+    const main = o.primary.map((m, i) => (i ? lower(t(`muscles.${m}`)) : t(`muscles.${m}`))).join(", ");
     return o.secondary.length ? `${main} · ${t("review.also")} ${o.secondary.map((m) => lower(t(`muscles.${m}`))).join(", ")}` : main;
   };
   const diffText = (d: Diff) =>
@@ -146,7 +146,7 @@ export function PlanReview({ planId, days }: { planId: string; days: ReviewDay[]
             <Button full disabled={pending} onClick={confirm}>{t("review.confirm")}</Button>
           ) : (
             <>
-              <Button variant="secondary" className="whitespace-nowrap" disabled={pending} onClick={Object.keys(choice).length ? confirm : () => router.push("/training")}>{t("review.acceptAll")}</Button>
+              <Button variant="secondary" className="whitespace-nowrap" disabled={pending} onClick={Object.keys(choice).length ? confirm : () => router.push("/training?ready=1")}>{t("review.acceptAll")}</Button>
               <Button full onClick={() => { setStep(step + 1); setOpen(null); window.scrollTo({ top: 0 }); }}>{t("common.next")}</Button>
             </>
           )}

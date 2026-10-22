@@ -989,3 +989,8 @@ export async function saveAiEstimate(userId: string, q: string, e: { name: strin
   );
   return (await getProduct(userId, id))!;
 }
+
+/** Deletes one of the user's own products; diary entries keep their stored values (product link is cleared). */
+export async function deleteOwnProduct(userId: string, id: string) {
+  await (await db()).run("DELETE FROM food_products WHERE id = ? AND owner_user_id = ? AND source = 'custom'", [id, userId]);
+}

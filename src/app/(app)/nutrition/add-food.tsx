@@ -1,7 +1,7 @@
 "use client";
 import { ChevronLeft, Flame, PackagePlus, Plus, ScanBarcode, Star, Utensils } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
-import { addProductEntry, addQuickEntry, addRecipeEntry, averageProduct, productFor, saveFood, toggleFavorite } from "@/app/actions/nutrition";
+import { addProductEntry, addQuickEntry, addRecipeEntry, averageProduct, productFor, removeOwnProduct, saveFood, toggleFavorite } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, cx, Field, Input, Notice, Select } from "@/components/ui";
 import { fmt } from "@/i18n";
@@ -238,14 +238,19 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
     // Nothing that fits the words typed (only unrelated products, or none): an AI estimate of typical values,
     // shown first and marked "≈". Stored, so the next search for it is instant.
     const all: Product[] = [...have, ...(r.products ?? [])];
-    if (!all.some((p) => fits(p, q)) && q.trim().length >= 4) {
-      setEstimating(true);
-      const e = await fetch(`/api/food/estimate?q=${encodeURIComponent(q)}`).then((x) => x.json()).catch(() => ({ product: null }));
-      if (id !== seq.current) return;
-      setEstimating(false);
-      if (e.product) setRemote((x) => [e.product, ...(x ?? []).filter((p) => p.id !== e.product.id)]);
-    }
+    if (!all.some((p) => fits(p, q)) && q.trim().length >= 4) await estimate(id);
   };
+  // Also on request ("not this?"), even when products were found.
+  const estimate = async (id = seq.current) => {
+    setEstimating(true);
+    const e = await fetch(`/api/food/estimate?q=${encodeURIComponent(q)}`).then((x) => x.json()).catch(() => ({ product: null }));
+    if (id !== seq.current) return;
+    setEstimating(false);
+    setAsked(true);
+    if (e.product) setRemote((x) => [e.product, ...(x ?? []).filter((p) => p.id !== e.product.id)]);
+  };
+  const [asked, setAsked] = useState(false);
+  useEffect(() => setAsked(false), [q]);
 
   return (
     <div className="space-y-3">
@@ -266,6 +271,9 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
               <>
                 <ProductList items={all} onPick={onPick} />
                 {(loading || estimating) && <p className="py-2 text-center text-xs text-muted">{estimating ? t("nutrition.estimating") : t("nutrition.searchingRemote")}</p>}
+                {!loading && !estimating && !asked && q.trim().length >= 4 && (
+                  <button type="button" className="w-full py-2 text-center text-sm font-medium text-accent" onClick={() => estimate()}>{t("nutrition.askAi")}</button>
+                )}
               </>
             );
           })()}
@@ -338,6 +346,13 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
         </div>
         {estimate && <p className="mt-2 text-xs text-muted">{t("nutrition.estimateNote")}</p>}
       </div>
+      {product.mine && (
+        // Own products (also averages made by mistake) can be removed; diary entries keep their values.
+        <button type="button" className="text-xs font-medium text-danger underline" disabled={pending}
+          onClick={() => { if (window.confirm(t("nutrition.removeProductConfirm"))) removeOwnProduct(product.id).then(onBack); }}>
+          {t("nutrition.removeProduct")}
+        </button>
+      )}
       <div className="sticky bottom-0 -mx-5 flex gap-2 bg-surface px-5 pt-1">
         {/* Favourite as a star next to Back: always at hand, no extra row. */}
         <Button variant="secondary" className="w-12 shrink-0 px-0" aria-pressed={fav} aria-label={fav ? t("nutrition.unfavorite") : t("nutrition.favorite")} title={fav ? t("nutrition.unfavorite") : t("nutrition.favorite")}

@@ -35,4 +35,15 @@ describe("AI food estimate", () => {
     reply({ food: true, name: "X", basis: "g", state: null, kcal: 900, protein: 10, carbs: 10, fat: 1, fiber: 0 });
     expect(await ai.estimateFood("coś", "pl")).toBeNull();
   });
+  it("own products can be deleted only by their owner; diary entries keep their values", async () => {
+    const auth = await import("./auth");
+    const { emptyNutrients } = await import("@/nutrition/calc");
+    const a = await auth.createUser("own-a@test.test", "A", "password-aaaa-1", false);
+    const b = await auth.createUser("own-b@test.test", "B", "password-bbbb-1", false);
+    const id = await data.saveCustomProduct(a, { name: "Ziemniaki airfryer (≈ średnia z 3)", brand: null, barcode: null, basis: "g", state: null, nutrients: { ...emptyNutrients(), kcal: 120 }, servings: [] });
+    await data.deleteOwnProduct(b, id);
+    expect(await data.getProduct(a, id)).not.toBeNull();
+    await data.deleteOwnProduct(a, id);
+    expect(await data.getProduct(a, id)).toBeNull();
+  });
 });

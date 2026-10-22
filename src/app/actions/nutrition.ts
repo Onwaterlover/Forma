@@ -7,7 +7,7 @@ import { energyEstimate } from "@/lib/estimate";
 import {
   addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, intakeHistory, saveCustomProduct, undoDelete, saveRecipe, setDayComplete,
   setFavorite, setTarget, updateEntry, type Recipe,
-  saveAverageProduct, type Product,
+  saveAverageProduct, deleteOwnProduct, type Product,
 } from "@/lib/data";
 import { translator } from "@/i18n";
 import { NUTRIENT_KEYS, sanitize, type Nutrients } from "@/nutrition/calc";
@@ -81,6 +81,13 @@ export async function markDay(day: string, complete: boolean | null) {
   const user = await requireUser();
   if (!isIsoDate(day)) return;
   await setDayComplete(user.id, day, complete);
+  done();
+}
+
+export async function removeOwnProduct(productId: string) {
+  const user = await requireUser();
+  if (typeof productId !== "string" || productId.length > 64) return;
+  await deleteOwnProduct(user.id, productId);
   done();
 }
 

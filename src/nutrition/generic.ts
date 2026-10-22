@@ -61,6 +61,8 @@ const F: Row[] = [
   { key: "bread_rye", names: { pl: "Chleb żytni", en: "Rye bread", de: "Roggenbrot" }, aliases: "chleb zytni razowy pieczywo roggenbrot brot rye bread", n: [259, 8.5, 42.5, 3.3, 5.8], servings: [["slice", 35]] },
   { key: "potato", names: { pl: "Ziemniaki, surowe", en: "Potatoes, raw", de: "Kartoffeln, roh" }, aliases: "ziemniak ziemniaki kartofle kartoffel kartoffeln potato potatoes", n: [77, 2.0, 15.3, 0.1, 2.2], servings: [["piece", 150]] },
   { key: "potato_boiled", names: { pl: "Ziemniaki gotowane", en: "Potatoes, boiled", de: "Kartoffeln, gekocht" }, aliases: "ziemniak ziemniaki gotowane kartoffeln gekocht salzkartoffeln potato boiled", state: "cooked", n: [87, 1.9, 18.3, 0.1, 1.8], servings: [["piece", 150]] },
+  // USDA SR 11674: baked, flesh and skin, no salt or fat.
+  { key: "potato_baked", names: { pl: "Ziemniaki pieczone (bez tłuszczu)", en: "Potatoes, baked", de: "Kartoffeln, gebacken" }, aliases: "ziemniak ziemniaki pieczone pieczony z piekarnika airfryer frytkownica ofenkartoffeln backkartoffel kartoffeln gebacken baked potato potatoes", state: "cooked", n: [93, 2.5, 21.2, 0.1, 2.2] },
   { key: "sweet_potato", names: { pl: "Batat, surowy", en: "Sweet potato, raw", de: "Süßkartoffel, roh" }, aliases: "batat bataty slodki ziemniak susskartoffel sweet potato", n: [86, 1.6, 17.1, 0.1, 3.0], servings: [["piece", 200]] },
   { key: "buckwheat", names: { pl: "Kasza gryczana, sucha", en: "Buckwheat groats, dry", de: "Buchweizen, roh" }, aliases: "kasza gryczana buchweizen buckwheat", n: [346, 11.7, 64.6, 2.7, 10.3], servings: [["bag", 100]] },
   { key: "buckwheat_cooked", names: { pl: "Kasza gryczana, ugotowana", en: "Buckwheat, cooked", de: "Buchweizen, gekocht" }, aliases: "kasza gryczana ugotowana buchweizen gekocht buckwheat cooked", state: "cooked", n: [92, 3.4, 17.2, 0.6, 2.7] },
@@ -109,7 +111,7 @@ const F: Row[] = [
 ];
 
 /** Bump when values change: rows are re-written once on the next start. */
-export const GENERIC_VERSION = "generic-5";
+export const GENERIC_VERSION = "generic-6";
 
 export function genericRows() {
   return F.flatMap((f, rank) => (["pl", "en", "de"] as const).map((locale) => {

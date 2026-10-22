@@ -250,3 +250,18 @@ describe("macro goals", () => {
     expect(macroTargets(1500, null).fiber).toBe(25);
   });
 });
+
+describe("typical piece", () => {
+  it("bakery items by the piece, never flour or crumbs", async () => {
+    const { typicalPiece } = await import("./slices");
+    expect(typicalPiece("Apfeltasche")).toBe(100);
+    expect(typicalPiece("Butter Croissant")).toBe(60);
+    expect(typicalPiece("Laugenbrezel")).toBe(85);
+    expect(typicalPiece("Laugenbrötchen")).toBe(70);
+    expect(typicalPiece("Bułka kajzerka")).toBe(55);
+    expect(typicalPiece("Bułka tarta")).toBeNull();
+    expect(typicalPiece("Mąka pszenna")).toBeNull();
+    expect(typicalPiece("Jogurt naturalny")).toBeNull();
+    expect(typicalPiece("Mini Apfeltaschen")).toBeNull();
+  });
+});

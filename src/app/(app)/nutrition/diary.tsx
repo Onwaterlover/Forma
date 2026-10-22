@@ -58,7 +58,7 @@ export function Diary({
     setEditServings([]);
     if (!editing?.productId) return;
     let live = true;
-    productFor(editing.productId).then((p) => { if (live && p) setEditServings(servingsWithSlice(p, t("nutrition.slice"))); }).catch(() => {});
+    productFor(editing.productId).then((p) => { if (live && p) setEditServings(servingsWithSlice(p, t("nutrition.slice"), t("nutrition.piece"))); }).catch(() => {});
     return () => { live = false; };
   }, [editing?.id, editing?.productId]);
   const [amount, setAmount] = useState<number | null>(null);

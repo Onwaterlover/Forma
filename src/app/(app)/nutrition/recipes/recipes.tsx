@@ -27,7 +27,7 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
     setEditIdx(editIdx === k ? null : k);
     setEditServings([]);
     const pid = draft?.ingredients[k]?.productId;
-    if (pid && editIdx !== k) productFor(pid).then((pr) => pr && setEditServings(servingsWithSlice(pr, t("nutrition.slice")))).catch(() => {});
+    if (pid && editIdx !== k) productFor(pid).then((pr) => pr && setEditServings(servingsWithSlice(pr, t("nutrition.slice"), t("nutrition.piece")))).catch(() => {});
   };
   const [q, setQ] = useState("");
   const [found, setFound] = useState<Product[] | null>(null);
@@ -66,7 +66,7 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
     // Open the new ingredient's amount right away (starts at 100 g).
     setEditIdx(draft.ingredients.length);
     setEditServings([]);
-    productFor(p.id).then((pr) => pr && setEditServings(servingsWithSlice(pr, t("nutrition.slice")))).catch(() => {});
+    productFor(p.id).then((pr) => pr && setEditServings(servingsWithSlice(pr, t("nutrition.slice"), t("nutrition.piece")))).catch(() => {});
   };
 
   const preview = draft ? calc(draft.ingredients.map((i) => ({ ...i, grams: i.grams ?? 0 })), { cookedYieldG: draft.cookedYieldG, servings: draft.servings ?? 1 }) : null;

@@ -8,7 +8,7 @@ import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product } from "@/lib/data";
 import { energyMismatch, medianOf, NUTRIENT_KEYS, scale, type NutrientKey } from "@/nutrition/calc";
-import { typicalSlice } from "@/nutrition/slices";
+import { typicalPiece, typicalSlice } from "@/nutrition/slices";
 import { Scanner } from "./scanner";
 
 export type RecipeLite = { id: string; name: string; isMeal: boolean; servings: number; finalWeight: number; perServingKcal: number | null; totalKcal: number | null };
@@ -275,19 +275,23 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
   );
 }
 
-/** Product servings, plus "slice (≈ 12 g)" for sliced ham/cheese that came without one. */
-export function servingsWithSlice(p: Pick<Product, "servings" | "name" | "basis">, label: string) {
+/** Product servings, plus "slice (≈ 12 g)" for sliced ham/cheese or "piece (≈ 100 g)" for bakery items that came without one. */
+export function servingsWithSlice(p: Pick<Product, "servings" | "name" | "basis">, label: string, pieceLabel = "1 ×") {
   if (p.servings.length || p.basis !== "g") return p.servings;
   const g = typicalSlice(p.name);
-  return g ? [{ label: `${label} (≈ ${g} g)`, amount: g }] : [];
+  if (g) return [{ label: `${label} (≈ ${g} g)`, amount: g }];
+  const pc = typicalPiece(p.name);
+  return pc ? [{ label: `${pieceLabel} (≈ ${pc} g)`, amount: pc }] : [];
 }
 
 export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }: { product: Product & { lastAmount?: number }; onAdd: (amount: number) => void; onBack: () => void; pending: boolean; meal?: ReactNode; onRescan?: () => void }) {
   const { t, locale } = useI18n();
   // Basic foods start at one piece (one egg); everything else at the last amount or 100 g.
   // (Countable servings only: an egg, a slice of bread, a pot; spoons and sprays start in grams.)
-  const startPieces = product.source === "generic" && !product.lastAmount && (product.servings[0]?.amount ?? 0) >= 30;
-  const [amount, setAmount] = useState<number | null>(product.lastAmount ?? (startPieces ? product.servings[0]!.amount : 100));
+  // Bakery items bought by the piece start at one piece too.
+  const servings = servingsWithSlice(product, t("nutrition.slice"), t("nutrition.piece"));
+  const startPieces = !product.lastAmount && (product.source === "generic" ? (product.servings[0]?.amount ?? 0) >= 30 : !product.servings.length && typicalSlice(product.name) === null && typicalPiece(product.name) !== null);
+  const [amount, setAmount] = useState<number | null>(product.lastAmount ?? (startPieces ? servings[0]!.amount : 100));
   const [fav, setFav] = useState(!!product.favorite);
   const v = scale(product.nutrients, amount ?? 0);
   const num = (k: NutrientKey) => (v[k] === null ? <span className="text-warning">?</span> : fmt(locale, v[k], k === "kcal" ? 0 : 1));
@@ -314,7 +318,7 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
       )}
       {energyMismatch(product.nutrients) && <Notice tone="warning">{t("nutrition.energyMismatch")}</Notice>}
       {meal}
-      <AmountInput amount={amount} onChange={setAmount} basis={product.basis} servings={servingsWithSlice(product, t("nutrition.slice"))} startPieces={startPieces} />
+      <AmountInput amount={amount} onChange={setAmount} basis={product.basis} servings={servings} startPieces={startPieces} />
       {/* The amount's calories big, per 100 g beside them, macros underneath; fits a phone screen without scrolling. */}
       <div className="rounded-2xl bg-surface-2 px-4 py-3">
         <div className="flex items-baseline justify-between gap-3">

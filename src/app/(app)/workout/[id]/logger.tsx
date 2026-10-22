@@ -402,7 +402,8 @@ export function WorkoutLogger({
                   if (!tg || timeBased || hideRepHint.includes(e.exerciseId)) return null;
                   const last = [...e.sets].reverse().find((x) => x.completed && x.type !== "warmup" && x.reps !== null);
                   if (!last?.reps) return null;
-                  const hint = last.reps > tg.repMax + 2 ? "tooLight" : last.reps < tg.repMin - 2 ? "tooHeavy" : null;
+                  // Only clear cases: 5+ reps above the range (e.g. 17 at 8–12) or half the range's bottom or less (e.g. 4 at 8–12).
+                  const hint = last.reps >= tg.repMax + 5 ? "tooLight" : last.reps <= Math.floor(tg.repMin / 2) ? "tooHeavy" : null;
                   if (!hint) return null;
                   return (
                     <p className="flex items-center justify-between gap-2 rounded-xl bg-warning-soft px-3 py-2 text-sm text-warning">

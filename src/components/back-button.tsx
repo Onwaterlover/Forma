@@ -8,6 +8,7 @@ export function BackButton({ href, label }: { href: string; label: string }) {
   return (
     <button
       type="button"
+      data-nav="back"
       onClick={() => {
         const fromApp = typeof document !== "undefined" && document.referrer.startsWith(window.location.origin);
         if (fromApp && window.history.length > 1) router.back();

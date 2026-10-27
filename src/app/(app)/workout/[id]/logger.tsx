@@ -69,6 +69,9 @@ export function WorkoutLogger({
   const [lastRest, setLastRest] = useState(90);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(w);
+  // Correcting a finished workout: the copy from before, while the corrections are a draft. Nothing is saved
+  // (not even on this device) until "Save corrections"; "Cancel" or leaving puts the old copy back.
+  const draft = useRef<WorkoutPayload | null>(null);
   const finished = w.status !== "in_progress";
   // A finished workout can be corrected afterwards; edits sync the same way as during the workout.
   const [editing, setEditing] = useState(false);
@@ -102,6 +105,7 @@ export function WorkoutLogger({
     const next = { ...fn(latest.current), clientUpdatedAt: now() };
     latest.current = next;
     setW(next);
+    if (draft.current) return;
     try { localStorage.setItem(STORE(next.id), JSON.stringify(next)); } catch {}
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(push, 700);
@@ -117,7 +121,7 @@ export function WorkoutLogger({
         push();
       }
     } catch {}
-    const online = () => latest.current && push();
+    const online = () => latest.current && !draft.current && push();
     window.addEventListener("online", online);
     const iv = setInterval(() => setTick(Date.now()), 1000);
     return () => {
@@ -173,8 +177,41 @@ export function WorkoutLogger({
     };
   };
 
+  // In a live workout the new exercise starts fresh; correcting history keeps every set as it was done.
   const swapTo = (i: number, ex: Exercise) =>
-    editEx(i, (e) => ({ ...e, exerciseId: ex.id, name: exName(ex, locale), loading: ex.loading, completed: false, sets: e.sets.map((s) => ({ ...s, weightKg: null, reps: null, completed: false })) }));
+    editEx(i, (e) => ({
+      ...e, exerciseId: ex.id, name: exName(ex, locale), loading: ex.loading,
+      ...(finished ? {} : { completed: false, sets: e.sets.map((s) => ({ ...s, weightKg: null, reps: null, completed: false })) }),
+    }));
+  const unsaved = editing && !!draft.current && w !== draft.current;
+  const cancelCorrections = () => {
+    const before = draft.current;
+    draft.current = null;
+    if (before) { latest.current = before; setW(before); }
+    setEditing(false);
+  };
+  const saveCorrections = async () => {
+    const before = draft.current;
+    draft.current = null;
+    setEditing(false);
+    if (before && latest.current !== before) {
+      try { localStorage.setItem(STORE(latest.current.id), JSON.stringify(latest.current)); } catch {}
+      toast({ text: (await push()) ? t("common.saved") : t("workout.offline") });
+    }
+    router.refresh();
+  };
+  // Leaving with unsaved corrections asks first (links, the back button, closing the page); a "yes" drops them.
+  useEffect(() => {
+    if (!unsaved) return;
+    const onClick = (e: MouseEvent) => {
+      const el = (e.target as Element | null)?.closest("a[href], [data-nav]");
+      if (el && !window.confirm(t("workout.leaveUnsaved"))) { e.preventDefault(); e.stopPropagation(); }
+    };
+    const onUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("beforeunload", onUnload);
+    return () => { document.removeEventListener("click", onClick, true); window.removeEventListener("beforeunload", onUnload); };
+  }, [unsaved, t]);
 
   const changeLocation = (locId: string) => {
     const loc = profile?.locations.find((l) => l.id === locId);
@@ -476,10 +513,13 @@ export function WorkoutLogger({
 
       {finished ? (
         editing ? (
-          <Button full onClick={() => { setEditing(false); router.refresh(); }}><Check size={16} aria-hidden />{t("workout.editDone")}</Button>
+          <div className="flex gap-2">
+            <Button full onClick={saveCorrections}><Check size={16} aria-hidden />{t("workout.editDone")}</Button>
+            <Button variant="ghost" onClick={cancelCorrections}>{t("common.cancel")}</Button>
+          </div>
         ) : (
           <div className="flex gap-2">
-            <Button full variant="secondary" onClick={() => { setEditing(true); window.scrollTo({ top: 0 }); }}><Pencil size={16} aria-hidden />{t("workout.editWorkout")}</Button>
+            <Button full variant="secondary" onClick={() => { draft.current = latest.current; setEditing(true); window.scrollTo({ top: 0 }); }}><Pencil size={16} aria-hidden />{t("workout.editWorkout")}</Button>
             <Button variant="ghost" className="text-danger" onClick={() => setSheet({ kind: "delete" })}><Trash2 size={16} aria-hidden />{t("common.delete")}</Button>
           </div>
         )

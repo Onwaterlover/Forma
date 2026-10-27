@@ -1,5 +1,6 @@
 import { ToastProvider } from "@/components/client";
 import { Logo } from "@/components/logo";
+import { RestPill } from "@/components/rest-pill";
 import { I18nProvider } from "@/i18n/client";
 import { pageCtx } from "@/lib/ctx";
 import { Nav } from "./nav";
@@ -30,6 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Nav items={items} variant="bottom" />
         </nav>
         </NavPendingProvider>
+        <RestPill />
         <SwRegister />
       </ToastProvider>
     </I18nProvider>

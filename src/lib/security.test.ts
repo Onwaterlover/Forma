@@ -292,3 +292,29 @@ describe("progress photos", () => {
     expect(await data.saveAverageProduct(A, ["gen_pl_apple", secret], () => "x")).toBeNull();
   });
 });
+
+describe("save as meal", () => {
+  it("replaces the chosen entries with one meal entry of the same values, for the owner only", async () => {
+    const day = "2026-10-20";
+    const rice = await data.saveCustomProduct(A, { name: "Ryż", brand: null, barcode: null, basis: "g", state: "cooked", nutrients: { ...emptyNutrients(), kcal: 130, protein: 2.7 }, servings: [] });
+    const chicken = await data.saveCustomProduct(A, { name: "Kurczak", brand: null, barcode: null, basis: "g", state: "cooked", nutrients: { ...emptyNutrients(), kcal: 165, protein: 31 }, servings: [] });
+    const e1 = (await data.addEntry(A, { productId: rice, amount: 200, date: day, meal: "lunch" }))!;
+    const e2 = (await data.addEntry(A, { productId: chicken, amount: 150, date: day, meal: "lunch" }))!;
+    await data.addEntry(A, { productId: chicken, amount: 50, date: day, meal: "dinner" });
+    const before = (await data.diaryDay(A, day)).totals;
+
+    expect(await data.replaceEntriesWithMeal(B, day, [e1, e2], "Hack")).toBeNull();
+    expect((await data.diaryDay(A, day)).entries).toHaveLength(3);
+
+    const id = (await data.replaceEntriesWithMeal(A, day, [e1, e2], "Obiad"))!;
+    const after = await data.diaryDay(A, day);
+    expect(after.entries).toHaveLength(2);
+    expect(after.totals.kcal).toBeCloseTo(before.kcal!, 6);
+    expect(after.totals.protein).toBeCloseTo(before.protein!, 6);
+    expect(after.entries.find((e) => e.recipeId === id)).toMatchObject({ name: "Obiad", amount: 350, meal: "lunch", basis: "g" });
+    const meal = (await data.getRecipe(A, id))!;
+    expect(meal).toMatchObject({ isMeal: true });
+    expect(meal.ingredients.map((i) => [i.name, i.grams])).toEqual([["Ryż", 200], ["Kurczak", 150]]);
+    expect(await data.getRecipe(B, id)).toBeNull();
+  });
+});

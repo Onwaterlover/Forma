@@ -44,23 +44,30 @@ export function Diary({
   const router = useRouter();
   const [adding, setAdding] = useState<null | { view: "search" | "scan"; product: (Product & { lastAmount?: number }) | null }>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
-  const [editServings, setEditServings] = useState<{ label: string; amount: number }[]>([]);
-  const [editRecipe, setEditRecipe] = useState<Recipe | null>(null);
+  // Loaded per entry and tagged with its id: until this entry's data is in, nothing stale (the previous entry's
+  // pieces) or provisional (grams) is shown, so the unit doesn't flip after opening.
+  const [editServings, setEditServings] = useState<{ entry: string; list: { label: string; amount: number }[] } | null>(null);
+  const [editRecipeFor, setEditRecipeFor] = useState<{ entry: string; recipe: Recipe | null } | null>(null);
   useEffect(() => {
-    setEditRecipe(null);
     if (!editing?.recipeId) return;
+    const entry = editing.id;
     let live = true;
-    recipeFor(editing.recipeId).then((r) => { if (live) setEditRecipe(r); }).catch(() => {});
+    recipeFor(editing.recipeId).then((r) => { if (live) setEditRecipeFor({ entry, recipe: r }); }).catch(() => { if (live) setEditRecipeFor({ entry, recipe: null }); });
     return () => { live = false; };
   }, [editing?.id, editing?.recipeId]);
   // Servings of the entry's product (egg, slice…), so it can be edited in pieces too.
   useEffect(() => {
-    setEditServings([]);
     if (!editing?.productId) return;
+    const entry = editing.id;
     let live = true;
-    productFor(editing.productId).then((p) => { if (live && p) setEditServings(servingsWithSlice(p, t("nutrition.slice"), t("nutrition.piece"))); }).catch(() => {});
+    productFor(editing.productId)
+      .then((p) => { if (live) setEditServings({ entry, list: p ? servingsWithSlice(p, t("nutrition.slice"), t("nutrition.piece")) : [] }); })
+      .catch(() => { if (live) setEditServings({ entry, list: [] }); });
     return () => { live = false; };
   }, [editing?.id, editing?.productId]);
+  const editRecipe = editing?.recipeId && editRecipeFor?.entry === editing.id ? editRecipeFor.recipe : null;
+  const recipeLoading = !!editing?.recipeId && editRecipeFor?.entry !== editing.id;
+  const servingsList = !editing?.productId ? [] : editServings?.entry === editing.id ? editServings.list : null;
   const [amount, setAmount] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -245,7 +252,7 @@ export function Diary({
         </div>
       )}
 
-      <AddFood open={!!adding} onClose={() => { setAdding(null); router.refresh(); }} date={date} today={today} view={adding?.view ?? "search"} product={adding?.product ?? null} favorites={favorites} recipes={recipes} />
+      <AddFood open={!!adding} onClose={() => { setAdding(null); router.refresh(); }} date={date} today={today} view={adding?.view ?? "search"} product={adding?.product ?? null} favorites={favorites} recents={recents} recipes={recipes} />
 
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.name ?? ""}>
         {editing && (
@@ -262,8 +269,8 @@ export function Diary({
                 <Link href={`/nutrition/recipes?open=${editRecipe.id}`} className="inline-flex text-sm font-medium text-accent">{t("nutrition.editRecipe")}</Link>
               </div>
             ) : editing.basis !== "portion" && (
-              <div className="space-y-3">
-                <AmountInput key={editServings.length} amount={amount} onChange={setAmount} basis={editing.basis} servings={editServings} />
+              <div className="min-h-[200px] space-y-3">
+                {!recipeLoading && servingsList !== null && <AmountInput key={editing.id} amount={amount} onChange={setAmount} basis={editing.basis} servings={servingsList} />}
               </div>
             )}
             <label className="block space-y-1.5">
@@ -295,6 +302,7 @@ export function Diary({
               </li>
             ))}
           </ul>
+          <p className="text-xs text-muted">{t("nutrition.saveMealReplaces")}</p>
           <Button full disabled={pending || !mealName.trim() || selected.length === 0}
             onClick={() => start(async () => {
               const r = await saveMealFromEntries(date, selected, mealName);

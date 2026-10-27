@@ -74,7 +74,7 @@ export default async function TodayPage() {
                     {t("plan.estimated", { n: next.estimatedMinutes })}
                     {locName(next.locationId) ? ` · ${locName(next.locationId)}` : ""}
                   </p>
-                  {!scheduledToday && planDays.size > 0 && <p className="mt-1 text-sm text-muted">{t(logging ? "today.restDay" : "today.restDayPlanOnly")}</p>}
+                  {!scheduledToday && planDays.size > 0 && <p className="mt-1 text-sm text-muted">{t("today.restDayPlanOnly")}</p>}
                 </div>
                 {logging && <form action={startWorkout.bind(null, plan.id, next.key, undefined, undefined)}>
                   <button type="submit" className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-hover">

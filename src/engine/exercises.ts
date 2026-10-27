@@ -173,6 +173,12 @@ export const EXERCISES: Exercise[] = [
     skill: 2, fatigue: "moderate", stable: true, loading: "total",
     cuePl: "Łopatki na ławce, broda lekko przy klatce, wyprost bioder bez przeprostu lędźwi.", cueEn: "Shoulder blades on the bench, chin tucked, extend the hips without arching.",
   }),
+  ex("hip_thrust_db", {
+    pl: "Hip thrust z hantlem", en: "Dumbbell hip thrust", de: "Hip Thrust mit Kurzhantel", aliases: ["hip thrust z hantlą", "hip thrust hantel", "dumbbell hip thrust", "db hip thrust"],
+    primary: ["glutes"], secondary: ["hamstrings"], pattern: "hip_ext", equipment: [...DB, "bench"], kind: "dumbbell", mechanics: "compound",
+    skill: 1, fatigue: "moderate", stable: true, loading: "total",
+    cuePl: "Łopatki na ławce, hantel trzymany oburącz na biodrach, wyprost bioder bez przeprostu lędźwi.", cueEn: "Shoulder blades on the bench, hold the dumbbell on the hips with both hands, extend the hips without arching.",
+  }),
   ex("hip_thrust_machine", {
     pl: "Hip thrust na maszynie", en: "Machine hip thrust", de: "Hip Thrust an der Maschine", aliases: ["hip thrust maszyna", "hip thrust na maszynie", "glute drive", "machine hip thrust"],
     primary: ["glutes"], secondary: ["hamstrings"], pattern: "hip_ext", equipment: ["glute_machines"], kind: "machine", machineType: "plate_loaded",

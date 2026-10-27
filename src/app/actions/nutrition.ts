@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { isIsoDate, shiftDate } from "@/lib/ctx";
 import { energyEstimate } from "@/lib/estimate";
 import {
-  addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, intakeHistory, saveCustomProduct, undoDelete, saveRecipe, setDayComplete,
+  addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, intakeHistory, replaceEntriesWithMeal, saveCustomProduct, undoDelete, saveRecipe, setDayComplete,
   setFavorite, setTarget, updateEntry, type Recipe,
   saveAverageProduct, deleteOwnProduct, type Product,
 } from "@/lib/data";
@@ -165,10 +165,10 @@ export async function saveRecipeAction(input: unknown): Promise<{ id?: string; e
 export async function saveMealFromEntries(day: string, entryIds: string[], name: string) {
   const user = await requireUser();
   if (!isIsoDate(day) || !name.trim()) return { error: "invalid" };
-  const entries = (await diaryDay(user.id, day)).entries.filter((e) => entryIds.includes(e.id) && e.basis !== "portion");
-  if (!entries.length) return { error: "invalid" };
-  const ingredients = entries.map((e) => ({ productId: e.productId, name: e.name, grams: e.amount, nutrients: e.nutrients as Nutrients }));
-  const id = await saveRecipe(user.id, { name: name.trim().slice(0, 80), ingredients, cookedYieldG: null, servings: 1, isMeal: true });
+  if (!Array.isArray(entryIds) || entryIds.length > 100 || entryIds.some((x) => typeof x !== "string")) return { error: "invalid" };
+  // The entries are replaced by one entry for the new meal (same values), so nothing is counted twice.
+  const id = await replaceEntriesWithMeal(user.id, day, entryIds, name.trim().slice(0, 80));
+  if (!id) return { error: "invalid" };
   revalidatePath("/nutrition", "layout");
   return { id };
 }

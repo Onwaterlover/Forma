@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode
 import { addProductEntry, addQuickEntry, addRecipeEntry, averageProduct, productFor, removeOwnProduct, saveFood, toggleFavorite } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, cx, Field, Input, Notice, Select } from "@/components/ui";
-import { fmt } from "@/i18n";
+import { DICTS, fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product } from "@/lib/data";
 import { energyMismatch, medianOf, NUTRIENT_KEYS, scale, type NutrientKey } from "@/nutrition/calc";
@@ -22,7 +22,7 @@ export function mealNow(): (typeof MEALS)[number] {
 }
 
 export function AddFood({
-  open, onClose, date, today, view: startView, product, favorites, recipes,
+  open, onClose, date, today, view: startView, product, favorites, recipes, recents = [],
 }: {
   open: boolean;
   onClose: () => void;
@@ -33,6 +33,7 @@ export function AddFood({
   /** Open directly on the amount screen for this product (e.g. tapped in "Recent"). */
   product: Product | null;
   favorites: Product[];
+  recents?: (Product & { lastAmount: number })[];
   recipes: RecipeLite[];
 }) {
   const { t } = useI18n();
@@ -82,27 +83,41 @@ export function AddFood({
   }, [t, toast]);
 
   const title = picked ? picked.name : view === "scan" ? t("nutrition.scan") : view === "meals" ? t("nutrition.meals") : view === "custom" ? t("nutrition.custom") : view === "quick" ? t("nutrition.quick") : t("nutrition.add");
+  // Picking closes the keyboard first, so it can't cover the amount; the search below stays mounted (hidden),
+  // so its query and results are still there after adding, going back or starring the product.
+  const pick = (p: Product) => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    setPicked(p);
+  };
 
   return (
     <Sheet open={open} onClose={onClose} title={title} wide full>
-      {picked ? (
+      {picked && (
         // From "Recent" on the diary page the sheet only exists for this product, so adding closes it.
         <AmountPicker product={picked} pending={pending} onBack={() => (product ? onClose() : setPicked(null))} onAdd={(amount) => add(picked, amount, !!product || scanned)}
           onRescan={scanned ? () => { setPicked(null); setScanned(false); setView("scan"); } : undefined}
           meal={<MealSelect meal={meal} onChange={setMeal} />} />
-      ) : (
-        <div className="space-y-4">
+      )}
+      {(!picked || view === "search") && (
+        <div className={cx("space-y-4", picked && "hidden")}>
           {view !== "search" && (
             <button type="button" onClick={() => setView("search")} className="-ml-1 inline-flex items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={16} aria-hidden />{t("nutrition.search")}</button>
           )}
           <MealSelect meal={meal} onChange={setMeal} />
 
           {view === "search" && (
-            <SearchTab onPick={setPicked} onScan={() => setView("scan")}>
+            <SearchTab onPick={pick} onScan={() => setView("scan")}>
               {favorites.length > 0 && (
                 <section>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.favorites")}</p>
-                  <ProductList items={favorites.map((p) => ({ ...p, lastAmount: p.servings[0]?.amount ?? 100 }))} onPick={setPicked} onQuick={(p, a) => add(p, a)} pending={pending} />
+                  <ProductList items={favorites.map((p) => ({ ...p, lastAmount: p.servings[0]?.amount ?? 100 }))} onPick={pick} onQuick={(p, a) => add(p, a)} pending={pending} />
+                </section>
+              )}
+              {/* Recent products right away: "+" adds the last amount and keeps the sheet open; the name opens it. */}
+              {recents.some((r) => !favorites.some((f) => f.id === r.id)) && (
+                <section>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("nutrition.recent")}</p>
+                  <ProductList items={recents.filter((r) => !favorites.some((f) => f.id === r.id)).slice(0, 8)} onPick={pick} onQuick={(p, a) => add(p, a)} pending={pending} />
                 </section>
               )}
               <div className="grid grid-cols-3 gap-2">
@@ -170,6 +185,10 @@ export function ProductList({ items, onPick, onQuick, pending }: { items: (Produ
   );
 }
 
+/** AI estimates are stored as "Name (≈ AI estimate)" in the language of whoever asked first. */
+const AI_LABELS = Object.values(DICTS).map((d) => d.nutrition.aiEstimate);
+const isAiEstimate = (p: Pick<Product, "source" | "name">) => p.source === "custom" && p.name.includes("≈") && AI_LABELS.some((l) => p.name.includes(l));
+
 /**
  * "Not exactly this? Use the average of similar results": the median of the top results (same as the server
  * computes), shown with a few of their names so it's clear what it is based on.
@@ -179,6 +198,8 @@ function AverageOffer({ query, items, onPick }: { query: string; items: Product[
   const toast = useToast();
   const [pending, start] = useTransition();
   const top = items.filter((p) => p.source !== "custom" || !p.name.includes("≈")).slice(0, 8);
+  // One estimate at a time: with an AI estimate in the list, a second "average" offer would only confuse.
+  if (items.some(isAiEstimate)) return null;
   // A basic food among the first results is better than any average.
   const m = query.trim().length >= 3 && top.length >= 3 && !top.slice(0, 3).some((p) => p.source === "generic") ? medianOf(top) : null;
   if (!m) return null;
@@ -303,8 +324,9 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
   const [fav, setFav] = useState(!!product.favorite);
   const v = scale(product.nutrients, amount ?? 0);
   const num = (k: NutrientKey) => (v[k] === null ? <span className="text-warning">?</span> : fmt(locale, v[k], k === "kcal" ? 0 : 1));
-  // Averages of similar products are estimates: the only case worth a note under the values.
-  const estimate = product.source === "custom" && product.name.includes("≈");
+  // Estimates get a note under the values saying what they are based on: an AI's typical values, or the
+  // average of similar products found in the databases.
+  const estimate = isAiEstimate(product) ? "nutrition.aiEstimateNote" : product.source === "custom" && product.name.includes("≈") ? "nutrition.estimateNote" : null;
   const macros: NutrientKey[] = ["protein", "carbs", "fat", ...(v.fiber !== null ? (["fiber"] as const) : [])];
   return (
     <div className="space-y-3">
@@ -345,7 +367,7 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
             </div>
           ))}
         </div>
-        {estimate && <p className="mt-2 text-xs text-muted">{t("nutrition.estimateNote")}</p>}
+        {estimate && <p className="mt-2 text-xs text-muted">{t(estimate)}</p>}
       </div>
       {product.mine && (
         // Own products (also averages made by mistake) can be removed; diary entries keep their values.
@@ -369,28 +391,51 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
 
 function MealsTab({ recipes, onLog, pending }: { recipes: RecipeLite[]; onLog: (r: RecipeLite, amount: number, mode: "grams" | "servings") => void; pending: boolean }) {
   const { t, locale } = useI18n();
+  // A recipe is logged in servings or, e.g. for a cake, in grams of the finished dish (values per 100 g follow
+  // the weight after cooking when the recipe has one). Saved meals are logged whole, as before.
   const [servings, setServings] = useState<Record<string, number | null>>({});
+  const [grams, setGrams] = useState<Record<string, number | null>>({});
+  const [byGrams, setByGrams] = useState<Record<string, boolean>>({});
   if (!recipes.length) return <p className="py-4 text-center text-sm text-muted">{t("nutrition.noResults")}</p>;
   return (
     <ul className="divide-y divide-border">
-      {recipes.map((r) => (
-        <li key={r.id} className="flex items-center gap-2 py-2">
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-medium">{r.name}</p>
-            <p className="text-xs text-muted">
-              {r.isMeal ? `${fmt(locale, r.totalKcal)} kcal` : `${fmt(locale, r.perServingKcal)} kcal ${t("nutrition.perServing")}`}
-            </p>
-          </div>
-          {!r.isMeal && (
-            <div className="w-20"><DecimalInput aria-label={t("nutrition.logServings")} value={servings[r.id] ?? 1} onChange={(v) => setServings({ ...servings, [r.id]: v })} className="h-10" /></div>
-          )}
-          <button type="button" disabled={pending} aria-label={`${t("common.add")} ${r.name}`}
-            onClick={() => (r.isMeal ? onLog(r, r.finalWeight, "grams") : onLog(r, servings[r.id] ?? 1, "servings"))}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent hover:bg-accent hover:text-accent-contrast">
-            <Plus size={20} />
-          </button>
-        </li>
-      ))}
+      {recipes.map((r) => {
+        const g = !!byGrams[r.id];
+        const value = g ? (r.id in grams ? grams[r.id]! : 100) : (r.id in servings ? servings[r.id]! : 1);
+        const per100 = r.totalKcal === null || r.finalWeight <= 0 ? null : (r.totalKcal / r.finalWeight) * 100;
+        return (
+          <li key={r.id} className="flex items-center gap-2 py-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{r.name}</p>
+              <p className="text-xs text-muted">
+                {r.isMeal ? `${fmt(locale, r.totalKcal)} kcal` : g ? `${fmt(locale, per100)} kcal / 100 g` : `${fmt(locale, r.perServingKcal)} kcal ${t("nutrition.perServing")}`}
+              </p>
+              {!r.isMeal && (
+                <div className="mt-1 inline-flex rounded-lg bg-surface-2 p-0.5 text-xs" role="group" aria-label={t("nutrition.unit")}>
+                  {[false, true].map((v) => (
+                    <button key={String(v)} type="button" aria-pressed={g === v} onClick={() => setByGrams({ ...byGrams, [r.id]: v })}
+                      className={cx("min-h-8 rounded-md px-2.5", g === v ? "bg-surface font-medium shadow-sm" : "text-muted")}>
+                      {v ? t("nutrition.logGrams") : t("nutrition.logServings")}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {!r.isMeal && (
+              <div className="relative w-20">
+                <DecimalInput aria-label={g ? t("nutrition.logGrams") : t("nutrition.logServings")} value={value}
+                  onChange={(v) => (g ? setGrams({ ...grams, [r.id]: v }) : setServings({ ...servings, [r.id]: v }))} className={cx("h-10", g && "pr-6")} />
+                {g && <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted">g</span>}
+              </div>
+            )}
+            <button type="button" disabled={pending || (!r.isMeal && !(value && value > 0))} aria-label={`${t("common.add")} ${r.name}`}
+              onClick={() => (r.isMeal ? onLog(r, r.finalWeight, "grams") : value && onLog(r, value, g ? "grams" : "servings"))}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent hover:bg-accent hover:text-accent-contrast">
+              <Plus size={20} />
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -16,6 +16,9 @@ const HEAVY_LOWER: Pattern[] = ["squat", "hinge"];
 export function canPair(a: Exercise, b: Exercise): boolean {
   if (a.pattern === "conditioning" || b.pattern === "conditioning") return false;
   if ((a.fatigue === "high" && HEAVY_LOWER.includes(a.pattern)) || (b.fatigue === "high" && HEAVY_LOWER.includes(b.pattern))) return false;
+  // Two technically demanding (or two very tiring) lifts back to back, e.g. handstand push-ups with pull-ups, leave
+  // both done with worse form and drain the rest of the session: they stay straight sets, other pairs save the time.
+  if ((a.skill >= 3 && b.skill >= 3) || (a.fatigue === "high" && b.fatigue === "high")) return false;
   return PAIRS.some(([x, y]) => (a.pattern === x && b.pattern === y) || (a.pattern === y && b.pattern === x));
 }
 

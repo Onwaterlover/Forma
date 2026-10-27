@@ -5,7 +5,7 @@ import type { Locale } from "@/i18n";
 import { EXERCISES } from "@/engine/exercises";
 import { parseProfile } from "@/engine/profile";
 import type { Exercise, ExercisePref, Grip, Plan, TrainingProfile } from "@/engine/types";
-import { emptyNutrients, medianOf, recipe as recipeCalc, scale, sum, type Ingredient, type Nutrients } from "@/nutrition/calc";
+import { emptyNutrients, medianOf, NUTRIENT_KEYS, recipe as recipeCalc, scale, sum, type Ingredient, type Nutrients } from "@/nutrition/calc";
 import type { ProductDraft } from "@/nutrition/off";
 import { db, json, newId, nowIso, type Q } from "./db";
 import { MEASUREMENT_SITES, type Measurement } from "./measurements";
@@ -766,6 +766,40 @@ export async function saveRecipe(userId: string, r: { id?: string; name: string;
   await q.run("INSERT INTO recipes (id, user_id, name, ingredients, cooked_yield_g, servings, is_meal, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
     [id, userId, r.name, JSON.stringify(r.ingredients), r.cookedYieldG, r.servings, r.isMeal ? 1 : 0, now, now]);
   return id;
+}
+
+/**
+ * "Save as meal": the chosen diary entries become one saved meal and, in the same transaction, one diary entry
+ * for it replaces them, so nothing is counted twice. The meal keeps every ingredient with its grams and its
+ * nutrient snapshot; the new entry carries exactly their sum. Returns the meal's id, or null if nothing matched.
+ */
+export async function replaceEntriesWithMeal(userId: string, date: string, entryIds: string[], name: string): Promise<string | null> {
+  if (!entryIds.length) return null;
+  return (await db()).tx(async (q) => {
+    const rows = await q.all<EntryRow>(
+      `SELECT * FROM diary_entries WHERE user_id = ? AND date = ? AND basis <> 'portion' AND id IN (${entryIds.map(() => "?").join(",")}) ORDER BY created_at`,
+      [userId, date, ...entryIds],
+    );
+    if (!rows.length) return null;
+    const entries = rows.map(toEntry);
+    const ingredients = entries.map((e) => ({ productId: e.productId, name: e.name, grams: e.amount, nutrients: e.nutrients }));
+    const id = newId();
+    const now = nowIso();
+    await q.run("INSERT INTO recipes (id, user_id, name, ingredients, cooked_yield_g, servings, is_meal, created_at, updated_at) VALUES (?,?,?,?,NULL,1,1,?,?)",
+      [id, userId, name, JSON.stringify(ingredients), now, now]);
+    // Per 100 g unrounded, so the entry's values are exactly the sum of the ingredients.
+    const c = recipeCalc(ingredients);
+    const per100 = emptyNutrients();
+    for (const k of NUTRIENT_KEYS) per100[k] = c.total[k] === null || c.finalWeight <= 0 ? null : (c.total[k]! / c.finalWeight) * 100;
+    if (c.total.incomplete) per100.incomplete = [...c.total.incomplete];
+    // The meal slot most of the entries were in (the first one's on a tie).
+    const counts = new Map<string | null, number>();
+    for (const e of entries) counts.set(e.meal, (counts.get(e.meal) ?? 0) + 1);
+    const meal = [...counts].reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+    await insertEntry(q, userId, { id: newId(), date, meal, product_id: null, recipe_id: id, name, amount: c.finalWeight, basis: "g", nutrients: JSON.stringify(per100), created_at: entries[0]!.createdAt });
+    await q.run(`DELETE FROM diary_entries WHERE user_id = ? AND id IN (${rows.map(() => "?").join(",")})`, [userId, ...rows.map((r) => r.id)]);
+    return id;
+  });
 }
 
 export async function deleteRecipe(userId: string, id: string) {

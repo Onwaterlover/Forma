@@ -1,11 +1,12 @@
 "use client";
 import { VerdictChip } from "@/components/verdict";
 import { verdictOf } from "@/engine/compare";
-import { ArrowDown, ArrowUp, Check, CircleHelp, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Pencil, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, CircleHelp, CloudOff, MapPin, Minus, MoreHorizontal, NotebookPen, Pencil, Plus, Repeat, SkipForward, Timer, Trash2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { applyWorkoutToPlan } from "@/app/actions/training";
 import { BackButton } from "@/components/back-button";
+import { REST_KEY, readRest } from "@/components/rest-pill";
 import { HowToPicker } from "@/components/how-to";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, Card, cx, Notice } from "@/components/ui";
@@ -62,6 +63,8 @@ export function WorkoutLogger({
   const [rest, setRest] = useState<{ endsAt: number; total: number } | null>(null);
   const [tick, setTick] = useState(Date.now());
   const [notesOpen, setNotesOpen] = useState<number | null>(null);
+  // Exercises collapse once every set is done; these were opened again by the user.
+  const [reopened, setReopened] = useState<string[]>([]);
   // Rest suggested by the last completed set (the timer is started manually unless auto-start is on).
   const [lastRest, setLastRest] = useState(90);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,6 +140,20 @@ export function WorkoutLogger({
     buzzed.current = false;
     setRest({ endsAt: Date.now() + sec * 1000, total: sec });
   };
+  // The running rest is kept in the browser, so leaving for another tab neither stops nor resets it: it is picked
+  // up again here, and meanwhile the other pages show it (RestPill). The first run only restores.
+  const restReady = useRef(false);
+  useEffect(() => {
+    if (!restReady.current) {
+      restReady.current = true;
+      const r = readRest();
+      if (r?.workoutId === initial.id && r.endsAt > Date.now()) return setRest({ endsAt: r.endsAt, total: r.total });
+    }
+    try {
+      if (rest) localStorage.setItem(REST_KEY, JSON.stringify({ workoutId: initial.id, ...rest }));
+      else if (readRest()?.workoutId === initial.id) localStorage.removeItem(REST_KEY);
+    } catch {}
+  }, [rest, initial.id]);
 
   const elapsed = Math.max(0, Math.floor(((w.endedAt ? Date.parse(w.endedAt) : tick) - Date.parse(w.startedAt)) / 1000));
   const location = profile?.locations.find((l) => l.id === w.locationId) ?? null;
@@ -305,6 +322,21 @@ export function WorkoutLogger({
         const group = supersets[e.exerciseId];
         const withNext = group !== undefined && supersets[w.exercises[i + 1]?.exerciseId ?? ""] === group;
         const withPrev = group !== undefined && supersets[w.exercises[i - 1]?.exerciseId ?? ""] === group;
+        // All sets done (or ticked off in simple mode): one line with what was done; a tap opens it again.
+        if (!finished && !e.skipped && (e.completed || (doneSets > 0 && doneSets === e.sets.length)) && !reopened.includes(e.id)) {
+          const done = e.sets.filter((s) => s.completed).map((s) => (s.durationS ? `${s.durationS}s` : s.weightKg ? `${fmt(locale, s.weightKg, 2)}×${s.reps ?? "?"}` : `${s.reps ?? "?"}`)).join(", ");
+          return (
+            <Card key={`${e.id}-${e.exerciseId}`} className={cx("py-3 sm:py-3", (withNext || withPrev) && "border-l-4 border-l-accent")}>
+              <button type="button" aria-expanded={false} onClick={() => setReopened((r) => [...r, e.id])} className="flex w-full items-center justify-between gap-3 text-left">
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{e.name}</span>
+                  {done && <span className="block truncate text-sm text-muted tabular-nums">{done}</span>}
+                </span>
+                <span className="flex shrink-0 items-center gap-2"><Badge tone="accent">✓</Badge><ChevronDown size={18} className="text-muted" aria-hidden /></span>
+              </button>
+            </Card>
+          );
+        }
         return (
           <Card key={`${e.id}-${e.exerciseId}`} className={cx("space-y-3", e.skipped && "opacity-60", (withNext || withPrev) && "border-l-4 border-l-accent")}>
             <div className="flex items-start justify-between gap-2">
@@ -389,6 +421,8 @@ export function WorkoutLogger({
                           sets: x.sets.map((y, k) => (k === j ? { ...y, ...patch } : k > j && !y.completed && y.weightKg === null && s.weightKg !== null ? { ...y, weightKg: s.weightKg } : y)),
                         }));
                         if (completing && tg?.restSec) setLastRest(tg.restSec);
+                        // The last set done: the exercise folds away (again, if it had been opened).
+                        if (completing && e.sets.every((y, k) => k === j || y.completed)) setReopened((r) => r.filter((x) => x !== e.id));
                         if (completing && settings.restTimer && tg?.restSec) startRest(tg.restSec);
                       }}
                       className={cx("grid h-12 w-full place-items-center rounded-xl border", s.completed ? "border-accent bg-accent text-accent-contrast" : "border-border text-muted hover:bg-surface-2")}>

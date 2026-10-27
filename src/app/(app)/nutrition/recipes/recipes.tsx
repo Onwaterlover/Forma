@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Trash2 } from "lucide-react";
+import { Check, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { productFor, removeRecipe, saveRecipeAction } from "@/app/actions/nutrition";
@@ -22,13 +22,20 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
   const [draft, setDraft] = useState<Draft | null>(() => { const r = openId ? recipes.find((x) => x.id === openId) : undefined; return r ? toDraft(r) : null; });
   // The ingredient whose amount is being changed (same wheel / pieces / quick amounts as when adding food).
   const [editIdx, setEditIdx] = useState<number | null>(null);
-  const [editServings, setEditServings] = useState<{ label: string; amount: number }[]>([]);
+  // Servings are loaded for one ingredient at a time and tagged with it; the amount editor appears once they are
+  // in, so it opens in the right unit instead of switching from grams to pieces.
+  const [editServings, setEditServings] = useState<{ idx: number; list: { label: string; amount: number }[] } | null>(null);
+  const loadServings = (k: number, pid: string | null) => {
+    if (!pid) return setEditServings({ idx: k, list: [] });
+    setEditServings(null);
+    productFor(pid).then((pr) => setEditServings({ idx: k, list: pr ? servingsWithSlice(pr, t("nutrition.slice"), t("nutrition.piece")) : [] })).catch(() => setEditServings({ idx: k, list: [] }));
+  };
   const editIngredient = (k: number) => {
     setEditIdx(editIdx === k ? null : k);
-    setEditServings([]);
-    const pid = draft?.ingredients[k]?.productId;
-    if (pid && editIdx !== k) productFor(pid).then((pr) => pr && setEditServings(servingsWithSlice(pr, t("nutrition.slice"), t("nutrition.piece")))).catch(() => {});
+    if (editIdx !== k) loadServings(k, draft?.ingredients[k]?.productId ?? null);
   };
+  // The ingredient search opens with the "Add ingredient" button (and on its own for an empty recipe).
+  const [searching, setSearching] = useState(false);
   const [q, setQ] = useState("");
   const [found, setFound] = useState<Product[] | null>(null);
   const [remote, setRemote] = useState<Product[] | null>(null);
@@ -63,24 +70,24 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
     if (!draft) return;
     setDraft({ ...draft, ingredients: [...draft.ingredients, { productId: p.id, name: p.name, grams: 100, nutrients: p.nutrients }] });
     setQ("");
+    setSearching(false);
     // Open the new ingredient's amount right away (starts at 100 g).
     setEditIdx(draft.ingredients.length);
-    setEditServings([]);
-    productFor(p.id).then((pr) => pr && setEditServings(servingsWithSlice(pr, t("nutrition.slice"), t("nutrition.piece")))).catch(() => {});
+    loadServings(draft.ingredients.length, p.id);
   };
 
   const preview = draft ? calc(draft.ingredients.map((i) => ({ ...i, grams: i.grams ?? 0 })), { cookedYieldG: draft.cookedYieldG, servings: draft.servings ?? 1 }) : null;
 
   return (
     <div className="space-y-3">
-      <Button onClick={() => setDraft({ name: "", ingredients: [], cookedYieldG: null, servings: 1, isMeal: false })}><Plus size={18} aria-hidden />{t("nutrition.newRecipe")}</Button>
+      <Button onClick={() => { setEditIdx(null); setSearching(false); setQ(""); setDraft({ name: "", ingredients: [], cookedYieldG: null, servings: 1, isMeal: false }); }}><Plus size={18} aria-hidden />{t("nutrition.newRecipe")}</Button>
       {recipes.length === 0 ? <Empty>{t("nutrition.noResults")}</Empty> : (
         <Card className="p-0 sm:p-0">
           <ul className="divide-y divide-border">
             {recipes.map((r) => (
               <li key={r.id} className="flex items-center gap-2 px-4 py-3">
                 <button type="button" className="min-w-0 flex-1 text-left"
-                  onClick={() => { setEditIdx(null); setDraft(toDraft(r)); }}>
+                  onClick={() => { setEditIdx(null); setSearching(false); setQ(""); setDraft(toDraft(r)); }}>
                   <span className="block font-medium">{r.name} {r.isMeal && <Badge>{t("nutrition.meals")}</Badge>}</span>
                   <span className="block text-xs text-muted">{r.ingredients.length} · {fmt(locale, r.calc.total.kcal)} kcal {t("nutrition.total").toLowerCase()} · {fmt(locale, r.calc.perServing.kcal)} kcal {t("nutrition.perServing")}</span>
                 </button>
@@ -91,7 +98,7 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
         </Card>
       )}
 
-      <Sheet open={!!draft} onClose={() => { setDraft(null); setEditIdx(null); }} title={draft?.id ? draft.name : t("nutrition.newRecipe")} wide full>
+      <Sheet open={!!draft} onClose={() => { setDraft(null); setEditIdx(null); setSearching(false); setQ(""); }} title={draft?.id ? draft.name : t("nutrition.newRecipe")} wide full>
         {draft && (
           <div className="space-y-4">
             <Field label={t("nutrition.name")} htmlFor="r-name"><Input id="r-name" value={draft.name} maxLength={80} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
@@ -108,16 +115,30 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
                       <Button variant="ghost" size="sm" aria-label={t("common.delete")} onClick={() => { setEditIdx(null); setDraft({ ...draft, ingredients: draft.ingredients.filter((_, j) => j !== k) }); }}><Trash2 size={15} /></Button>
                     </div>
                     {editIdx === k && (
-                      <div className="space-y-3 border-t border-border px-3 py-3">
-                        <AmountInput key={`${k}-${editServings.length}`} amount={i.grams} basis="g" servings={editServings}
-                          onChange={(v) => setDraft((d) => d && { ...d, ingredients: d.ingredients.map((x, j) => (j === k ? { ...x, grams: v } : x)) })} />
+                      <div className="min-h-[200px] space-y-3 border-t border-border px-3 py-3">
+                        {editServings?.idx === k && (
+                          <>
+                            <AmountInput key={k} amount={i.grams} basis="g" servings={editServings.list}
+                              onChange={(v) => setDraft((d) => d && { ...d, ingredients: d.ingredients.map((x, j) => (j === k ? { ...x, grams: v } : x)) })} />
+                            <Button full variant="secondary" disabled={!i.grams} onClick={() => setEditIdx(null)}><Check size={18} aria-hidden />{t("common.done")}</Button>
+                          </>
+                        )}
                       </div>
                     )}
                   </li>
                 ))}
               </ul>
-              <Input className="mt-3" type="search" placeholder={t("nutrition.addIngredient")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("nutrition.addIngredient")} />
-              {q.trim().length >= 2 && (
+              {searching || draft.ingredients.length === 0 ? (
+                <div className="mt-3 flex gap-2">
+                  {/* With the keyboard up the search moves to the top of the sheet, so the results show above it. */}
+                  <Input type="search" autoFocus={searching} placeholder={t("nutrition.searchIngredient")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("nutrition.addIngredient")}
+                    onFocus={(e) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: "start", behavior: "smooth" }), 300); }} />
+                  {draft.ingredients.length > 0 && <Button variant="ghost" onClick={() => { setSearching(false); setQ(""); }}>{t("common.cancel")}</Button>}
+                </div>
+              ) : (
+                <Button variant="secondary" full className="mt-3" onClick={() => { setEditIdx(null); setSearching(true); }}><Plus size={18} aria-hidden />{t("nutrition.addIngredient")}</Button>
+              )}
+              {(searching || draft.ingredients.length === 0) && q.trim().length >= 2 && (
                 // Always says what happened: searching, found (tap to add), or nothing found.
                 <div className="mt-2 max-h-72 overflow-y-auto rounded-xl border border-border px-3">
                   {(() => {

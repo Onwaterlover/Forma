@@ -13,7 +13,7 @@ import { medianOf, scale, type Nutrients } from "@/nutrition/calc";
 import { todayIso, weekdayOf } from "./ctx";
 import {
   createSuggestion, currentTarget, diaryDay, getActivePlan, getPrefs, getProduct, getProfile, libraryFor, listWeights, listWorkouts,
-  recentProducts, searchProducts, type Product,
+  findAiEstimate, recentProducts, saveAiEstimate, searchProducts, type Product,
 } from "./data";
 import { searchRemote } from "./off";
 
@@ -74,6 +74,9 @@ Training
 - One-off situations ("only 25 minutes today", "no gym today") don't need a plan change: tell them to tap "Skip" on the Today screen, which offers a shorter version or a version for another place or with no equipment.`
     : `
 Food
+- Match exactly what the user named. "3 naleśniki z dżemem" means pancakes with jam, never with cheese or another filling; a product that differs in the main ingredient, filling or preparation is not a match. When search_food has no real match, use estimate_food with the exact dish name, or add it from its basic parts (e.g. pancake batter + jam).
+- Realistic portions, stated in the reply: 1 naleśnik (crêpe) ≈ 60 g without filling, 1 tablespoon jam ≈ 20 g, 1 bread roll ≈ 55 g. Check the total before proposing: 3 pancakes with jam are roughly 450–550 kcal, not 800. If a total looks out of line for the portion, recheck the products and grams.
+- If a detail that changes the calories a lot is missing (filling, size, how much oil or sauce) and can't be reasonably assumed, ask one short question first instead of guessing.
 - Never invent nutrition values. Search every food separately with search_food (short queries in the user's language, e.g. "jajko", "chleb żytni") or use the recent products in <app_data>. Pick the closest plain match (e.g. a basic egg, not an egg salad).
 - Basic foods (egg, flour, rice, oats, oil, milk, chicken breast, vegetables, fruit…) are in the database as plain entries in the user's language, e.g. "Mąka pszenna", "Oliwa z oliwek", "Jajko kurze, surowe". Prefer them for unbranded food; pick raw vs cooked from the user's words (raw by default for cooking ingredients).
 - Add everything from one request in a single propose_add_food call. Convert household measures to grams and say what you assumed: 1 egg (M) ≈ 50 g edible, a slice of bread ≈ 35 g, a banana ≈ 120 g, a glass ≈ 250 ml, 1 tablespoon oil ≈ 10 g, 1 teaspoon oil ≈ 4 g, 1 spray of oil (spray bottle) ≈ 1 g, 1 tablespoon flour ≈ 10 g, 1 teaspoon sugar ≈ 5 g, a handful of nuts ≈ 30 g. Never turn a few sprays or drops into tablespoons.
@@ -200,6 +203,11 @@ const TRAINING_TOOLS: BetaTool[] = [
 ];
 
 const NUTRITION_TOOLS: BetaTool[] = [
+  {
+    name: "estimate_food",
+    description: "Typical values per 100 g for exactly this food or dish (e.g. 'naleśnik z dżemem', 'ziemniaki pieczone') from reference tables, stored as a product marked '≈'. Use when search_food has no product that matches what the user named. Returns a product id for propose_add_food.",
+    input_schema: obj({ query: str("The exact food or dish, in the user's language") }, ["query"]),
+  },
   {
     name: "search_food",
     description: "Search the user's saved foods and the Open Food Facts database. Returns product ids with nutrition per 100 g or ml. Use short queries, e.g. 'jajko', 'chleb żytni', 'skyr'.",
@@ -357,6 +365,15 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
       const ex = (await libraryFor(c.userId)).find((e) => e.id === a.data.exercise_id);
       if (!ex) return { error: "Unknown exercise id." };
       return propose("pref", { exerciseId: ex.id, pref: a.data.pref }, t("assistant.prefTitle"), [`${label(ex, ex.id)}: ${t(`library.pref.${a.data.pref}`)}`]);
+    }
+    case "estimate_food": {
+      const a = z.object({ query: z.string().trim().min(3).max(80) }).safeParse(input);
+      if (!a.success) return { error: "Invalid input." };
+      const known = await findAiEstimate(c.userId, a.data.query);
+      if (known) return productLine(known);
+      const e = await estimateFood(a.data.query, c.locale);
+      if (!e) return "No reliable estimate. Ask the user for the label values or a more specific name.";
+      return productLine(await saveAiEstimate(c.userId, a.data.query, e));
     }
     case "search_food": {
       const a = z.object({ query: z.string().trim().min(1).max(80) }).safeParse(input);

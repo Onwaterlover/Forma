@@ -61,7 +61,7 @@ export function Diary({
     const entry = editing.id;
     let live = true;
     productFor(editing.productId)
-      .then((p) => { if (live) setEditServings({ entry, list: p ? servingsWithSlice(p, t("nutrition.slice"), t("nutrition.piece")) : [] }); })
+      .then((p) => { if (live) setEditServings({ entry, list: p ? servingsWithSlice(p, t, locale) : [] }); })
       .catch(() => { if (live) setEditServings({ entry, list: [] }); });
     return () => { live = false; };
   }, [editing?.id, editing?.productId]);

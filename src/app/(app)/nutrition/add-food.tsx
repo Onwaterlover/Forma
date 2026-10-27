@@ -4,11 +4,11 @@ import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode
 import { addProductEntry, addQuickEntry, addRecipeEntry, averageProduct, productFor, removeOwnProduct, saveFood, toggleFavorite } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, cx, Field, Input, Notice, Select } from "@/components/ui";
-import { DICTS, fmt } from "@/i18n";
+import { DICTS, fmt, type Locale, type T } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product } from "@/lib/data";
 import { energyMismatch, medianOf, NUTRIENT_KEYS, scale, type NutrientKey } from "@/nutrition/calc";
-import { typicalPiece, typicalSlice } from "@/nutrition/slices";
+import { countFromLabel, typicalPiece, typicalSlice, typicalUnits } from "@/nutrition/slices";
 import { Scanner } from "./scanner";
 
 export type RecipeLite = { id: string; name: string; isMeal: boolean; servings: number; finalWeight: number; perServingKcal: number | null; totalKcal: number | null };
@@ -304,22 +304,41 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
   );
 }
 
-/** Product servings, plus "slice (≈ 12 g)" for sliced ham/cheese or "piece (≈ 100 g)" for bakery items that came without one. */
-export function servingsWithSlice(p: Pick<Product, "servings" | "name" | "basis">, label: string, pieceLabel = "1 ×") {
-  if (p.servings.length || p.basis !== "g") return p.servings;
-  const g = typicalSlice(p.name);
-  if (g) return [{ label: `${label} (≈ ${g} g)`, amount: g }];
-  const pc = typicalPiece(p.name);
-  return pc ? [{ label: `${pieceLabel} (≈ ${pc} g)`, amount: pc }] : [];
+/** A unit offered besides grams; `count`: something counted (a bar, a pot, an egg), where adding starts at one. */
+export type Serving = { label: string; amount: number; count?: boolean };
+
+/**
+ * The units offered for a product, countable ones first. The package's own serving, plus one piece when it reads
+ * "2 bars (43 g)". With nothing countable on the package, typical weights by kind of food (marked ≈): a piece of a
+ * known bar or bakery item, a slice of ham or cheese, spoons for spreads, sauces, oils and sugar, a handful of nuts,
+ * a scoop of protein powder, a square of chocolate, a slice of bread.
+ */
+export function servingsWithSlice(p: Pick<Product, "servings" | "name" | "basis" | "source">, t: T, locale: Locale): Serving[] {
+  // Basic foods carry hand-picked units; the countable ones (≥ 30 g: an egg, a banana) start at one.
+  if (p.source === "generic") return p.servings.map((s) => ({ ...s, count: s.amount >= 30 }));
+  const approx = (label: string, amount: number) => `${label} (≈ ${fmt(locale, amount, 1)} ${p.basis})`;
+  const out: Serving[] = [];
+  for (const s of p.servings) {
+    const c = countFromLabel(s.label);
+    if (c && c.n > 1) out.push({ label: approx(t("nutrition.piece"), s.amount / c.n), amount: Math.round((s.amount / c.n) * 10) / 10, count: true });
+    out.push({ ...s, count: c?.n === 1 });
+  }
+  if (!out.some((s) => s.count)) {
+    const pc = p.basis === "g" ? typicalPiece(p.name) : null;
+    const sl = p.basis === "g" && !out.length ? typicalSlice(p.name) : null;
+    if (pc) out.unshift({ label: approx(t("nutrition.piece"), pc), amount: pc, count: true });
+    else if (sl) out.push({ label: approx(t("nutrition.slice"), sl), amount: sl });
+    if (!pc && !sl) for (const [k, g] of typicalUnits(p.name, p.basis)) out.push({ label: approx(t(`nutrition.units.${k}`), g), amount: g });
+  }
+  return out.sort((a, b) => Number(!!b.count) - Number(!!a.count));
 }
 
 export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }: { product: Product & { lastAmount?: number }; onAdd: (amount: number) => void; onBack: () => void; pending: boolean; meal?: ReactNode; onRescan?: () => void }) {
   const { t, locale } = useI18n();
-  // Basic foods start at one piece (one egg); everything else at the last amount or 100 g.
-  // (Countable servings only: an egg, a slice of bread, a pot; spoons and sprays start in grams.)
-  // Bakery items bought by the piece start at one piece too.
-  const servings = servingsWithSlice(product, t("nutrition.slice"), t("nutrition.piece"));
-  const startPieces = !product.lastAmount && (product.source === "generic" ? (product.servings[0]?.amount ?? 0) >= 30 : !product.servings.length && typicalSlice(product.name) === null && typicalPiece(product.name) !== null);
+  // Things counted (an egg, a bar, a pot, a roll) start at one piece; everything else at the last amount or 100 g
+  // (spoons, sprays and slices of ham start in grams).
+  const servings = servingsWithSlice(product, t, locale);
+  const startPieces = !product.lastAmount && !!servings[0]?.count;
   const [amount, setAmount] = useState<number | null>(product.lastAmount ?? (startPieces ? servings[0]!.amount : 100));
   const [fav, setFav] = useState(!!product.favorite);
   const v = scale(product.nutrients, amount ?? 0);
@@ -527,14 +546,14 @@ function wheelValues(extra: number | null): number[] {
  * Opens in pieces when the amount is a whole number of servings (or `startPieces`).
  */
 export function AmountInput({ amount, onChange, basis, servings, startPieces }: {
-  amount: number | null; onChange: (v: number | null) => void; basis: string; servings: { label: string; amount: number }[]; startPieces?: boolean;
+  amount: number | null; onChange: (v: number | null) => void; basis: string; servings: Serving[]; startPieces?: boolean;
 }) {
   const { t, locale } = useI18n();
   const [unit, setUnit] = useState<number | null>(() => {
     if (!servings.length) return null;
     if (startPieces) return 0;
-    // Only countable servings (≥ 30 g: egg, slice of bread, pot); 100 g of flour is not "10 tablespoons".
-    const i = amount ? servings.findIndex((s) => s.amount >= 30 && Number.isInteger(amount / s.amount) && amount / s.amount <= 20) : -1;
+    // Only countable servings (≥ 30 g: egg, slice of bread, pot; or a counted bar); 100 g of flour is not "10 tablespoons".
+    const i = amount ? servings.findIndex((s) => (s.amount >= 30 || s.count) && Number.isInteger(amount / s.amount) && amount / s.amount <= 20) : -1;
     return i >= 0 ? i : null;
   });
   const [count, setCount] = useState<number | null>(() => (unit !== null && amount ? amount / servings[unit]!.amount : 1));

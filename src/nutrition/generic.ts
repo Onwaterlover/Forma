@@ -30,6 +30,7 @@ const SERVING = {
   handful: { pl: "1 garść", en: "1 handful", de: "1 Handvoll" },
   can: { pl: "1 puszka (odsączona)", en: "1 can (drained)", de: "1 Dose (abgetropft)" },
   white: { pl: "1 sztuka", en: "1 piece", de: "1 Stück" },
+  cube: { pl: "1 kostka", en: "1 square", de: "1 Stückchen" },
   cup: { pl: "1 kubeczek", en: "1 pot", de: "1 Becher" },
   fillet: { pl: "1 filet", en: "1 fillet", de: "1 Filet" },
 } satisfies Record<string, Record<Locale, string>>;
@@ -44,8 +45,8 @@ const F: Row[] = [
   { key: "milk_05", names: { pl: "Mleko 0,5%", en: "Skimmed milk", de: "Magermilch" }, aliases: "mleko chude odtluszczone milch milk skim", basis: "ml", n: [34, 3.4, 5.0, 0.1, 0], servings: [["glass", 250]] },
   { key: "yogurt", names: { pl: "Jogurt naturalny (ok. 1,5–2%)", en: "Plain yogurt, low fat", de: "Naturjoghurt (1,5 %)" }, aliases: "jogurt joghurt yogurt yoghurt naturalny natur", n: [63, 5.3, 7.0, 1.6, 0], servings: [["cup", 150]] },
   { key: "skyr", names: { pl: "Skyr naturalny", en: "Skyr, plain", de: "Skyr natur" }, aliases: "skyr", n: [63, 11.0, 4.0, 0.2, 0], servings: [["cup", 150]] },
-  { key: "quark_half", names: { pl: "Twaróg półtłusty", en: "Quark, half-fat", de: "Quark, Halbfett" }, aliases: "twarog twarozek ser bialy quark topfen cottage", n: [133, 18.7, 3.7, 4.7, 0] },
-  { key: "quark_lean", names: { pl: "Twaróg chudy", en: "Quark, low fat", de: "Magerquark" }, aliases: "twarog chudy ser bialy quark magerquark", n: [99, 19.8, 3.5, 0.5, 0] },
+  { key: "quark_half", names: { pl: "Twaróg półtłusty", en: "Quark, half-fat", de: "Quark, Halbfett" }, aliases: "twarog twarozek ser bialy quark topfen cottage", n: [133, 18.7, 3.7, 4.7, 0], servings: [["tbsp", 25]] },
+  { key: "quark_lean", names: { pl: "Twaróg chudy", en: "Quark, low fat", de: "Magerquark" }, aliases: "twarog chudy ser bialy quark magerquark", n: [99, 19.8, 3.5, 0.5, 0], servings: [["tbsp", 25]] },
   { key: "gouda", names: { pl: "Ser żółty (gouda)", en: "Gouda cheese", de: "Gouda" }, aliases: "ser zolty gouda kase cheese", n: [356, 24.9, 2.2, 27.4, 0], servings: [["slice", 15]] },
   { key: "butter", names: { pl: "Masło", en: "Butter", de: "Butter" }, aliases: "maslo butter", n: [717, 0.9, 0.1, 81.1, 0], servings: [["tsp", 5]] },
   // Grains and starches
@@ -92,13 +93,13 @@ const F: Row[] = [
   { key: "walnuts", names: { pl: "Orzechy włoskie", en: "Walnuts", de: "Walnüsse" }, aliases: "orzechy wloskie walnusse nusse walnuts nuts", n: [654, 15.2, 7.0, 65.2, 6.7], servings: [["handful", 30]] },
   { key: "sugar", names: { pl: "Cukier", en: "Sugar", de: "Zucker" }, aliases: "cukier zucker sugar", n: [387, 0, 100, 0, 0], servings: [["tsp", 5]] },
   { key: "honey", names: { pl: "Miód", en: "Honey", de: "Honig" }, aliases: "miod honig honey", n: [304, 0.3, 82.2, 0, 0.2], servings: [["tsp", 12]] },
-  { key: "dark_chocolate", names: { pl: "Czekolada gorzka (70–85%)", en: "Dark chocolate (70–85%)", de: "Zartbitterschokolade (70–85 %)" }, aliases: "czekolada gorzka schokolade zartbitter dark chocolate", n: [598, 7.8, 35.0, 42.6, 10.9] },
+  { key: "dark_chocolate", names: { pl: "Czekolada gorzka (70–85%)", en: "Dark chocolate (70–85%)", de: "Zartbitterschokolade (70–85 %)" }, aliases: "czekolada gorzka schokolade zartbitter dark chocolate", n: [598, 7.8, 35.0, 42.6, 10.9], servings: [["cube", 5]] },
   // Fruit and vegetables
   { key: "banana", names: { pl: "Banan", en: "Banana", de: "Banane" }, aliases: "banan banany banane bananen banana", n: [89, 1.1, 20.2, 0.3, 2.6], servings: [["piece", 120]] },
   { key: "apple", names: { pl: "Jabłko", en: "Apple", de: "Apfel" }, aliases: "jablko jablka apfel apfel apple", n: [52, 0.3, 11.4, 0.2, 2.4], servings: [["piece", 180]] },
   { key: "orange", names: { pl: "Pomarańcza", en: "Orange", de: "Orange" }, aliases: "pomarancza pomarancze orange apfelsine", n: [47, 0.9, 9.4, 0.1, 2.4], servings: [["piece", 150]] },
-  { key: "strawberries", names: { pl: "Truskawki", en: "Strawberries", de: "Erdbeeren" }, aliases: "truskawki truskawka erdbeeren strawberries", n: [32, 0.7, 5.7, 0.3, 2.0] },
-  { key: "blueberries", names: { pl: "Borówki amerykańskie", en: "Blueberries", de: "Heidelbeeren" }, aliases: "borowki jagody heidelbeeren blaubeeren blueberries", n: [57, 0.7, 12.1, 0.3, 2.4] },
+  { key: "strawberries", names: { pl: "Truskawki", en: "Strawberries", de: "Erdbeeren" }, aliases: "truskawki truskawka erdbeeren strawberries", n: [32, 0.7, 5.7, 0.3, 2.0], servings: [["handful", 100]] },
+  { key: "blueberries", names: { pl: "Borówki amerykańskie", en: "Blueberries", de: "Heidelbeeren" }, aliases: "borowki jagody heidelbeeren blaubeeren blueberries", n: [57, 0.7, 12.1, 0.3, 2.4], servings: [["handful", 70]] },
   { key: "tomato", names: { pl: "Pomidor", en: "Tomato", de: "Tomate" }, aliases: "pomidor pomidory tomate tomaten tomato", n: [18, 0.9, 2.7, 0.2, 1.2], servings: [["piece", 120]] },
   { key: "cucumber", names: { pl: "Ogórek", en: "Cucumber", de: "Gurke" }, aliases: "ogorek ogorki gurke salatgurke cucumber", n: [15, 0.7, 3.1, 0.1, 0.5] },
   { key: "carrot", names: { pl: "Marchew", en: "Carrot", de: "Karotte" }, aliases: "marchew marchewka karotte mohre moehre carrot", n: [41, 0.9, 6.8, 0.2, 2.8], servings: [["piece", 70]] },
@@ -111,7 +112,7 @@ const F: Row[] = [
 ];
 
 /** Bump when values change: rows are re-written once on the next start. */
-export const GENERIC_VERSION = "generic-6";
+export const GENERIC_VERSION = "generic-7";
 
 export function genericRows() {
   return F.flatMap((f, rank) => (["pl", "en", "de"] as const).map((locale) => {

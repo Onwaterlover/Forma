@@ -28,7 +28,7 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
   const loadServings = (k: number, pid: string | null) => {
     if (!pid) return setEditServings({ idx: k, list: [] });
     setEditServings(null);
-    productFor(pid).then((pr) => setEditServings({ idx: k, list: pr ? servingsWithSlice(pr, t("nutrition.slice"), t("nutrition.piece")) : [] })).catch(() => setEditServings({ idx: k, list: [] }));
+    productFor(pid).then((pr) => setEditServings({ idx: k, list: pr ? servingsWithSlice(pr, t, locale) : [] })).catch(() => setEditServings({ idx: k, list: [] }));
   };
   const editIngredient = (k: number) => {
     setEditIdx(editIdx === k ? null : k);

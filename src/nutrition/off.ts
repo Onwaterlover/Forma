@@ -56,7 +56,8 @@ export function mapOffProduct(raw: unknown, lang: "pl" | "de" | "en" = "pl"): Pr
   const basis: "g" | "ml" = unit === "ml" || /\d\s*(ml|cl|l)\b/.test(qty) ? "ml" : "g";
 
   const servings: ProductDraft["servings"] = [];
-  const sq = Number(p.serving_quantity);
+  // The serving's weight, or failing that the one written in its text ("1 bar (21.5 g)").
+  const sq = Number(p.serving_quantity) || Number(str(p.serving_size)?.match(/(\d+(?:[.,]\d+)?)\s*(g|ml)\b/i)?.[1]?.replace(",", "."));
   if (Number.isFinite(sq) && sq > 0 && sq < 5000) servings.push({ label: str(p.serving_size) ?? `${sq} ${basis}`, amount: sq });
 
   const warnings: ProductDraft["warnings"] = [];

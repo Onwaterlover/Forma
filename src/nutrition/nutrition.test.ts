@@ -264,4 +264,41 @@ describe("typical piece", () => {
     expect(typicalPiece("Jogurt naturalny")).toBeNull();
     expect(typicalPiece("Mini Apfeltaschen")).toBeNull();
   });
+  it("one bar of popular snacks", async () => {
+    const { typicalPiece } = await import("./slices");
+    expect(typicalPiece("Kinder Bueno")).toBe(21.5);
+    expect(typicalPiece("Snickers")).toBe(50);
+    expect(typicalPiece("Snickers Mini")).toBeNull();
+    expect(typicalPiece("Marshmallows")).toBeNull();
+  });
+});
+
+describe("household units", () => {
+  it("spoons, scoops, handfuls by kind of food; nothing for nuts inside sweets", async () => {
+    const { typicalUnits } = await import("./slices");
+    expect(typicalUnits("Nutella")).toEqual([["tsp", 7], ["tbsp", 15]]);
+    expect(typicalUnits("Masło orzechowe crunchy")).toEqual([["tsp", 7], ["tbsp", 15]]);
+    expect(typicalUnits("Olej rzepakowy", "ml")).toEqual([["tsp", 4], ["tbsp", 10]]);
+    expect(typicalUnits("Whey Protein 80")).toEqual([["scoop", 30]]);
+    expect(typicalUnits("Orzechy włoskie")).toEqual([["handful", 30]]);
+    expect(typicalUnits("Czekolada mleczna z orzechami")).toEqual([["cube", 5]]);
+    expect(typicalUnits("Baton z orzechami")).toEqual([]);
+    expect(typicalUnits("Sok jabłkowy", "ml")).toEqual([]);
+    expect(typicalUnits("Ketchup łagodny")).toEqual([["tsp", 5], ["tbsp", 15]]);
+    expect(typicalUnits("Buttermilch", "ml")).toEqual([]);
+  });
+
+  it("reads how many pieces a package serving is", async () => {
+    const { countFromLabel } = await import("./slices");
+    expect(countFromLabel("2 bars (43 g)")).toEqual({ n: 2, amount: 43 });
+    expect(countFromLabel("1 Becher (150 g)")).toEqual({ n: 1, amount: 150 });
+    expect(countFromLabel("4 kostki = 25 g")).toEqual({ n: 4, amount: 25 });
+    expect(countFromLabel("30 g")).toBeNull();
+    expect(countFromLabel("2 x 21,5 g")).toBeNull();
+  });
+
+  it("takes the serving weight from its text when the number is missing", () => {
+    const p = mapOffProduct({ code: "4008400940024", product_name: "Kinder Bueno", serving_size: "1 bar (21.5 g)", nutriments: { "energy-kcal_100g": 572 } }, "en");
+    expect(p?.servings).toEqual([{ label: "1 bar (21.5 g)", amount: 21.5 }]);
+  });
 });

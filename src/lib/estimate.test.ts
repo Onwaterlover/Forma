@@ -29,6 +29,18 @@ describe("AI food estimate", () => {
     await data.saveAiEstimate(a, "Pieczone udko bez skórki", e!);
     expect((await data.findAiEstimate(b, "pieczone  udko bez skorki"))?.name).toBe(e!.name);
   });
+  it("looks it up on the web first and says so in the name", async () => {
+    const calls: { tools?: unknown }[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, init: { body: string }) => {
+      calls.push(JSON.parse(init.body));
+      const text = JSON.stringify({ food: true, name: "Pierogi ruskie, gotowane", basis: "g", state: "cooked", kcal: 200, protein: 6, carbs: 30, fat: 6, fiber: 2 });
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: `Here: ${text}` }] }, groundingMetadata: { groundingChunks: [{ web: { uri: "a" } }, { web: { uri: "b" } }] } }] }));
+    }));
+    const e = await ai.estimateFood("pierogi ruskie", "pl");
+    expect(e?.name).toBe("Pierogi ruskie, gotowane (≈ średnia z internetu)");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.tools).toEqual([{ google_search: {} }]);
+  });
   it("rejects non-food and energy that doesn't match the macros", async () => {
     reply({ food: false });
     expect(await ai.estimateFood("krzesło", "pl")).toBeNull();

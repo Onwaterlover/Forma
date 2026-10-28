@@ -570,40 +570,56 @@ async function runGemini(o: { locale: Locale; scope: Scope; history: ChatTurn[] 
 }
 
 /**
- * Typical values per 100 g (or 100 ml) for a food that isn't in any database, from the model's knowledge of
- * reference tables. Returns null when the text isn't a food or the numbers don't add up (energy vs macros),
- * so nothing invented-looking is ever stored.
+ * Typical values per 100 g (or 100 ml) for a food or dish that isn't in any database. With Gemini it is looked
+ * up on the web first (Google Search: the value most sources agree on), named "≈ web average"; failing that, from
+ * the model's knowledge of reference tables, named "≈ AI estimate". Returns null when the text isn't a food or
+ * the numbers don't add up (energy vs macros), so nothing invented-looking is ever stored.
  */
 export async function estimateFood(query: string, locale: Locale): Promise<{ name: string; basis: "g" | "ml"; state: "raw" | "cooked" | null; nutrients: Nutrients } | null> {
-  const prompt = `Food search: "${query.slice(0, 80)}". Give typical nutrition per 100 g (100 ml for drinks) for exactly this food in this state (raw/cooked/roasted as written), as in standard reference tables (USDA, national food tables). Answer with JSON only: {"food": true|false, "name": short name in ${LANG[locale]} including the state, "basis": "g"|"ml", "state": "raw"|"cooked"|null, "kcal": number, "protein": number, "carbs": number, "fat": number, "fiber": number}. If it is not a food or drink, answer {"food": false}.`;
-  let text = "";
+  const answer = `Answer with JSON only: {"food": true|false, "name": short name in ${LANG[locale]} including the state, "basis": "g"|"ml", "state": "raw"|"cooked"|null, "kcal": number, "protein": number, "carbs": number, "fat": number, "fiber": number}. If it is not a food or drink, answer {"food": false}.`;
+  const food = `"${query.slice(0, 80)}"`;
+  const fromTables = `Food search: ${food}. Give typical nutrition per 100 g (100 ml for drinks) for exactly this food in this state (raw/cooked/roasted as written), as in standard reference tables (USDA, national food tables). ${answer}`;
+  const fromWeb = `Food search: ${food}. Search the web for the nutrition per 100 g (100 ml for drinks) of exactly this food or dish in this state (raw/cooked/roasted as written): food tables and calorie sites, also in Polish and German. Give the typical value most sources agree on (roughly the median of 2–5 sources; ignore outliers and unrelated variants). ${answer}`;
+  const gemini = async (web: boolean) => {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+      method: "POST", cache: "no-store",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+      // JSON mode doesn't go together with search on every model, so the web answer is read from its text.
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: web ? fromWeb : fromTables }] }], ...(web ? { tools: [{ google_search: {} }] } : { generationConfig: { responseMimeType: "application/json", temperature: 0 } }) }),
+      signal: AbortSignal.timeout(web ? 25_000 : 20_000),
+    });
+    const data = (await res.json().catch(() => null)) as { candidates?: { content?: { parts?: { text?: string }[] }; groundingMetadata?: { groundingChunks?: unknown[] } }[] } | null;
+    const c = res.ok ? data?.candidates?.[0] : undefined;
+    return { text: c?.content?.parts?.map((x) => x.text ?? "").join("") ?? "", sources: c?.groundingMetadata?.groundingChunks?.length ?? 0 };
+  };
+  const read = (text: string) => {
+    const raw = (() => { try { return JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)); } catch { return null; } })();
+    const num = z.number().min(0).max(900);
+    const v = z.object({ food: z.literal(true), name: z.string().trim().min(2).max(80), basis: z.enum(["g", "ml"]).catch("g"), state: z.enum(["raw", "cooked"]).nullable().catch(null),
+      kcal: num, protein: num.max(100), carbs: num.max(100), fat: num.max(100), fiber: num.max(100) }).safeParse(raw);
+    if (!v.success) return null;
+    const d = v.data;
+    // Energy has to match the macros (4/4/9 kcal per g, fibre ~2), otherwise the answer is not trustworthy.
+    const calc = d.protein * 4 + Math.max(0, d.carbs) * 4 + d.fat * 9 + d.fiber * 2;
+    return d.protein + d.carbs + d.fat > 100 || Math.abs(calc - d.kcal) > Math.max(40, d.kcal * 0.25) ? null : d;
+  };
+  let d: ReturnType<typeof read> = null;
+  let web = false;
   try {
     if (aiProvider() === "gemini") {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-        method: "POST", cache: "no-store",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } }),
-        signal: AbortSignal.timeout(20_000),
-      });
-      const data = (await res.json().catch(() => null)) as { candidates?: { content?: { parts?: { text?: string }[] } }[] } | null;
-      text = data?.candidates?.[0]?.content?.parts?.map((x) => x.text ?? "").join("") ?? "";
+      const w = await gemini(true).catch(() => ({ text: "", sources: 0 }));
+      d = read(w.text);
+      web = !!d && w.sources > 0;
+      if (!d) d = read((await gemini(false)).text);
     } else if (aiProvider() === "anthropic") {
-      const res = await anthropic().messages.create({ model: MODEL, max_tokens: 400, messages: [{ role: "user", content: prompt }] });
-      text = res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
+      const res = await anthropic().messages.create({ model: MODEL, max_tokens: 400, messages: [{ role: "user", content: fromTables }] });
+      d = read(res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join(""));
     } else return null;
   } catch {
     return null;
   }
-  const raw = (() => { try { return JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)); } catch { return null; } })();
-  const num = z.number().min(0).max(900);
-  const v = z.object({ food: z.literal(true), name: z.string().trim().min(2).max(80), basis: z.enum(["g", "ml"]).catch("g"), state: z.enum(["raw", "cooked"]).nullable().catch(null),
-    kcal: num, protein: num.max(100), carbs: num.max(100), fat: num.max(100), fiber: num.max(100) }).safeParse(raw);
-  if (!v.success) return null;
-  const d = v.data;
-  // Energy has to match the macros (4/4/9 kcal per g, fibre ~2), otherwise the answer is not trustworthy.
-  const calc = d.protein * 4 + Math.max(0, d.carbs) * 4 + d.fat * 9 + d.fiber * 2;
-  if (d.protein + d.carbs + d.fat > 100 || Math.abs(calc - d.kcal) > Math.max(40, d.kcal * 0.25)) return null;
+  if (!d) return null;
   const round = (x: number) => Math.round(x * 10) / 10;
-  return { name: `${d.name} (≈ ${translator(locale)("nutrition.aiEstimate")})`, basis: d.basis, state: d.state,
+  return { name: `${d.name} (≈ ${translator(locale)(web ? "nutrition.webEstimate" : "nutrition.aiEstimate")})`, basis: d.basis, state: d.state,
     nutrients: { kcal: Math.round(d.kcal), protein: round(d.protein), carbs: round(d.carbs), fat: round(d.fat), fiber: round(d.fiber), sugar: null, satFat: null, salt: null } };
 }

@@ -187,7 +187,9 @@ export function ProductList({ items, onPick, onQuick, pending }: { items: (Produ
 
 /** AI estimates are stored as "Name (≈ AI estimate)" in the language of whoever asked first. */
 const AI_LABELS = Object.values(DICTS).map((d) => d.nutrition.aiEstimate);
-const isAiEstimate = (p: Pick<Product, "source" | "name">) => p.source === "custom" && p.name.includes("≈") && AI_LABELS.some((l) => p.name.includes(l));
+const WEB_LABELS = Object.values(DICTS).map((d) => d.nutrition.webEstimate);
+const isWebEstimate = (p: Pick<Product, "source" | "name">) => p.source === "custom" && p.name.includes("≈") && WEB_LABELS.some((l) => p.name.includes(l));
+const isAiEstimate = (p: Pick<Product, "source" | "name">) => isWebEstimate(p) || (p.source === "custom" && p.name.includes("≈") && AI_LABELS.some((l) => p.name.includes(l)));
 
 /**
  * "Not exactly this? Use the average of similar results": the median of the top results (same as the server
@@ -231,6 +233,7 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
   // One search: own + basic foods as you type, then Open Food Facts right after (cached server-side), merged into one list.
   useEffect(() => {
     setRemote(null);
+    setEst(null);
     setError(null);
     setSearched(false);
     if (q.trim().length < 2) return setLocal([]);
@@ -248,18 +251,22 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
   }, [q]);
 
   const [estimating, setEstimating] = useState(false);
+  // Typical values for what was typed (looked up on the web, marked "≈"), shown first. Stored, so the next search
+  // for it is instant.
+  const [est, setEst] = useState<Product | null>(null);
   const searchRemote = async (have: Product[] = local, id = seq.current) => {
     setLoading(true);
     setError(null);
+    // Nothing found here fits the words typed: the web lookup starts right away, alongside Open Food Facts.
+    const early = !have.some((p) => fits(p, q)) && q.trim().length >= 4 ? estimate(id) : null;
     const r = await fetch(`/api/food/search?q=${encodeURIComponent(q)}&remote=1`).then((x) => x.json()).catch(() => ({ error: "unavailable" }));
     if (id !== seq.current) return;
     setLoading(false);
     if (r.error) setError(r.error === "rate_limited" ? t("nutrition.rateLimited") : t("nutrition.unavailable"));
     else setRemote((r.products ?? []).filter((p: Product) => !have.some((l) => l.id === p.id)));
-    // Nothing that fits the words typed (only unrelated products, or none): an AI estimate of typical values,
-    // shown first and marked "≈". Stored, so the next search for it is instant.
     const all: Product[] = [...have, ...(r.products ?? [])];
-    if (!all.some((p) => fits(p, q)) && q.trim().length >= 4) await estimate(id);
+    if (early) await early;
+    else if (!all.some((p) => fits(p, q)) && q.trim().length >= 4) await estimate(id);
   };
   // Also on request ("not this?"), even when products were found.
   const estimate = async (id = seq.current) => {
@@ -268,7 +275,7 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
     if (id !== seq.current) return;
     setEstimating(false);
     setAsked(true);
-    if (e.product) setRemote((x) => [e.product, ...(x ?? []).filter((p) => p.id !== e.product.id)]);
+    if (e.product) setEst(e.product);
   };
   const [asked, setAsked] = useState(false);
   useEffect(() => setAsked(false), [q]);
@@ -282,9 +289,12 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
       {q.trim().length < 2 && children}
       {q.trim().length >= 2 && (
         <>
-          <AverageOffer query={q} items={[...local, ...(remote ?? [])]} onPick={onPick} />
           {(() => {
-            const all = [...local, ...(remote ?? [])];
+            const all = [...(est ? [est] : []), ...[...local, ...(remote ?? [])].filter((p) => p.id !== est?.id)];
+            return <AverageOffer query={q} items={all} onPick={onPick} />;
+          })()}
+          {(() => {
+            const all = [...(est ? [est] : []), ...[...local, ...(remote ?? [])].filter((p) => p.id !== est?.id)];
             if (!searched) return <p className="py-3 text-center text-sm text-muted">{t("common.loading")}</p>;
             if (!all.length && (loading || estimating)) return <p className="py-3 text-center text-sm text-muted">{estimating ? t("nutrition.estimating") : t("nutrition.searchingRemote")}</p>;
             if (!all.length) return <p className="py-4 text-center text-sm text-muted">{error ?? t("nutrition.nothingFound")}</p>;
@@ -345,7 +355,7 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
   const num = (k: NutrientKey) => (v[k] === null ? <span className="text-warning">?</span> : fmt(locale, v[k], k === "kcal" ? 0 : 1));
   // Estimates get a note under the values saying what they are based on: an AI's typical values, or the
   // average of similar products found in the databases.
-  const estimate = isAiEstimate(product) ? "nutrition.aiEstimateNote" : product.source === "custom" && product.name.includes("≈") ? "nutrition.estimateNote" : null;
+  const estimate = isWebEstimate(product) ? "nutrition.webEstimateNote" : isAiEstimate(product) ? "nutrition.aiEstimateNote" : product.source === "custom" && product.name.includes("≈") ? "nutrition.estimateNote" : null;
   const macros: NutrientKey[] = ["protein", "carbs", "fat", ...(v.fiber !== null ? (["fiber"] as const) : [])];
   return (
     <div className="space-y-3">

@@ -31,6 +31,7 @@ const SERVING = {
   can: { pl: "1 puszka (odsączona)", en: "1 can (drained)", de: "1 Dose (abgetropft)" },
   white: { pl: "1 sztuka", en: "1 piece", de: "1 Stück" },
   cube: { pl: "1 kostka", en: "1 square", de: "1 Stückchen" },
+  plaster: { pl: "1 plasterek", en: "1 slice", de: "1 Scheibe" },
   cup: { pl: "1 kubeczek", en: "1 pot", de: "1 Becher" },
   fillet: { pl: "1 filet", en: "1 fillet", de: "1 Filet" },
 } satisfies Record<string, Record<Locale, string>>;
@@ -70,14 +71,35 @@ const F: Row[] = [
   { key: "millet", names: { pl: "Kasza jaglana, sucha", en: "Millet, dry", de: "Hirse, roh" }, aliases: "kasza jaglana proso hirse millet", n: [378, 11.0, 64.3, 4.2, 8.5], servings: [["bag", 100]] },
   { key: "couscous", names: { pl: "Kuskus, suchy", en: "Couscous, dry", de: "Couscous, roh" }, aliases: "kuskus couscous", n: [376, 12.8, 72.4, 0.6, 5.0] },
   // Meat, fish, plant protein
-  { key: "chicken_breast", names: { pl: "Pierś z kurczaka, surowa", en: "Chicken breast, raw", de: "Hähnchenbrust, roh" }, aliases: "piers z kurczaka kurczak filet drob hahnchenbrust haehnchen huhn chicken breast", n: [120, 22.5, 0, 2.6, 0], servings: [["fillet", 200]] },
-  { key: "chicken_breast_cooked", names: { pl: "Pierś z kurczaka, pieczona", en: "Chicken breast, roasted", de: "Hähnchenbrust, gebraten" }, aliases: "piers z kurczaka pieczona smazona grillowana kurczak hahnchenbrust gebraten chicken breast cooked", state: "cooked", n: [165, 31.0, 0, 3.6, 0] },
+  { key: "chicken_breast", names: { pl: "Pierś z kurczaka, surowa", en: "Chicken breast, raw", de: "Hähnchenbrust, roh" }, aliases: "piers z kurczaka kurczak filet poledwiczki poledwiczka drob hahnchenbrust haehnchen huhn chicken breast tenderloins", n: [120, 22.5, 0, 2.6, 0], servings: [["fillet", 200]] },
+  { key: "chicken_breast_cooked", names: { pl: "Pierś z kurczaka, pieczona", en: "Chicken breast, roasted", de: "Hähnchenbrust, gebraten" }, aliases: "piers z kurczaka poledwiczki poledwiczka pieczona pieczone smazona grillowana airfryer kurczak hahnchenbrust gebraten chicken breast tenderloins cooked", state: "cooked", n: [165, 31.0, 0, 3.6, 0] },
   { key: "chicken_thigh", names: { pl: "Udko z kurczaka bez skóry, surowe", en: "Chicken thigh, skinless, raw", de: "Hähnchenschenkel ohne Haut, roh" }, aliases: "udko kurczak hahnchenschenkel chicken thigh", n: [119, 19.7, 0, 3.9, 0] },
   // USDA SR 05096: thigh, meat only, roasted.
   { key: "chicken_thigh_cooked", names: { pl: "Udko z kurczaka bez skóry, pieczone", en: "Chicken thigh, skinless, roasted", de: "Hähnchenschenkel ohne Haut, gebraten" }, aliases: "udko udka pieczone pieczony upieczone grillowane z piekarnika kurczak kurczaka bez skory skorki hahnchenschenkel gebraten chicken thigh roasted cooked", state: "cooked", n: [209, 26.0, 0, 10.9, 0] },
   { key: "chicken_drumstick_cooked", names: { pl: "Pałka z kurczaka bez skóry, pieczona", en: "Chicken drumstick, skinless, roasted", de: "Hähnchenunterschenkel ohne Haut, gebraten" }, aliases: "palka palki paleczka podudzie podudzia pieczona pieczone upieczona grillowana z piekarnika airfryer kurczak kurczaka bez skory skorki unterschenkel hahnchenunterschenkel keule gebraten chicken drumstick roasted cooked", state: "cooked", n: [172, 28.3, 0, 5.7, 0], servings: [["piece", 70]] },
   { key: "beef_10", names: { pl: "Wołowina mielona (10% tł.), surowa", en: "Ground beef 10% fat, raw", de: "Rinderhack (10 % Fett), roh" }, aliases: "wolowina mielona mieso mielone rinderhack hackfleisch ground beef mince", n: [176, 20.0, 0, 10.0, 0] },
   { key: "beef_20", names: { pl: "Wołowina mielona (20% tł.), surowa", en: "Ground beef 20% fat, raw", de: "Rinderhack (20 % Fett), roh" }, aliases: "wolowina mielona mieso mielone rinderhack hackfleisch ground beef mince", n: [254, 17.2, 0, 20.0, 0] },
+  // USDA SR Legacy via FoodData Central (fdcId in each comment), checked 2026-10-28.
+  // 168230 pork loin, whole, lean only, raw
+  { key: "pork_loin", names: { pl: "Schab wieprzowy, surowy", en: "Pork loin, lean, raw", de: "Schweinelachs (Kotelettstrang), roh" }, aliases: "schab schabu wieprzowina wieprzowy pork loin schweinelachs schweinekotelett karree", n: [143, 21.4, 0, 5.7, 0] },
+  // 167849 pork shoulder (Boston butt), blade, lean and fat, raw
+  { key: "pork_neck", names: { pl: "Karkówka wieprzowa, surowa", en: "Pork shoulder (neck), raw", de: "Schweinenacken, roh" }, aliases: "karkowka karkowki karczek wieprzowina wieprzowa schweinenacken nacken schweinekamm pork neck shoulder boston butt", n: [186, 17.4, 0, 12.4, 0] },
+  // 168249 pork tenderloin, lean only, raw
+  { key: "pork_tenderloin", names: { pl: "Polędwiczka wieprzowa, surowa", en: "Pork tenderloin, raw", de: "Schweinefilet, roh" }, aliases: "poledwiczka poledwiczki wieprzowa wieprzowe wieprzowina schweinefilet pork tenderloin", n: [109, 21.0, 0, 2.2, 0] },
+  // 168250 pork tenderloin, lean only, roasted
+  { key: "pork_tenderloin_cooked", names: { pl: "Polędwiczka wieprzowa, pieczona", en: "Pork tenderloin, roasted", de: "Schweinefilet, gebraten" }, aliases: "poledwiczka poledwiczki wieprzowa wieprzowe wieprzowina pieczona pieczone smazona grillowana z piekarnika airfryer schweinefilet gebraten pork tenderloin roasted cooked", state: "cooked", n: [143, 26.2, 0, 3.5, 0] },
+  // 167902 pork, ground, raw
+  { key: "pork_ground", names: { pl: "Mięso mielone wieprzowe, surowe", en: "Ground pork, raw", de: "Schweinehackfleisch, roh" }, aliases: "mieso mielone mielona wieprzowe wieprzowa wieprzowina schweinehack hackfleisch schwein gemischtes ground pork minced", n: [263, 16.9, 0, 21.2, 0] },
+  // 168277 bacon, cured, unprepared
+  { key: "bacon", names: { pl: "Boczek wędzony, surowy", en: "Bacon, raw", de: "Bauchspeck (Frühstücksspeck), roh" }, aliases: "boczek boczku wedzony bekon bacon speck bauchspeck fruhstucksspeck", n: [393, 13.7, 0, 37.1, 0] },
+  // 173864 ham, sliced, regular (about 11% fat)
+  { key: "ham", names: { pl: "Szynka (wędlina w plastrach)", en: "Ham, sliced", de: "Kochschinken (Aufschnitt)" }, aliases: "szynka szynki wedlina wedliny wieprzowa plastry schinken kochschinken aufschnitt ham sliced", n: [164, 16.6, 3.6, 8.8, 1.3], servings: [["plaster", 12]] },
+  // 174577 Polish sausage, pork
+  { key: "sausage", names: { pl: "Kiełbasa wieprzowa", en: "Polish sausage (pork)", de: "Polnische Wurst (Schwein)" }, aliases: "kielbasa kielbasy kielbaska wieprzowa wedzona slaska swojska polish sausage polnische wurst", n: [326, 14.1, 1.6, 28.7, 0] },
+  // 172964 frankfurter, pork
+  { key: "frankfurters", names: { pl: "Parówki wieprzowe", en: "Frankfurters (pork)", de: "Wiener Würstchen (Schwein)" }, aliases: "parowki parowka paroweczki frankfurterki wieprzowe wiener wurstchen hot dog frankfurter", n: [269, 12.8, 0.3, 23.7, 0.1] },
+  // 173630 chicken wing, meat and skin, roasted
+  { key: "chicken_wings_cooked", names: { pl: "Skrzydełka z kurczaka, pieczone (ze skórą)", en: "Chicken wings, roasted (with skin)", de: "Hähnchenflügel, gebraten (mit Haut)" }, aliases: "skrzydelka skrzydelko skrzydla kurczak kurczaka pieczone grillowane z piekarnika airfryer hahnchenflugel chicken wings wing roasted cooked", state: "cooked", n: [254, 23.8, 0, 16.9, 0] },
   { key: "salmon", names: { pl: "Łosoś (hodowlany), surowy", en: "Salmon, farmed, raw", de: "Lachs (Zucht), roh" }, aliases: "losos lachs salmon", n: [208, 20.4, 0, 13.4, 0] },
   { key: "cod", names: { pl: "Dorsz, surowy", en: "Cod, raw", de: "Kabeljau, roh" }, aliases: "dorsz kabeljau dorsch cod", n: [82, 17.8, 0, 0.7, 0] },
   { key: "tuna_water", names: { pl: "Tuńczyk w sosie własnym (odsączony)", en: "Tuna in water, drained", de: "Thunfisch im eigenen Saft, abgetropft" }, aliases: "tunczyk thunfisch tuna", n: [116, 25.5, 0, 0.8, 0], servings: [["can", 130]] },
@@ -113,7 +135,7 @@ const F: Row[] = [
 ];
 
 /** Bump when values change: rows are re-written once on the next start. */
-export const GENERIC_VERSION = "generic-8";
+export const GENERIC_VERSION = "generic-9";
 
 export function genericRows() {
   return F.flatMap((f, rank) => (["pl", "en", "de"] as const).map((locale) => {

@@ -501,11 +501,15 @@ export async function searchProducts(userId: string, q: string, limit = 25, loca
   const one = `(${PLAIN.replace("%s", "p.name")} LIKE ? OR ${PLAIN.replace("%s", "coalesce(p.brand,'')")} LIKE ? OR coalesce(p.aliases,'') LIKE ?)`;
   const where = terms.map((alts) => `(${alts.map(() => one).join(" OR ")})`).join(" AND ");
   const args = terms.flatMap((alts) => alts.flatMap((t) => [`%${t}%`, `%${t}%`, `% ${t}%`]));
+  // Products matching the words as typed come before those found only through a translation ("bułka" → bread
+  // rolls, not "Rolled oats" via "roll").
+  const direct = terms.map(() => `(${one})`).join(" AND ");
+  const directArgs = terms.flatMap((alts) => [`%${alts[0]}%`, `%${alts[0]}%`, `% ${alts[0]}%`]);
   const rows = await (await db()).all<ProductRow>(
     `SELECT p.*, ${FAV}, (SELECT MAX(d.created_at) FROM diary_entries d WHERE d.user_id = ? AND d.product_id = p.id) AS last_used
      FROM food_products p WHERE ${VISIBLE} AND (p.source <> 'generic' OR p.id LIKE ?) AND ${where}
-     ORDER BY fav DESC NULLS LAST, last_used DESC NULLS LAST, (p.source = 'generic') DESC, (coalesce(p.state, '') = 'cooked'), p.sort_rank NULLS LAST, (p.owner_user_id IS NULL), length(p.name) LIMIT ?`,
-    [userId, userId, userId, `gen\\_${locale}\\_%`, ...args, limit],
+     ORDER BY fav DESC NULLS LAST, last_used DESC NULLS LAST, (${direct}) DESC, (p.source = 'generic') DESC, (coalesce(p.state, '') = 'cooked'), p.sort_rank NULLS LAST, (p.owner_user_id IS NULL), length(p.name) LIMIT ?`,
+    [userId, userId, userId, `gen\\_${locale}\\_%`, ...args, ...directArgs, limit],
   );
   return rows.map((r) => toProduct(r, userId));
 }

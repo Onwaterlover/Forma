@@ -57,7 +57,8 @@ export function Diary({
   }, [editing?.id, editing?.recipeId]);
   // Servings of the entry's product (egg, slice…), so it can be edited in pieces too.
   useEffect(() => {
-    if (!editing?.productId) return;
+    // Usually already loaded with the day (instant); asked from the server only for older data.
+    if (!editing?.productId || editing.product) return;
     const entry = editing.id;
     let live = true;
     productFor(editing.productId)
@@ -67,7 +68,7 @@ export function Diary({
   }, [editing?.id, editing?.productId]);
   const editRecipe = editing?.recipeId && editRecipeFor?.entry === editing.id ? editRecipeFor.recipe : null;
   const recipeLoading = !!editing?.recipeId && editRecipeFor?.entry !== editing.id;
-  const servingsList = !editing?.productId ? [] : editServings?.entry === editing.id ? editServings.list : null;
+  const servingsList = !editing?.productId ? [] : editing.product ? servingsWithSlice(editing.product, t, locale) : editServings?.entry === editing.id ? editServings.list : null;
   const [amount, setAmount] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);

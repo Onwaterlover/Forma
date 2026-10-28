@@ -605,18 +605,26 @@ export interface DiaryEntry {
   nutrients: Nutrients; // per 100 snapshot
   values: Nutrients; // scaled
   createdAt: string;
+  /** The product's units (piece, slice…), loaded with the day so editing the amount opens instantly. */
+  product?: Pick<Product, "servings" | "name" | "basis" | "source"> | null;
 }
 
-type EntryRow = { id: string; date: string; meal: string | null; product_id: string | null; recipe_id: string | null; name: string; amount: number; basis: string; nutrients: string; created_at: string };
+type EntryRow = { id: string; date: string; meal: string | null; product_id: string | null; recipe_id: string | null; name: string; amount: number; basis: string; nutrients: string; created_at: string;
+  p_servings?: string | null; p_name?: string | null; p_basis?: "g" | "ml" | null; p_source?: Product["source"] | null };
 
 const toEntry = (r: EntryRow): DiaryEntry => {
   const per100 = json<Nutrients>(r.nutrients, emptyNutrients());
-  return { id: r.id, date: r.date, meal: r.meal, productId: r.product_id, recipeId: r.recipe_id, name: r.name, amount: r.amount, basis: r.basis, nutrients: per100, values: scale(per100, r.amount), createdAt: r.created_at };
+  return { id: r.id, date: r.date, meal: r.meal, productId: r.product_id, recipeId: r.recipe_id, name: r.name, amount: r.amount, basis: r.basis, nutrients: per100, values: scale(per100, r.amount), createdAt: r.created_at,
+    ...(r.p_name ? { product: { servings: json(r.p_servings ?? "[]", []), name: r.p_name, basis: r.p_basis ?? "g", source: r.p_source ?? "custom" } } : {}) };
 };
 
 export async function diaryDay(userId: string, date: string) {
   const q = await db();
-  const rows = await q.all<EntryRow>("SELECT * FROM diary_entries WHERE user_id = ? AND date = ? ORDER BY created_at", [userId, date]);
+  const rows = await q.all<EntryRow>(
+    `SELECT e.*, p.servings AS p_servings, p.name AS p_name, p.basis AS p_basis, p.source AS p_source
+     FROM diary_entries e LEFT JOIN food_products p ON p.id = e.product_id WHERE e.user_id = ? AND e.date = ? ORDER BY e.created_at`,
+    [userId, date],
+  );
   const entries = rows.map(toEntry);
   const flag = await q.get<{ complete: number }>("SELECT complete FROM diary_days WHERE user_id = ? AND date = ?", [userId, date]);
   return { entries, totals: sum(entries.map((e) => e.values)), complete: flag ? flag.complete === 1 : null };

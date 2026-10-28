@@ -37,8 +37,11 @@ export async function rejectSuggestion(id: string) {
   await resolveSuggestion(user.id, id, "rejected");
 }
 
-/** Applies a stored proposal through the same actions the normal UI uses, so all their checks still run. */
-export async function applySuggestion(id: string): Promise<{ error?: string }> {
+/**
+ * Applies a stored proposal through the same actions the normal UI uses, so all their checks still run.
+ * `choices` (food): per item, -1 for the proposed product or the index of an alternative stored with it ("Change").
+ */
+export async function applySuggestion(id: string, choices?: number[]): Promise<{ error?: string }> {
   const user = await requireUser();
   const s = await pendingSuggestion(user.id, id);
   // Marking it first means a double tap cannot apply the same proposal twice.
@@ -72,8 +75,11 @@ export async function applySuggestion(id: string): Promise<{ error?: string }> {
   }
   if (s.kind === "food") {
     const p = foodPayload.parse(s.payload);
-    for (const it of p.items) {
-      const r = await addProductEntry({ productId: it.productId, amount: it.grams, date: p.date, meal: p.meal });
+    const ch = z.array(z.number().int().min(-1).max(4)).max(10).safeParse(choices ?? []);
+    for (const [k, it] of p.items.entries()) {
+      const alt = ch.success ? ch.data[k] ?? -1 : -1;
+      const productId = alt >= 0 ? it.alts?.[alt] ?? it.productId : it.productId;
+      const r = await addProductEntry({ productId, amount: it.grams, date: p.date, meal: p.meal });
       if (r.error) return { error: r.error };
     }
     return {};

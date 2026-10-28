@@ -29,7 +29,10 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 export type Scope = "training" | "nutrition";
 export interface ChatTurn { role: "user" | "assistant"; text: string }
-export interface Proposal { id: string; title: string; lines: string[] }
+/** A food on a proposal card: the product picked, per 100 g/ml values for the totals. */
+export interface FoodPick { productId: string; name: string; basis: string; kcal100: number | null; protein100: number | null }
+/** `items` (food): each picked product with the other matches of the same search, for "Change" on the card. */
+export interface Proposal { id: string; title: string; lines: string[]; items?: { grams: number; pick: FoodPick; alts: FoodPick[] }[] }
 export const REASONS = ["too_long", "too_short", "fewer_days", "more_days", "more_upper", "more_lower", "too_hard", "more_machines", "more_free", "more_bodyweight"] as const;
 export const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
@@ -74,7 +77,10 @@ Training
 - One-off situations ("only 25 minutes today", "no gym today") don't need a plan change: tell them to tap "Skip" on the Today screen, which offers a shorter version or a version for another place or with no equipment.`
     : `
 Food
+- Be quick: in your first turn call search_food for every food at once (one call per food, all in the same turn), then propose_add_food right away in the next turn. No text before the proposal; the card shows each item with its grams and a "Change" button.
 - Never invent nutrition values. Search every food separately with search_food (short queries in the user's language, e.g. "jajko", "chleb żytni") or use the recent products in <app_data>. Pick the closest plain match (e.g. a basic egg, not an egg salad).
+- Keep exactly the food and cut the user named; never substitute a different one. Chicken: pałka / podudzie = drumstick (Unterschenkel), udko = thigh (Schenkel), pierś / filet = breast, skrzydełko = wing; with or without skin as said. Airfryer, oven or grill = roasted/cooked. If the results don't contain that exact cut, search once more with another wording before choosing.
+- No grams given: assume a typical portion and put it in the proposal, e.g. 1 chicken drumstick without skin ≈ 70 g of meat, 1 chicken thigh without skin ≈ 100 g, 1 chicken breast fillet ≈ 200 g.
 - Basic foods (egg, flour, rice, oats, oil, milk, chicken breast, vegetables, fruit…) are in the database as plain entries in the user's language, e.g. "Mąka pszenna", "Oliwa z oliwek", "Jajko kurze, surowe". Prefer them for unbranded food; pick raw vs cooked from the user's words (raw by default for cooking ingredients).
 - Add everything from one request in a single propose_add_food call. Convert household measures to grams and say what you assumed: 1 egg (M) ≈ 50 g edible, a slice of bread ≈ 35 g, a banana ≈ 120 g, a glass ≈ 250 ml, 1 tablespoon oil ≈ 10 g, 1 teaspoon oil ≈ 4 g, 1 spray of oil (spray bottle) ≈ 1 g, 1 tablespoon flour ≈ 10 g, 1 teaspoon sugar ≈ 5 g, a handful of nuts ≈ 30 g. Never turn a few sprays or drops into tablespoons.
 - Bakery and other unpackaged food (Lidl/Aldi bake-off, Bäckerei, piekarnia, street food) has no barcode. Search the plain item name, also in German or Polish and as a generic form (e.g. "Apfeltasche", then "Blätterteig Apfel"; "Laugenbrezel"; "drożdżówka"), and use the closest generic product. Say it is an approximation, with the weight you assumed.
@@ -244,14 +250,15 @@ export const swapPayload = z.object({ planId: id, sessionKey: id, from: id, to: 
 export const planEditPayload = z.object({ planId: id, version: z.number().int(), plan: planSchema });
 export const planChangePayload = z.object({ reasons: z.array(z.enum(REASONS)).max(10), dislike: z.array(id).max(30) });
 export const prefPayload = z.object({ exerciseId: id, pref: z.enum(["favorite", "dislike", "exclude", "pain"]) });
-export const foodPayload = z.object({ date: z.string(), meal, items: z.array(z.object({ productId: id, grams: z.number().positive().max(3000) })).min(1).max(10) });
+export const foodPayload = z.object({ date: z.string(), meal, items: z.array(z.object({ productId: id, grams: z.number().positive().max(3000), alts: z.array(id).max(5).optional() })).min(1).max(10) });
 const num = z.number().min(0).max(5000).nullable();
 export const foodAvgPayload = z.object({ date: z.string(), meal, name: z.string().trim().min(1).max(60), ids: z.array(id).min(2).max(8), grams: z.number().positive().max(3000) });
 export const quickPayload = z.object({ date: z.string(), meal, name: z.string().trim().min(1).max(80), kcal: z.number().min(0).max(10000), protein: num, carbs: num, fat: num });
 
 const KIND_STYLE: Record<"machines" | "free" | "bodyweight", Kind[]> = { machines: ["machine", "cable", "smith"], free: ["barbell", "dumbbell", "kettlebell"], bodyweight: ["bodyweight", "band"] };
 
-export interface Ctx { userId: string; locale: Locale; date: string; proposals: Proposal[] }
+/** `found`: for each product a food search returned, that search's results (alternatives on the card). */
+export interface Ctx { userId: string; locale: Locale; date: string; proposals: Proposal[]; found?: Map<string, Product[]> }
 type ToolOut = string | { error: string };
 
 async function sessionCtx(c: Ctx, sessionKey: string, exerciseId: string) {
@@ -271,9 +278,9 @@ async function sessionCtx(c: Ctx, sessionKey: string, exerciseId: string) {
 export async function runTool(c: Ctx, name: string, input: unknown): Promise<ToolOut> {
   const t = translator(c.locale);
   const label = (ex: Exercise | undefined, fallback: string) => exName(ex, c.locale, fallback);
-  const propose = async (kind: string, payload: unknown, title: string, lines: string[]) => {
+  const propose = async (kind: string, payload: unknown, title: string, lines: string[], items?: Proposal["items"]) => {
     const pid = await createSuggestion(c.userId, kind, payload);
-    c.proposals.push({ id: pid, title, lines });
+    c.proposals.push({ id: pid, title, lines, ...(items ? { items } : {}) });
     return "Proposal shown to the user with an Apply button. It is NOT applied yet.";
   };
 
@@ -363,18 +370,24 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
       if (!a.success) return { error: "Invalid input." };
       const found = await searchProducts(c.userId, a.data.query, 8, c.locale);
       let note = "";
-      if (found.length < 3) {
+      // Own, basic and already fetched foods answer at once; Open Food Facts (often several seconds) only when
+      // nothing here matches.
+      if (!found.length) {
         const r = await searchRemote(c.userId, a.data.query, c.locale);
         if ("error" in r) note = "\n(Open Food Facts is not available right now.)";
         else for (const p of r.products) if (found.length < 10 && !found.some((f) => f.id === p.id)) found.push(p);
       }
       if (!found.length) return `No products found.${note} Try a more generic name or another language once; if still nothing, offer an estimate via propose_quick_entry (marked "≈") or suggest scanning the barcode.`;
+      c.found ??= new Map();
+      for (const p of found) if (!c.found.has(p.id)) c.found.set(p.id, found);
       return found.map(productLine).join("\n") + note;
     }
     case "propose_add_food": {
       const a = z.object({ meal, items: z.array(z.object({ product_id: id, grams: z.number().positive().max(3000) })).min(1).max(10) }).safeParse(input);
       if (!a.success) return { error: "Invalid input: 1-10 items, grams between 1 and 3000." };
       const lines: string[] = [];
+      const items: NonNullable<Proposal["items"]> = [];
+      const pick = (p: Product): FoodPick => ({ productId: p.id, name: p.name, basis: p.basis, kcal100: p.nutrients.kcal, protein100: p.nutrients.protein });
       let kcal = 0;
       let protein = 0;
       for (const it of a.data.items) {
@@ -384,10 +397,13 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
         kcal += v.kcal ?? 0;
         protein += v.protein ?? 0;
         lines.push(`${p.name} · ${fmt(c.locale, it.grams)} ${p.basis} · ${fmt(c.locale, v.kcal)} kcal · ${t("nutrition.protein")} ${fmt(c.locale, v.protein, 1)} g`);
+        // "Change" on the card offers the other results of the search this product came from (same unit).
+        const alts = (c.found?.get(p.id) ?? []).filter((x) => x.id !== p.id && x.basis === p.basis).slice(0, 5);
+        items.push({ grams: it.grams, pick: pick(p), alts: alts.map(pick) });
       }
       if (a.data.items.length > 1) lines.push(`${t("nutrition.total")}: ${fmt(c.locale, kcal)} kcal · ${t("nutrition.protein")} ${fmt(c.locale, protein, 1)} g`);
-      return propose("food", { date: c.date, meal: a.data.meal, items: a.data.items.map((i) => ({ productId: i.product_id, grams: i.grams })) },
-        `${t("assistant.foodTitle")}${a.data.meal ? ` · ${t(`nutrition.meal.${a.data.meal}`)}` : ""}`, lines);
+      return propose("food", { date: c.date, meal: a.data.meal, items: a.data.items.map((i, k) => ({ productId: i.product_id, grams: i.grams, alts: items[k]!.alts.map((x) => x.productId) })) },
+        `${t("assistant.foodTitle")}${a.data.meal ? ` · ${t(`nutrition.meal.${a.data.meal}`)}` : ""}`, lines, items);
     }
     case "propose_food_average": {
       const a = z.object({ name: z.string().trim().min(1).max(60), product_ids: z.array(id).min(2).max(8), grams: z.number().positive().max(3000), meal }).safeParse(input);
@@ -451,11 +467,13 @@ ${context}
       const uses = res.content.filter((b): b is BetaToolUseBlock => b.type === "tool_use");
       if (res.stop_reason !== "tool_use" || !uses.length) return { reply: text || t("assistant.empty"), proposals: c.proposals };
       messages.push({ role: "assistant", content: res.content });
-      const results: BetaToolResultBlockParam[] = [];
-      for (const u of uses) {
-        const out = await runTool(c, u.name, u.input);
-        results.push(typeof out === "string" ? { type: "tool_result", tool_use_id: u.id, content: out } : { type: "tool_result", tool_use_id: u.id, content: out.error, is_error: true });
-      }
+      // Several searches at once run side by side.
+      const outs = await Promise.all(uses.map((u) => runTool(c, u.name, u.input)));
+      if (cardDone(o.scope, uses.map((u) => u.name), outs, c)) return { reply: text || t("assistant.foodReady"), proposals: c.proposals };
+      const results: BetaToolResultBlockParam[] = uses.map((u, k) => {
+        const out = outs[k]!;
+        return typeof out === "string" ? { type: "tool_result", tool_use_id: u.id, content: out } : { type: "tool_result", tool_use_id: u.id, content: out.error, is_error: true };
+      });
       messages.push({ role: "user", content: results });
     }
     return { reply: t("assistant.empty"), proposals: c.proposals };
@@ -470,7 +488,17 @@ ${context}
   }
 }
 
+/**
+ * Food: once a turn only proposed entries and they all went through, the card speaks for itself (grams per item,
+ * "Change" for each), so the answer comes back without one more round trip for a closing sentence.
+ */
+function cardDone(scope: Scope, names: string[], outs: ToolOut[], c: Ctx): boolean {
+  return scope === "nutrition" && c.proposals.length > 0 && names.every((n) => n.startsWith("propose_")) && outs.every((x) => typeof x === "string");
+}
+
 // ── Gemini (REST, function calling) ──────────────────────────────────────
+// Little thinking, as each model family spells it (Gemini 3: a level; 2.5 Flash: a budget, 0 = off).
+const LOW_THINKING = /gemini-3/.test(GEMINI_MODEL) ? { thinkingLevel: "low" } : /gemini-2\.5-flash/.test(GEMINI_MODEL) ? { thinkingBudget: 0 } : null;
 type GPart = { text?: string; thought?: boolean; inlineData?: { mimeType: string; data: string }; functionCall?: { id?: string; name: string; args?: unknown }; functionResponse?: unknown };
 type GContent = { role: "user" | "model"; parts: GPart[] };
 
@@ -479,6 +507,8 @@ async function runGemini(o: { locale: Locale; scope: Scope; history: ChatTurn[] 
   const contents: GContent[] = o.history.slice(0, -1).map((h) => ({ role: h.role === "assistant" ? "model" : "user", parts: [{ text: h.text }] }));
   contents.push({ role: "user", parts: [...(image ? [{ inlineData: { mimeType: "image/jpeg", data: image } }] : []), { text: appData }, { text: question }] });
   const tools = [{ functionDeclarations: (o.scope === "training" ? TRAINING_TOOLS : NUTRITION_TOOLS).map((x) => ({ name: x.name, description: x.description, parametersJsonSchema: x.input_schema })) }];
+  // Logging food needs a quick answer, not long deliberation.
+  let thinking = o.scope === "nutrition" ? LOW_THINKING : null;
 
   for (let i = 0; i < 6; i++) {
     let res: Response;
@@ -487,7 +517,7 @@ async function runGemini(o: { locale: Locale; scope: Scope; history: ChatTurn[] 
         method: "POST",
         cache: "no-store",
         headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt(o.locale, o.scope) }] }, contents, tools }),
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt(o.locale, o.scope) }] }, contents, tools, ...(thinking ? { generationConfig: { thinkingConfig: thinking } } : {}) }),
         signal: AbortSignal.timeout(60_000),
       });
     } catch {
@@ -495,6 +525,8 @@ async function runGemini(o: { locale: Locale; scope: Scope; history: ChatTurn[] 
     }
     const data = (await res.json().catch(() => null)) as { candidates?: { content?: GContent }[]; promptFeedback?: { blockReason?: string }; error?: { message?: string } } | null;
     if (!res.ok) {
+      // A model that doesn't take this thinking setting: ask again without it.
+      if (res.status === 400 && thinking && /thinking/i.test(data?.error?.message ?? "")) { thinking = null; continue; }
       console.error("gemini", res.status, data?.error?.message);
       if (res.status === 429 || res.status === 503) return { error: "busy" };
       if (res.status === 401 || res.status === 403 || /api key/i.test(data?.error?.message ?? "")) return { error: "key" };
@@ -507,11 +539,13 @@ async function runGemini(o: { locale: Locale; scope: Scope; history: ChatTurn[] 
     if (!calls.length) return { reply: text || t("assistant.empty"), proposals: c.proposals };
     // Echo the model turn unchanged: it may carry thought signatures that later turns need.
     contents.push(content);
-    const parts: GPart[] = [];
-    for (const p of calls) {
-      const out = await runTool(c, p.functionCall!.name, p.functionCall!.args ?? {});
-      parts.push({ functionResponse: { ...(p.functionCall!.id ? { id: p.functionCall!.id } : {}), name: p.functionCall!.name, response: typeof out === "string" ? { result: out } : { error: out.error } } });
-    }
+    // Several searches at once run side by side.
+    const outs = await Promise.all(calls.map((p) => runTool(c, p.functionCall!.name, p.functionCall!.args ?? {})));
+    if (cardDone(o.scope, calls.map((p) => p.functionCall!.name), outs, c)) return { reply: text || t("assistant.foodReady"), proposals: c.proposals };
+    const parts: GPart[] = calls.map((p, k) => {
+      const out = outs[k]!;
+      return { functionResponse: { ...(p.functionCall!.id ? { id: p.functionCall!.id } : {}), name: p.functionCall!.name, response: typeof out === "string" ? { result: out } : { error: out.error } } };
+    });
     contents.push({ role: "user", parts });
   }
   return { reply: t("assistant.empty"), proposals: c.proposals };

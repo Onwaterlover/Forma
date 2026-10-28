@@ -6,10 +6,15 @@ import { applySuggestion, askAssistant, rejectSuggestion } from "@/app/actions/a
 import { updateSettings } from "@/app/actions/general";
 import { Sheet } from "@/components/client";
 import { Button, cx, inputClass } from "@/components/ui";
+import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Proposal } from "@/lib/assistant";
 
-type Card = Proposal & { state?: "busy" | "applied" | "rejected" | "failed"; error?: string };
+/** `choice`: per food item, -1 for the proposed product or the alternative picked with "Change"; `openItem`: the item showing alternatives. */
+type Card = Proposal & { state?: "busy" | "applied" | "rejected" | "failed"; error?: string; choice?: number[]; openItem?: number | null };
+
+/** The product currently chosen for a food item on a card. */
+const chosen = (c: Card, k: number) => { const it = c.items![k]!; const i = c.choice?.[k] ?? -1; return i >= 0 ? it.alts[i] ?? it.pick : it.pick; };
 /** `prompt`: what is sent to the AI when it differs from what the user sees (e.g. the long review instructions). */
 type Msg = { role: "user" | "assistant"; text: string; prompt?: string; proposals?: Card[]; error?: boolean; photo?: string };
 
@@ -30,7 +35,7 @@ async function shrink(file: File): Promise<string> {
  */
 /** `review`: renders a "Rate my plan" button that opens the chat and asks for a review of the current plan. */
 export function Assistant({ scope, date, enabled, provider, review, onClose }: { scope: "training" | "nutrition"; date: string; enabled: boolean; provider: "gemini" | "anthropic"; review?: boolean; onClose?: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [on, setOn] = useState(enabled);
@@ -57,7 +62,8 @@ export function Assistant({ scope, date, enabled, provider, review, onClose }: {
   // The model only sees text, so proposal cards are summarised into the history with their outcome.
   const asHistory = (m: Msg) => ({
     role: m.role,
-    text: [m.photo ? `${t("assistant.photoSent")} ${m.prompt ?? m.text}` : m.prompt ?? m.text, ...(m.proposals ?? []).map((p) => `[${p.title}: ${p.lines.join("; ")} — ${p.state ?? "pending"}]`)].join("\n"),
+    text: [m.photo ? `${t("assistant.photoSent")} ${m.prompt ?? m.text}` : m.prompt ?? m.text, ...(m.proposals ?? []).map((p) =>
+      `[${p.title}: ${p.items ? p.items.map((it, k) => `${chosen(p, k).name} ${it.grams} ${chosen(p, k).basis}`).join("; ") : p.lines.join("; ")} — ${p.state ?? "pending"}]`)].join("\n"),
   });
 
   const send = async (raw: string, shot?: string, prompt?: string) => {
@@ -91,7 +97,7 @@ export function Assistant({ scope, date, enabled, provider, review, onClose }: {
         patch(mi, pi, { state: "rejected" });
         return;
       }
-      const r = await applySuggestion(card.id);
+      const r = await applySuggestion(card.id, card.choice);
       patch(mi, pi, r.error ? { state: "failed", error: err(r.error) } : { state: "applied" });
       if (!r.error) router.refresh();
     } catch {
@@ -173,7 +179,46 @@ export function Assistant({ scope, date, enabled, provider, review, onClose }: {
                   {m.proposals?.map((c, pi) => (
                     <div key={c.id} className="w-full max-w-[90%] min-w-0 rounded-2xl border border-accent/40 p-3.5 [overflow-wrap:anywhere]">
                       <p className="text-sm font-semibold">{c.title}</p>
-                      <ul className="mt-1 space-y-0.5 text-sm">{c.lines.map((l, k) => <li key={k}>{l}</li>)}</ul>
+                      {c.items ? (
+                        // One row per food; "Change" shows the other matches of its search, one tap swaps it.
+                        <ul className="mt-1 divide-y divide-border text-sm">
+                          {c.items.map((it, k) => {
+                            const p = chosen(c, k);
+                            const others = [it.pick, ...it.alts].map((x, i) => ({ x, i: i - 1 })).filter(({ x }) => x.productId !== p.productId);
+                            return (
+                              <li key={k} className="py-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-medium">{p.name}</p>
+                                    <p className="text-xs text-muted tabular-nums">{fmt(locale, it.grams)} {p.basis} · {fmt(locale, ((p.kcal100 ?? 0) * it.grams) / 100)} kcal</p>
+                                  </div>
+                                  {!c.state && <Button size="sm" variant="ghost" aria-expanded={c.openItem === k} onClick={() => patch(mi, pi, { openItem: c.openItem === k ? null : k })}>{t("assistant.change")}</Button>}
+                                </div>
+                                {c.openItem === k && !c.state && (
+                                  others.length ? (
+                                    <div className="mt-2 flex flex-col gap-1.5">
+                                      {others.map(({ x, i }) => (
+                                        <button key={x.productId} type="button" className="rounded-xl border border-border px-3 py-2 text-left hover:bg-surface-2"
+                                          onClick={() => patch(mi, pi, { choice: c.items!.map((_, j) => (j === k ? i : c.choice?.[j] ?? -1)), openItem: null })}>
+                                          <span className="block">{x.name}</span>
+                                          <span className="block text-xs text-muted tabular-nums">{fmt(locale, ((x.kcal100 ?? 0) * it.grams) / 100)} kcal · {fmt(locale, x.kcal100)} kcal / 100 {x.basis}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : <p className="mt-1 text-xs text-muted">{t("assistant.noAlts")}</p>
+                                )}
+                              </li>
+                            );
+                          })}
+                          {c.items.length > 1 && (
+                            <li className="pt-2 font-medium tabular-nums">
+                              {t("nutrition.total")}: {fmt(locale, c.items.reduce((a, it, k) => a + ((chosen(c, k).kcal100 ?? 0) * it.grams) / 100, 0))} kcal · {t("nutrition.protein")} {fmt(locale, c.items.reduce((a, it, k) => a + ((chosen(c, k).protein100 ?? 0) * it.grams) / 100, 0), 1)} g
+                            </li>
+                          )}
+                        </ul>
+                      ) : (
+                        <ul className="mt-1 space-y-0.5 text-sm">{c.lines.map((l, k) => <li key={k}>{l}</li>)}</ul>
+                      )}
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         {c.state === "applied" ? <p className="inline-flex items-center gap-1 text-sm font-medium text-accent"><Check size={16} aria-hidden />{t("assistant.applied")}</p>
                           : c.state === "rejected" ? <p className="text-sm text-muted">{t("assistant.rejected")}</p>

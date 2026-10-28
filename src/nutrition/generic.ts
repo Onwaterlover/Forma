@@ -72,9 +72,10 @@ const F: Row[] = [
   // Meat, fish, plant protein
   { key: "chicken_breast", names: { pl: "Pierś z kurczaka, surowa", en: "Chicken breast, raw", de: "Hähnchenbrust, roh" }, aliases: "piers z kurczaka kurczak filet drob hahnchenbrust haehnchen huhn chicken breast", n: [120, 22.5, 0, 2.6, 0], servings: [["fillet", 200]] },
   { key: "chicken_breast_cooked", names: { pl: "Pierś z kurczaka, pieczona", en: "Chicken breast, roasted", de: "Hähnchenbrust, gebraten" }, aliases: "piers z kurczaka pieczona smazona grillowana kurczak hahnchenbrust gebraten chicken breast cooked", state: "cooked", n: [165, 31.0, 0, 3.6, 0] },
-  { key: "chicken_thigh", names: { pl: "Udko z kurczaka bez skóry, surowe", en: "Chicken thigh, skinless, raw", de: "Hähnchenschenkel ohne Haut, roh" }, aliases: "udko kurczak podudzie hahnchenschenkel chicken thigh", n: [119, 19.7, 0, 3.9, 0] },
+  { key: "chicken_thigh", names: { pl: "Udko z kurczaka bez skóry, surowe", en: "Chicken thigh, skinless, raw", de: "Hähnchenschenkel ohne Haut, roh" }, aliases: "udko kurczak hahnchenschenkel chicken thigh", n: [119, 19.7, 0, 3.9, 0] },
   // USDA SR 05096: thigh, meat only, roasted.
-  { key: "chicken_thigh_cooked", names: { pl: "Udko z kurczaka bez skóry, pieczone", en: "Chicken thigh, skinless, roasted", de: "Hähnchenschenkel ohne Haut, gebraten" }, aliases: "udko udka pieczone pieczony upieczone grillowane z piekarnika kurczak kurczaka bez skory skorki podudzie hahnchenschenkel gebraten chicken thigh roasted cooked", state: "cooked", n: [209, 26.0, 0, 10.9, 0] },
+  { key: "chicken_thigh_cooked", names: { pl: "Udko z kurczaka bez skóry, pieczone", en: "Chicken thigh, skinless, roasted", de: "Hähnchenschenkel ohne Haut, gebraten" }, aliases: "udko udka pieczone pieczony upieczone grillowane z piekarnika kurczak kurczaka bez skory skorki hahnchenschenkel gebraten chicken thigh roasted cooked", state: "cooked", n: [209, 26.0, 0, 10.9, 0] },
+  { key: "chicken_drumstick_cooked", names: { pl: "Pałka z kurczaka bez skóry, pieczona", en: "Chicken drumstick, skinless, roasted", de: "Hähnchenunterschenkel ohne Haut, gebraten" }, aliases: "palka palki paleczka podudzie podudzia pieczona pieczone upieczona grillowana z piekarnika airfryer kurczak kurczaka bez skory skorki unterschenkel hahnchenunterschenkel keule gebraten chicken drumstick roasted cooked", state: "cooked", n: [172, 28.3, 0, 5.7, 0], servings: [["piece", 70]] },
   { key: "beef_10", names: { pl: "Wołowina mielona (10% tł.), surowa", en: "Ground beef 10% fat, raw", de: "Rinderhack (10 % Fett), roh" }, aliases: "wolowina mielona mieso mielone rinderhack hackfleisch ground beef mince", n: [176, 20.0, 0, 10.0, 0] },
   { key: "beef_20", names: { pl: "Wołowina mielona (20% tł.), surowa", en: "Ground beef 20% fat, raw", de: "Rinderhack (20 % Fett), roh" }, aliases: "wolowina mielona mieso mielone rinderhack hackfleisch ground beef mince", n: [254, 17.2, 0, 20.0, 0] },
   { key: "salmon", names: { pl: "Łosoś (hodowlany), surowy", en: "Salmon, farmed, raw", de: "Lachs (Zucht), roh" }, aliases: "losos lachs salmon", n: [208, 20.4, 0, 13.4, 0] },
@@ -112,7 +113,7 @@ const F: Row[] = [
 ];
 
 /** Bump when values change: rows are re-written once on the next start. */
-export const GENERIC_VERSION = "generic-7";
+export const GENERIC_VERSION = "generic-8";
 
 export function genericRows() {
   return F.flatMap((f, rank) => (["pl", "en", "de"] as const).map((locale) => {

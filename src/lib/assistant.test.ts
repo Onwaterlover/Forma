@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { generatePlan } from "@/engine/generator";
 import { defaultProfile } from "@/engine/profile";
+import { translator } from "@/i18n";
 import { emptyNutrients } from "@/nutrition/calc";
 
 // The assistant's tools against a throwaway in-memory database. No API calls are made here.
@@ -24,7 +25,7 @@ beforeAll(async () => {
   await data.createPlan(A, "Plan", "generated", generatePlan({ profile, prefs: {}, library: await data.libraryFor(A) }), null, true);
 }, 60_000);
 
-const ctx = (userId: string) => ({ userId, locale: "pl" as const, date: "2026-10-20", proposals: [] as { id: string; title: string; lines: string[] }[] });
+const ctx = (userId: string) => ({ userId, locale: "pl" as const, date: "2026-10-20", proposals: [] as import("./assistant").Proposal[] });
 
 describe("assistant tools", () => {
   it("only proposes swaps the engine allows, and stores them as pending", async () => {
@@ -90,7 +91,8 @@ describe("assistant tools", () => {
     expect(await ai.runTool(c, "propose_add_food", { meal: "breakfast", items: [{ product_id: "invented", grams: 100 }] })).toHaveProperty("error");
     await ai.runTool(c, "propose_add_food", { meal: "breakfast", items: [{ product_id: egg, grams: 120 }] });
     expect(c.proposals[0]!.lines[0]).toContain("180 kcal");
-    expect(ai.foodPayload.parse((await data.pendingSuggestion(A, c.proposals[0]!.id))!.payload)).toEqual({ date: "2026-10-20", meal: "breakfast", items: [{ productId: egg, grams: 120 }] });
+    expect(ai.foodPayload.parse((await data.pendingSuggestion(A, c.proposals[0]!.id))!.payload)).toEqual({ date: "2026-10-20", meal: "breakfast", items: [{ productId: egg, grams: 120, alts: [] }] });
+    expect(c.proposals[0]!.items).toMatchObject([{ grams: 120, pick: { productId: egg, kcal100: 150 }, alts: [] }]);
 
     // Another user can neither see the product nor use the proposal.
     expect(await ai.runTool(ctx(B), "propose_add_food", { meal: null, items: [{ product_id: egg, grams: 100 }] })).toHaveProperty("error");
@@ -109,13 +111,13 @@ describe("assistant tools", () => {
 });
 
 describe("gemini provider", () => {
-  it("runs tool calls and returns the proposal with the final text", async () => {
+  it("runs tool calls, then returns a food card without another round trip", async () => {
     const { vi } = await import("vitest");
     process.env.GEMINI_API_KEY = "test-key";
-    const bodies: { contents: { role: string; parts: Record<string, unknown>[] }[] }[] = [];
+    const bodies: { contents: { role: string; parts: Record<string, unknown>[] }[]; generationConfig?: { thinkingConfig?: Record<string, unknown> } }[] = [];
     const replies = [
-      { candidates: [{ content: { role: "model", parts: [{ functionCall: { id: "c1", name: "propose_quick_entry", args: { name: "Obiad", kcal: 650, protein: null, carbs: null, fat: null, meal: "lunch" } }, thoughtSignature: "sig" }] } }] },
-      { candidates: [{ content: { role: "model", parts: [{ text: "Kliknij Zastosuj." }] } }] },
+      { candidates: [{ content: { role: "model", parts: [{ functionCall: { id: "c1", name: "search_food", args: { query: "jajko" } }, thoughtSignature: "sig" }] } }] },
+      { candidates: [{ content: { role: "model", parts: [{ functionCall: { id: "c2", name: "propose_quick_entry", args: { name: "Obiad", kcal: 650, protein: null, carbs: null, fat: null, meal: "lunch" } } }] } }] },
     ];
     vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => {
       bodies.push(JSON.parse(init.body));
@@ -123,11 +125,13 @@ describe("gemini provider", () => {
     });
     try {
       const r = await ai.runAssistant({ userId: A, locale: "pl", scope: "nutrition", date: "2026-10-20", history: [{ role: "user", text: "Dodaj 650 kcal na obiad" }] });
-      expect(r).toMatchObject({ reply: "Kliknij Zastosuj." });
+      expect(r).toMatchObject({ reply: translator("pl")("assistant.foodReady") });
       expect("proposals" in r && r.proposals).toHaveLength(1);
+      expect(bodies).toHaveLength(2);
+      expect(bodies[0]!.generationConfig?.thinkingConfig).toEqual({ thinkingLevel: "low" });
       const second = bodies[1]!.contents;
       expect(second.at(-2)!.parts[0]).toHaveProperty("thoughtSignature", "sig");
-      expect(second.at(-1)!.parts[0]).toMatchObject({ functionResponse: { id: "c1", name: "propose_quick_entry" } });
+      expect(second.at(-1)!.parts[0]).toMatchObject({ functionResponse: { id: "c1", name: "search_food" } });
     } finally {
       vi.unstubAllGlobals();
       delete process.env.GEMINI_API_KEY;

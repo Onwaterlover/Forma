@@ -7,9 +7,11 @@ import { defaultProfile } from "@/engine/profile";
 import { matchesQuery, REGIONS, regionsOf } from "@/engine/regions";
 import { substitutes } from "@/engine/select";
 import { EQUIPMENT, type Exercise, type Kind, type PlannedSession } from "@/engine/types";
+import { weeklySets } from "@/engine/volume";
 import { planSchema } from "./schemas";
 import { DICTS, exName, fmt, translator, type Locale } from "@/i18n";
 import { medianOf, scale, type Nutrients } from "@/nutrition/calc";
+import { hourIn, suggestMeal } from "@/nutrition/meal";
 import { todayIso, weekdayOf } from "./ctx";
 import {
   createSuggestion, currentTarget, diaryDay, getActivePlan, getPrefs, getProduct, getProfile, libraryFor, listWeights, listWorkouts,
@@ -45,7 +47,7 @@ function systemPrompt(locale: Locale, scope: Scope) {
   return `You are the assistant in Forma, a private training and nutrition app for one person and their family. Always reply in ${LANG[locale]}, in a warm, direct, everyday tone, like an experienced coach who is also a friend.
 
 How to answer
-- Lead with the answer or the action, then at most 2-4 short points with the why or how. Usually under 80 words; go longer only if the user asks for detail.
+- Lead with the answer or the action, then at most 2-4 short points with the why or how. Usually under 80 words; go longer only if the user asks for detail (a plan review has its own format below).
 - Use concrete numbers with units (sets × reps, kg, minutes, g protein, kcal). Give ranges where people differ, and one clear recommendation.
 - Plain text only: no Markdown headings, tables or bold. Short lists starting with "- " are fine.
 - Refer to the user's own data (their plan, today's diary, their target) instead of generic advice.
@@ -71,7 +73,12 @@ Training
 - Swap an exercise: call find_substitutes (add style if the user wants machines, free weights or bodyweight), pick the best fit, then call propose_swap. Prefer simple, stable options that match the user's level.
 - Changes to the current plan go through propose_plan_edit, all in ONE call with every change listed: training more or fewer times a week, doing a session twice (e.g. "4x a week, upper twice" with sessions Upper, Glutes A, Legs B: duplicate_session of Upper, placed where the user wants it in the rotation), removing or renaming a session, setting weekdays, adding/removing exercises (find ids with find_exercises), sets, reps, kg and rest. For the same change everywhere ("every rest 2 minutes", "all exercises 3 sets") use one set_all_exercises with session_key "*" (or one session's key). This keeps the user's own exercises and works for imported plans too.
 - Read the request carefully and restate it in one short sentence before proposing. If something essential is ambiguous (which session, which day), ask one short question instead of guessing.
-- Plan reviews: be candid and specific, not just encouraging. Check hard sets per session (more than ~20 is a lot for one workout), weekly sets per muscle (~10–20), the basic lifts (a squat/leg press and a hip hinge such as RDL on leg days), push/pull balance including rear delts, and session length vs the user's time. Respect deliberate choices (e.g. one leg day) without criticising them. Say what is good in one line, then at most 3 concrete improvements, each offered as a propose_plan_edit.
+- Plan reviews: honest and useful, like a good coach talking to a friend: direct, specific and warm, no lecturing, no generic tips, no hedging. Up to about 170 words, plain text, in this order:
+  1. One sentence with your verdict: how well the plan fits the user's goal, days and time (e.g. "Solidny plan na 3 dni, ale nogi dostają za mało pracy.").
+  2. "Dobre:" (in the user's language) one or two concrete strengths.
+  3. "Do poprawy:" at most three points, most important first. Each names the problem with numbers from <app_data> (sets per muscle per week from the app's count, sets per session, session length vs the user's time, a missing squat/leg press or hip hinge on leg days, push/pull balance including rear delts, several very demanding exercises or supersets late in one session), says in a few words why it matters, and gives the concrete fix. Guides: about 10–20 hard sets per muscle per week, more than ~20 hard sets in one session is a lot.
+  4. Offer all the fixes in ONE propose_plan_edit; say in one sentence that they can apply it below. If nothing important needs changing, say so plainly and propose nothing.
+  Respect deliberate choices (e.g. one leg day) without criticising them.
 - propose_plan_change regenerates the whole plan from the questionnaire. Use it only when the user wants a new plan built for them (e.g. "make it easier overall", "more machines everywhere") and a training profile exists.
 - An exercise that hurts: propose marking it "pain" and suggest a gentler alternative.
 - One-off situations ("only 25 minutes today", "no gym today") don't need a plan change: tell them to tap "Skip" on the Today screen, which offers a shorter version or a version for another place or with no equipment.`
@@ -91,7 +98,7 @@ Food
 - If the exact food isn't in the database but similar ones are (e.g. several apple turnovers of other brands), call propose_food_average with 2–8 of them; the app takes the median of their values. Say plainly that it wasn't in the database and that you used the average of similar products, naming two or three.
 - If nothing suitable exists even generically, propose_quick_entry with an estimate: name ending in " (≈)", kcal rounded to 10, macros from typical values for that food. Say plainly that it is an estimate and what you based it on. Never present an estimate as exact.
 - propose_quick_entry otherwise only when the user states the calories themselves.
-- Meal: from the user's words or the time of day; leave it empty if unclear.
+- Meal: set it only when the user names it (breakfast, lunch, dinner, snack in any wording); otherwise pass null and the app picks it the same way as the diary.
 - For "what should I eat" questions, use what's left of today's target and suggest 2-3 simple, real foods.
 - Food photo: name what you see and estimate portions from plate size and cutlery. Photos are approximate: if something important is unclear (what a dish or sauce is, how much oil or dressing, hidden ingredients, the portion size), ask 1-2 short, specific questions first (e.g. "Is that chicken or tofu? Roughly how many spoons of rice?"). Propose the entry once you are reasonably sure, listing your assumptions. Values still come only from search_food.`}`;
 }
@@ -119,6 +126,11 @@ async function trainingContext(userId: string, locale: Locale): Promise<string> 
       out.push(`  Session key=${s.key} "${sessionName(s, t)}", ${s.day === null ? "any day" : DICTS[locale].days.long[s.day]}, at ${loc}, ~${s.estimatedMinutes} min`);
       for (const e of s.exercises) out.push(`    - ${e.exerciseId} | ${name(e.exerciseId)} | ${e.sets}×${e.seconds ? `${e.seconds}s` : `${e.repMin}-${e.repMax}`} | rest ${e.restSec}s${e.startKg ? ` | ${e.startKg} kg` : ""}${e.grip ? ` | grip ${e.grip}` : ""}`);
     }
+    // The app's own count, so a review quotes real numbers instead of adding them up itself.
+    const lookup = (id: string) => library.find((e) => e.id === id);
+    const perMuscle = Object.entries(weeklySets(plan.data.sessions, lookup)).filter(([, n]) => (n ?? 0) > 0).sort((a, b) => b[1]! - a[1]!);
+    out.push(`Hard sets per week by muscle (app's count, direct work; indirect work counts half): ${perMuscle.map(([m, n]) => `${m} ${Math.round(n! * 10) / 10}`).join(", ")}`);
+    out.push(`Hard sets per session: ${plan.data.sessions.map((s) => `${s.key} ${s.exercises.reduce((a, e) => a + e.sets, 0)}`).join(", ")}`);
   } else out.push("No active plan.");
   if (workouts.length) {
     out.push("Recent workouts:");
@@ -287,6 +299,10 @@ async function sessionCtx(c: Ctx, sessionKey: string, exerciseId: string) {
 export async function runTool(c: Ctx, name: string, input: unknown): Promise<ToolOut> {
   const t = translator(c.locale);
   const label = (ex: Exercise | undefined, fallback: string) => exName(ex, c.locale, fallback);
+  // No meal named by the user: the same rule as the diary (the meal of something added in the last hour, else the
+  // time of day), so the assistant doesn't pick one at random.
+  const autoMeal = async (m: (typeof MEALS)[number] | null) =>
+    m ?? (c.date === todayIso() ? suggestMeal((await diaryDay(c.userId, c.date)).entries, hourIn(process.env.APP_TIME_ZONE || "Europe/Warsaw"), Date.now()) : null);
   const propose = async (kind: string, payload: unknown, title: string, lines: string[], items?: Proposal["items"]) => {
     const pid = await createSuggestion(c.userId, kind, payload);
     c.proposals.push({ id: pid, title, lines, ...(items ? { items } : {}) });
@@ -420,8 +436,9 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
         items.push({ grams: it.grams, pick: pick(p), alts: alts.map(pick) });
       }
       if (a.data.items.length > 1) lines.push(`${t("nutrition.total")}: ${fmt(c.locale, kcal)} kcal · ${t("nutrition.protein")} ${fmt(c.locale, protein, 1)} g`);
-      return propose("food", { date: c.date, meal: a.data.meal, items: a.data.items.map((i, k) => ({ productId: i.product_id, grams: i.grams, alts: items[k]!.alts.map((x) => x.productId) })) },
-        `${t("assistant.foodTitle")}${a.data.meal ? ` · ${t(`nutrition.meal.${a.data.meal}`)}` : ""}`, lines, items);
+      const mealOf = await autoMeal(a.data.meal);
+      return propose("food", { date: c.date, meal: mealOf, items: a.data.items.map((i, k) => ({ productId: i.product_id, grams: i.grams, alts: items[k]!.alts.map((x) => x.productId) })) },
+        `${t("assistant.foodTitle")}${mealOf ? ` · ${t(`nutrition.meal.${mealOf}`)}` : ""}`, lines, items);
     }
     case "propose_food_average": {
       const a = z.object({ name: z.string().trim().min(1).max(60), product_ids: z.array(id).min(2).max(8), grams: z.number().positive().max(3000), meal }).safeParse(input);
@@ -430,8 +447,9 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
       const m = medianOf(found);
       if (!m) return { error: "Need at least 2 known products with kcal (same unit). Use ids from search_food." };
       const v = scale(m.nutrients, a.data.grams);
-      return propose("food_avg", { date: c.date, meal: a.data.meal, name: a.data.name, ids: m.used.map((p) => p.id), grams: a.data.grams },
-        `${t("assistant.foodTitle")}${a.data.meal ? ` · ${t(`nutrition.meal.${a.data.meal}`)}` : ""}`, [
+      const mealOf = await autoMeal(a.data.meal);
+      return propose("food_avg", { date: c.date, meal: mealOf, name: a.data.name, ids: m.used.map((p) => p.id), grams: a.data.grams },
+        `${t("assistant.foodTitle")}${mealOf ? ` · ${t(`nutrition.meal.${mealOf}`)}` : ""}`, [
           `${a.data.name} (≈) · ${fmt(c.locale, a.data.grams)} ${m.basis} · ${fmt(c.locale, v.kcal)} kcal · ${t("nutrition.protein")} ${fmt(c.locale, v.protein, 1)} g`,
           t("assistant.avgFrom", { names: m.used.slice(0, 4).map((p) => p.name).join(", ") }),
         ]);
@@ -439,7 +457,7 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
     case "propose_quick_entry": {
       const a = quickPayload.omit({ date: true }).safeParse(input);
       if (!a.success) return { error: "Invalid input." };
-      const q = a.data;
+      const q = { ...a.data, meal: await autoMeal(a.data.meal) };
       const macros = [q.protein !== null && `P ${fmt(c.locale, q.protein)} g`, q.carbs !== null && `C ${fmt(c.locale, q.carbs)} g`, q.fat !== null && `F ${fmt(c.locale, q.fat)} g`].filter(Boolean).join(" · ");
       return propose("quick", { ...q, date: c.date }, `${t("assistant.quickTitle")}${q.meal ? ` · ${t(`nutrition.meal.${q.meal}`)}` : ""}`,
         [`${q.name} · ${fmt(c.locale, q.kcal)} kcal${macros ? ` · ${macros}` : ""}`]);

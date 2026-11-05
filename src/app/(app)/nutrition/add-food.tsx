@@ -9,20 +9,21 @@ import { useI18n } from "@/i18n/client";
 import type { Product } from "@/lib/data";
 import { energyMismatch, medianOf, NUTRIENT_KEYS, scale, type NutrientKey } from "@/nutrition/calc";
 import { countFromLabel, typicalPiece, typicalSlice, typicalUnits } from "@/nutrition/slices";
+import { suggestMeal } from "@/nutrition/meal";
 import { Scanner } from "./scanner";
 
 export type RecipeLite = { id: string; name: string; isMeal: boolean; servings: number; finalWeight: number; perServingKcal: number | null; totalKcal: number | null };
 type View = "search" | "scan" | "meals" | "custom" | "quick";
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
-/** Meal suggested by the time of day when logging for today (the user can change it). */
-export function mealNow(): (typeof MEALS)[number] {
-  const h = new Date().getHours() + new Date().getMinutes() / 60;
-  return h < 11 ? "breakfast" : h < 17 ? "lunch" : h < 22 ? "dinner" : "snack";
+/** Meal suggested when logging for today (the user can change it): see suggestMeal. */
+export function mealNow(entries: { meal: string | null; createdAt: string }[] = []): (typeof MEALS)[number] {
+  const d = new Date();
+  return suggestMeal(entries, d.getHours() + d.getMinutes() / 60, d.getTime());
 }
 
 export function AddFood({
-  open, onClose, date, today, view: startView, product, favorites, recipes, recents = [],
+  open, onClose, date, today, view: startView, product, favorites, recipes, recents = [], entries = [],
 }: {
   open: boolean;
   onClose: () => void;
@@ -34,6 +35,8 @@ export function AddFood({
   product: Product | null;
   favorites: Product[];
   recents?: (Product & { lastAmount: number })[];
+  /** Today's diary entries, to suggest the meal. */
+  entries?: { meal: string | null; createdAt: string }[];
   recipes: RecipeLite[];
 }) {
   const { t } = useI18n();
@@ -52,7 +55,7 @@ export function AddFood({
       setView(startView);
       setPicked(product);
       setBarcodeForNew(null);
-      setMeal(date === today ? mealNow() : null);
+      setMeal(date === today ? mealNow(entries) : null);
     }
   }, [open, startView, product, date, today]);
 

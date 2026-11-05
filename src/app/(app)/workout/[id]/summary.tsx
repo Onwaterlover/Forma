@@ -69,9 +69,6 @@ export function SummaryCard({ s, status, week, t, locale }: {
         </>
       )}
 
-      <p className="text-sm text-muted">
-        {week.planned ? t("summary.week", { n: week.done, planned: week.planned }) : t("summary.weekNoPlan", { n: week.done })}
-      </p>
       <LinkButton href="/" full>{t("summary.close")}</LinkButton>
     </Card>
   );

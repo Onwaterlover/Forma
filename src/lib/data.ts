@@ -420,6 +420,12 @@ export async function lastWeights(userId: string, exerciseIds: string[]): Promis
   return out;
 }
 
+/** When this plan last saw any activity (a workout, or a session skipped or postponed): its start time, or null. */
+export async function lastPlanActivity(userId: string, planId: string): Promise<string | null> {
+  const r = await (await db()).get<{ t: string | null }>("SELECT MAX(started_at) AS t FROM workouts WHERE user_id = ? AND plan_id = ?", [userId, planId]);
+  return r?.t ?? null;
+}
+
 export async function workoutDatesSince(userId: string, sinceIso: string): Promise<string[]> {
   const rows = await (await db()).all<{ started_at: string }>("SELECT started_at FROM workouts WHERE user_id = ? AND status = 'completed' AND started_at >= ? ORDER BY started_at", [userId, sinceIso]);
   return rows.map((r) => r.started_at);

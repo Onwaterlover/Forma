@@ -1,9 +1,9 @@
 "use client";
-import { ChevronLeft, ChevronRight, Copy, ListPlus, Plus, ScanBarcode, Search, Settings2, Utensils } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, ListPlus, Plus, ScanBarcode, Search, Utensils } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
-import { addProductEntry, addRecipeEntry, copyFromYesterday, editEntry, markDay, productFor, recipeFor, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
+import { addProductEntry, addRecipeEntry, copyFromYesterday, editEntry, productFor, recipeFor, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
 import { Sheet, useToast } from "@/components/client";
 import { Button, Card, cx, Empty, Input, Meter, Select } from "@/components/ui";
 import { fmt, fmtDate } from "@/i18n";
@@ -199,7 +199,7 @@ export function Diary({
                 </Link>
                 <button type="button" disabled={pending} aria-label={`${t("common.add")} ${m.name}`}
                   onClick={() => start(async () => {
-                    const r = await addRecipeEntry({ recipeId: m.id, amount: m.amount, mode: m.mode, date, meal: date === today ? mealNow() : null });
+                    const r = await addRecipeEntry({ recipeId: m.id, amount: m.amount, mode: m.mode, date, meal: date === today ? mealNow(entries) : null });
                     toast({ text: r.error ? t("common.error") : `${t("common.saved")}: ${m.name}` });
                     router.refresh();
                   })}
@@ -224,7 +224,7 @@ export function Diary({
                 </button>
                 <button type="button" disabled={pending} aria-label={`${t("common.add")} ${p.name}`}
                   onClick={() => start(async () => {
-                    const r = await addProductEntry({ productId: p.id, amount: p.lastAmount, date, meal: date === today ? mealNow() : null });
+                    const r = await addProductEntry({ productId: p.id, amount: p.lastAmount, date, meal: date === today ? mealNow(entries) : null });
                     toast({ text: r.error ? t("common.error") : `${t("common.saved")}: ${p.name}` });
                     router.refresh();
                   })}
@@ -237,23 +237,10 @@ export function Diary({
         </section>
       )}
 
-      {entries.length > 0 && (
-        <div className="mt-6">
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <Settings2 size={16} className="text-muted" aria-hidden />
-            {[{ v: true, l: t("nutrition.dayComplete") }, { v: false, l: t("nutrition.dayIncomplete") }].map((o) => (
-              <button key={String(o.v)} type="button" aria-pressed={complete === o.v} disabled={pending}
-                onClick={() => start(() => markDay(date, complete === o.v ? null : o.v))}
-                className={cx("min-h-9 rounded-full border px-3", complete === o.v ? "border-accent bg-accent-soft text-accent" : "border-border text-muted hover:bg-surface-2")}>
-                {o.l}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1 text-xs text-muted">{t("nutrition.completeHint")}</p>
-        </div>
-      )}
+      {/* No daily "complete / incomplete" question: every logged day counts; a week that wasn't fully logged is
+          marked once in the weekly check-in, and the weekly review notices when the log and the scale disagree. */}
 
-      <AddFood open={!!adding} onClose={() => { setAdding(null); router.refresh(); }} date={date} today={today} view={adding?.view ?? "search"} product={adding?.product ?? null} favorites={favorites} recents={recents} recipes={recipes} />
+      <AddFood open={!!adding} onClose={() => { setAdding(null); router.refresh(); }} date={date} today={today} view={adding?.view ?? "search"} product={adding?.product ?? null} favorites={favorites} recents={recents} entries={entries} recipes={recipes} />
 
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.name ?? ""}>
         {editing && (

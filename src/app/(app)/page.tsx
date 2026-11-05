@@ -4,8 +4,8 @@ import { startWorkout } from "@/app/actions/training";
 import { Badge, Card, LinkButton, Meter, SectionTitle } from "@/components/ui";
 import { nextSession } from "@/engine/adapt";
 import { fmt, prescriptionText } from "@/i18n";
-import { pageCtx, todayIso, weekdayOf } from "@/lib/ctx";
-import { currentTarget, diaryDay, getActivePlan, getProfile, postponedSince, inProgressWorkout, lastCompletedSessionKey, libraryFor, listWeights } from "@/lib/data";
+import { pageCtx, shiftDate, todayIso, weekdayOf } from "@/lib/ctx";
+import { currentTarget, diaryDay, getActivePlan, getProfile, postponedSince, inProgressWorkout, lastCompletedSessionKey, lastPlanActivity, libraryFor, listWeights } from "@/lib/data";
 import { exName } from "@/i18n";
 import { StartChoices } from "./start-choices";
 import { QuickWeight } from "./quick-weight";
@@ -27,7 +27,9 @@ export default async function TodayPage() {
     getProfile(user.id),
   ]);
   const lookup = (id: string) => library.find((e) => e.id === id);
-  const [lastKey, postponed] = plan ? await Promise.all([lastCompletedSessionKey(user.id, plan.id), postponedSince(user.id, `${today}T00:00`)]) : [null, []];
+  const [lastKey, postponed, lastActivity] = plan
+    ? await Promise.all([lastCompletedSessionKey(user.id, plan.id), postponedSince(user.id, `${today}T00:00`), lastPlanActivity(user.id, plan.id)])
+    : [null, [], null];
 
   const wd = weekdayOf(today);
   const logging = settings.logWorkouts;
@@ -42,6 +44,15 @@ export default async function TodayPage() {
   // Before the first workout of this plan there is nothing to wait for: it can start today.
   const daysAhead = next?.day === wd || (logging && !lastKey) ? 0 : [1, 2, 3, 4, 5, 6, 7].find((k) => planDays.has((wd + k) % 7));
   const firstEver = logging && !lastKey && next?.day !== wd;
+  // A planned day went by with nothing done (no workout, skip or postpone since): the session waits as the next
+  // one; say so: Start does it today, "Skip" offers skipping it for good. Doing nothing moves it on, like "postpone".
+  const missedDay = (() => {
+    if (!plan || !logging || running || !next || next.day === null || next.day === wd) return null;
+    const back = [1, 2, 3, 4, 5, 6].find((k) => (wd - k + 7) % 7 === next.day)!;
+    const date = shiftDate(today, -back);
+    if (date < plan.created_at.slice(0, 10) || (lastActivity && lastActivity.slice(0, 10) >= date)) return null;
+    return DICTS[locale].days.long[next.day]!;
+  })();
   const showStart = !settings.onboarded && !plan && day.entries.length === 0;
   const locName = (id: string) => profile?.locations.find((l) => l.id === id)?.name ?? "";
 
@@ -67,14 +78,15 @@ export default async function TodayPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-                    {firstEver ? t("today.startToday") : daysAhead === 0 ? t(logging ? "today.scheduledToday" : "today.inPlanToday") : daysAhead === 1 ? t("today.tomorrow") : daysAhead ? t("today.scheduledOn", { day: DICTS[locale].days.long[(wd + daysAhead) % 7]! }) : t("today.anytime")}
+                    {missedDay ? t("today.catchUp") : firstEver ? t("today.startToday") : daysAhead === 0 ? t(logging ? "today.scheduledToday" : "today.inPlanToday") : daysAhead === 1 ? t("today.tomorrow") : daysAhead ? t("today.scheduledOn", { day: DICTS[locale].days.long[(wd + daysAhead) % 7]! }) : t("today.anytime")}
                   </p>
                   <p className="text-lg font-medium">{next.name ?? t(`template.${next.template}`)}</p>
                   <p className="text-sm text-muted">
                     {t("plan.estimated", { n: next.estimatedMinutes })}
                     {locName(next.locationId) ? ` · ${locName(next.locationId)}` : ""}
                   </p>
-                  {!scheduledToday && planDays.size > 0 && <p className="mt-1 text-sm text-muted">{t("today.restDayPlanOnly")}</p>}
+                  {missedDay ? <p className="mt-1 text-sm text-muted">{t("today.missed", { day: missedDay })}</p>
+                    : !scheduledToday && planDays.size > 0 && <p className="mt-1 text-sm text-muted">{t("today.restDayPlanOnly")}</p>}
                 </div>
                 {logging && <form action={startWorkout.bind(null, plan.id, next.key, undefined, undefined)}>
                   <button type="submit" className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-hover">

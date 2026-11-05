@@ -366,15 +366,15 @@ export function WorkoutLogger({
         if (!finished && !e.skipped && (e.completed || (doneSets > 0 && doneSets === e.sets.length)) && !reopened.includes(e.id)) {
           const done = e.sets.filter((s) => s.completed).map((s) => (s.durationS ? `${s.durationS}s` : s.weightKg ? `${fmt(locale, s.weightKg, 2)}×${s.reps ?? "?"}` : `${s.reps ?? "?"}`)).join(", ");
           return (
-            <Card key={`${e.id}-${e.exerciseId}`} className={cx("py-3 sm:py-3", (withNext || withPrev) && "border-l-4 border-l-accent")}>
-              <button type="button" aria-expanded={false} onClick={() => setReopened((r) => [...r, e.id])} className="flex w-full items-center justify-between gap-3 text-left">
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold">{e.name}</span>
-                  {done && <span className="block truncate text-sm text-muted tabular-nums">{done}</span>}
-                </span>
-                <span className="flex shrink-0 items-center gap-2"><Badge tone="accent">✓</Badge><ChevronDown size={18} className="text-muted" aria-hidden /></span>
-              </button>
-            </Card>
+            // The whole card is the button, edges included, so any tap opens it again.
+            <button key={`${e.id}-${e.exerciseId}`} type="button" aria-expanded={false} onClick={() => setReopened((r) => [...r, e.id])}
+              className={cx("flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left shadow-[var(--shadow)] hover:bg-surface-2 sm:px-5", (withNext || withPrev) && "border-l-4 border-l-accent")}>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">{e.name}</span>
+                {done && <span className="block truncate text-sm text-muted tabular-nums">{done}</span>}
+              </span>
+              <span className="flex shrink-0 items-center gap-2"><Badge tone="accent">✓</Badge><ChevronDown size={18} className="text-muted" aria-hidden /></span>
+            </button>
           );
         }
         return (

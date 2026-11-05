@@ -1,14 +1,15 @@
 import { Bars, Sparkline, TrendChart } from "@/components/charts";
-import { Camera, Check, ChevronRight } from "lucide-react";
+import { Camera, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { Card, cx, Empty, LinkButton, Notice, PageHeader, SectionTitle } from "@/components/ui";
+import { Card, Empty, LinkButton, Notice, PageHeader, SectionTitle } from "@/components/ui";
 import { bestPoint, exerciseTrend, personalRecords } from "@/engine/progression";
 import { exName, fmt, fmtDate } from "@/i18n";
 import { pageCtx, shiftDate, todayIso } from "@/lib/ctx";
 import {
-  currentTarget, exerciseHistory, getActivePlan, intakeHistory, libraryFor, listMeasurements, listWeights, loggedExerciseIds, workoutDatesSince,
+  currentTarget, exerciseHistory, getActivePlan, intakeHistory, libraryFor, listMeasurements, listWeights, listWorkouts, loggedExerciseIds,
 } from "@/lib/data";
 import { measurementTrends } from "@/lib/measurements";
+import { weeklyReview, type Goal } from "@/lib/review";
 import { weightTrend } from "@/nutrition/energy";
 import { MeasurementForm } from "./measurement-form";
 import { metricLabel, metricUnit } from "./sets";
@@ -43,13 +44,8 @@ export default async function ProgressPage() {
   const logged = intake.filter((x) => x.kcal > 0);
   const avg = logged.length ? logged.reduce((a, x) => a + x.kcal, 0) / logged.length : null;
 
-  const since = mondayOf(shiftDate(today, -7 * 7));
-  const dates = settings.modules.training ? await workoutDatesSince(user.id, since) : [];
-  const weeks = Array.from({ length: 8 }, (_, i) => mondayOf(shiftDate(today, (i - 7) * 7)));
-  const perWeek = weeks.map((w) => ({ label: fmtDate(locale, w, { day: "numeric", month: "numeric" }), value: dates.filter((d) => mondayOf(d) === w).length }));
   const plan = settings.modules.training ? await getActivePlan(user.id) : null;
   const planned = plan?.data.sessions.length ?? 0;
-  const thisWeek = perWeek.at(-1)!.value;
 
   // Every logged exercise, most recently trained first; each row opens its trend.
   const library = await libraryFor(user.id);
@@ -90,22 +86,63 @@ export default async function ProgressPage() {
     </li>
   );
 
-  // Weekly review: short and honest; "no change needed" is a perfectly good answer.
-  const review = plan && planned > 0
-    ? perWeek.at(-2)!.value >= Math.ceil(planned * 0.75) ? t("progress.weeklyNoChange") : t("progress.weeklyLowData")
-    : null;
+  // Last full week (Monday to Sunday) in a few facts from the user's own data and at most one tip; "nothing to
+  // change" is a perfectly good answer.
+  const weekStart = shiftDate(mondayOf(today), -7);
+  const weekEnd = shiftDate(weekStart, 6);
+  const inWeek = (iso: string, from = weekStart, to = weekEnd) => iso.slice(0, 10) >= from && iso.slice(0, 10) <= to;
+  const recent = settings.modules.training ? await listWorkouts(user.id, 60) : [];
+  const doneIn = (from: string, to: string) => recent.filter((w) => w.status === "completed" && inWeek(w.started_at, from, to));
+  const review = weeklyReview({
+    goal: settings.weightGoal ?? ((target?.goal as Goal) || null),
+    trend,
+    days: intake.filter((d) => d.kcal > 0 && inWeek(d.date)).map((d) => ({ kcal: d.kcal, protein: d.protein })),
+    target: target ? { kcal: target.kcal, protein: target.protein_g } : null,
+    workouts: {
+      done: doneIn(weekStart, weekEnd).length, planned: planned || null,
+      sets: doneIn(weekStart, weekEnd).reduce((a, w) => a + w.logged_sets, 0),
+      setsBefore: doneIn(shiftDate(weekStart, -7), shiftDate(weekStart, -1)).reduce((a, w) => a + w.logged_sets, 0),
+    },
+    weekStart, weekEnd,
+  });
+  const tipText = (() => {
+    const tip = review.tip;
+    switch (tip.key) {
+      case "underlog": return t("progress.review.underlog", { kcal: fmt(locale, tip.kcal) });
+      case "tooFast": return t("progress.review.tooFast", { pct: fmt(locale, tip.pct, 1) });
+      case "drift": return t(`progress.review.drift_${tip.dir}`);
+      case "protein": return t("progress.review.protein", { avg: fmt(locale, tip.avg), target: fmt(locale, tip.target) });
+      case "fewerWorkouts": return t("progress.review.fewerWorkouts", { done: tip.done, planned: tip.planned });
+      default: return t(`progress.review.${tip.key}`);
+    }
+  })();
 
   return (
     <>
       <PageHeader title={t("progress.title")} action={<LinkButton href="/progress/photos" variant="secondary" size="sm"><Camera size={16} aria-hidden />{t("progress.photos")}</LinkButton>} />
 
-      {review && (
-        <Card className="mb-4">
-          <h2 className="font-semibold">{t("progress.weekly")}</h2>
-          <p className="mt-1 text-sm">{t("progress.weeklyWorkouts", { done: thisWeek, planned })}</p>
-          <p className="mt-1 text-sm text-muted">{review}</p>
-        </Card>
-      )}
+      <Card className="mb-4 space-y-2">
+        <h2 className="font-semibold">{t("progress.review.title", { range: `${fmtDate(locale, weekStart, { day: "numeric", month: "short" })} – ${fmtDate(locale, weekEnd, { day: "numeric", month: "short" })}` })}</h2>
+        {(review.weight !== null || review.food || review.training) && (
+          <ul className="space-y-1 text-sm">
+            {review.weight !== null && <li>{t("progress.review.weight", { delta: signed(review.weight, 2) })}</li>}
+            {review.food && (
+              <li>
+                {t("progress.review.food", { kcal: fmt(locale, review.food.kcal), days: review.food.days })}
+                {target?.kcal ? <span className="text-muted"> · {t("progress.review.target", { n: fmt(locale, target.kcal) })}</span> : null}
+                {target?.protein_g ? <span className="text-muted"> · {t("progress.review.protein_line", { g: fmt(locale, review.food.protein), target: fmt(locale, target.protein_g) })}</span> : null}
+              </li>
+            )}
+            {review.training && (
+              <li>
+                {review.training.planned ? t("progress.review.training", { done: review.training.done, planned: review.training.planned }) : t("progress.review.trainingNoPlan", { done: review.training.done })}
+                {review.training.sets > 0 && <span className="text-muted"> · {t("progress.review.sets", { n: review.training.sets })}{review.training.setsBefore > 0 ? ` (${signed(review.training.sets - review.training.setsBefore, 0)})` : ""}</span>}
+              </li>
+            )}
+          </ul>
+        )}
+        <Notice tone={review.tip.key === "keep" ? "accent" : "neutral"}>{tipText}</Notice>
+      </Card>
 
       <SectionTitle>{t("progress.bodyweight")}</SectionTitle>
       <Card className="space-y-4">
@@ -191,20 +228,6 @@ export default async function ProgressPage() {
 
       {settings.modules.training && (
         <>
-          <SectionTitle>{t("progress.thisWeek")}</SectionTitle>
-          {/* One circle per planned workout, ticked when done; a short average instead of a bar chart. */}
-          <Card>
-            <div className="flex flex-wrap items-center gap-2" aria-label={t("progress.weeklyWorkouts", { done: thisWeek, planned })}>
-              {Array.from({ length: Math.max(planned, thisWeek) }, (_, i) => (
-                <span key={i} className={cx("grid h-9 w-9 place-items-center rounded-full border", i < thisWeek ? "border-accent bg-accent text-accent-contrast" : "border-border text-muted")}>
-                  {i < thisWeek ? <Check size={18} aria-hidden /> : null}
-                </span>
-              ))}
-              <span className="ml-1 text-sm">{planned ? t("progress.weeklyWorkouts", { done: thisWeek, planned }) : t("progress.doneThisWeek", { n: thisWeek })}</span>
-            </div>
-            <p className="mt-2 text-xs text-muted">{t("progress.avgPerWeek", { n: fmt(locale, perWeek.slice(0, -1).reduce((a, w) => a + w.value, 0) / 7, 1) })}</p>
-          </Card>
-
           {records.length > 0 && (
             // Folded away by default: useful now and then, not every day.
             <details className="group mt-6">

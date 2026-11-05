@@ -6,7 +6,7 @@ import { prescribe } from "./prescribe";
 
 export const EDIT_OPS = [
   "duplicate_session", "remove_session", "rename_session", "move_session", "set_day",
-  "add_exercise", "remove_exercise", "set_exercise", "set_all_exercises",
+  "add_exercise", "remove_exercise", "set_exercise", "set_all_exercises", "split_superset",
 ] as const;
 export type EditOp = {
   op: (typeof EDIT_OPS)[number];
@@ -31,7 +31,9 @@ export type EditLine =
   | { kind: "day"; session: string; day: number | null }
   | { kind: "add" | "remove"; session: string; exerciseId: string }
   | { kind: "set"; session: string; exerciseId: string; sets?: number; reps?: [number, number]; kg?: number; rest?: number }
-  | { kind: "set_all"; session: string | null; sets?: number; reps?: [number, number]; rest?: number };
+  | { kind: "set_all"; session: string | null; sets?: number; reps?: [number, number]; rest?: number }
+  /** A superset split into normal exercises: one pair (both ids), or every pair of a session / the plan. */
+  | { kind: "split"; session: string | null; pair?: [string, string] };
 
 const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -40,6 +42,8 @@ export function weekOrder<T extends { day: number | null }>(sessions: T[]): T[] 
   return sessions.map((s, i) => ({ s, i })).sort((a, b) => (a.s.day ?? 7 + a.i / 100) - (b.s.day ?? 7 + b.i / 100)).map((x) => x.s);
 }
 const label = (s: PlannedSession) => s.name ?? s.key;
+/** The same exercise outside any superset. */
+const solo = ({ superset: _, ...rest }: PlannedExercise): PlannedExercise => rest;
 
 export function applyPlanEdits(
   plan: Plan, ops: EditOp[], library: Exercise[], profile: TrainingProfile, now = new Date().toISOString(),
@@ -50,9 +54,19 @@ export function applyPlanEdits(
   const at = (pos: number | null | undefined, len: number) => (pos && pos >= 1 ? Math.min(pos - 1, len) : len);
 
   for (const o of ops) {
+    // "No supersets": every pair of a session, or of the whole plan with session_key "*", becomes normal exercises.
+    if (o.op === "split_superset" && (o.session_key === "*" || !o.exercise_id)) {
+      const targets = o.session_key === "*" ? p.sessions : p.sessions.filter((x) => x.key === o.session_key);
+      if (!targets.length) return { error: `Unknown session_key "${o.session_key}". Use a key or "*" for the whole plan.` };
+      if (!targets.some((t) => t.exercises.some((e) => e.superset !== undefined))) return { error: "There are no supersets there." };
+      for (const t of targets) t.exercises = t.exercises.map(solo);
+      lines.push({ kind: "split", session: o.session_key === "*" ? null : label(targets[0]!) });
+      continue;
+    }
     // "Every rest 2 minutes": one change for all exercises of a session, or of the whole plan with session_key "*".
     if (o.op === "set_all_exercises") {
       if (o.kg != null) return { error: "kg differs per exercise; use set_exercise." };
+      if (o.sets == null && o.rep_min == null && o.rep_max == null && o.rest_sec == null) return { error: "Nothing to change: give sets, rep_min/rep_max or rest_sec." };
       const targets = o.session_key === "*" ? p.sessions : p.sessions.filter((x) => x.key === o.session_key);
       if (!targets.length) return { error: `Unknown session_key "${o.session_key}". Use a key or "*" for the whole plan.` };
       for (const t of targets) for (let i = 0; i < t.exercises.length; i++) {
@@ -118,13 +132,25 @@ export function applyPlanEdits(
       case "remove_exercise": {
         const i = s.exercises.findIndex((e) => e.exerciseId === o.exercise_id);
         if (i < 0) return { error: `${o.exercise_id} is not in session ${s.key}.` };
-        s.exercises.splice(i, 1);
+        const [gone] = s.exercises.splice(i, 1);
+        // Its superset partner is a normal exercise again.
+        if (gone!.superset !== undefined) s.exercises = s.exercises.map((e) => (e.superset === gone!.superset ? solo(e) : e));
         lines.push({ kind: "remove", session: label(s), exerciseId: o.exercise_id! });
+        break;
+      }
+      case "split_superset": {
+        const e = s.exercises.find((x) => x.exerciseId === o.exercise_id);
+        if (!e) return { error: `${o.exercise_id} is not in session ${s.key}.` };
+        const partner = s.exercises.find((x) => x !== e && e.superset !== undefined && x.superset === e.superset);
+        if (!partner) return { error: `${o.exercise_id} is not in a superset in session ${s.key}.` };
+        s.exercises = s.exercises.map((x) => (x.superset === e.superset ? solo(x) : x));
+        lines.push({ kind: "split", session: label(s), pair: [e.exerciseId, partner.exerciseId] });
         break;
       }
       case "set_exercise": {
         const i = s.exercises.findIndex((e) => e.exerciseId === o.exercise_id);
         if (i < 0) return { error: `${o.exercise_id} is not in session ${s.key}.` };
+        if (o.sets == null && o.rep_min == null && o.rep_max == null && o.kg == null && o.rest_sec == null) return { error: "Nothing to change: give sets, rep_min/rep_max, kg or rest_sec." };
         const pe = setNumbers(s.exercises[i]!, o, now);
         if ("error" in pe) return pe;
         s.exercises[i] = pe;

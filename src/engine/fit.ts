@@ -19,6 +19,10 @@ export function canPair(a: Exercise, b: Exercise): boolean {
   // Two technically demanding (or two very tiring) lifts back to back, e.g. handstand push-ups with pull-ups, leave
   // both done with worse form and drain the rest of the session: they stay straight sets, other pairs save the time.
   if ((a.skill >= 3 && b.skill >= 3) || (a.fatigue === "high" && b.fatigue === "high")) return false;
+  // Two real compound lifts in a row (dumbbell bench with rows) feel brutal and both suffer; one-side-at-a-time
+  // exercises make the switch awkward. Supersets are for the lighter work: arms, shoulders, easy bodyweight pairs.
+  if (a.unilateral || b.unilateral) return false;
+  if (a.mechanics === "compound" && b.mechanics === "compound" && (a.fatigue !== "low" || b.fatigue !== "low")) return false;
   return PAIRS.some(([x, y]) => (a.pattern === x && b.pattern === y) || (a.pattern === y && b.pattern === x));
 }
 

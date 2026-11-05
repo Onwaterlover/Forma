@@ -45,4 +45,27 @@ describe("plan edits by the assistant", () => {
     expect(r.plan.sessions.flatMap((s) => s.exercises.map((e) => e.restSec))).toEqual([120, 120, 120, 120]);
     expect(run([{ op: "set_all_exercises", session_key: "*", kg: 50 }])).toHaveProperty("error");
   });
+  it("splits supersets: one pair, or all of them; a change that changes nothing is refused", () => {
+    const paired: Plan = structuredClone(plan);
+    paired.sessions[0]!.exercises = [{ ...pe("db_bench_press"), superset: 1 }, { ...pe("one_arm_db_row"), superset: 1 }, { ...pe("db_curl"), superset: 2 }, { ...pe("cable_pushdown"), superset: 2 }];
+    const edit = (changes: object[]) => applyPlanEdits(paired, changes as never, EXERCISES, defaultProfile());
+
+    const one = edit([{ op: "split_superset", session_key: "A", exercise_id: "one_arm_db_row" }]);
+    if ("error" in one) throw new Error(one.error);
+    expect(one.plan.sessions[0]!.exercises.map((e) => e.superset)).toEqual([undefined, undefined, 2, 2]);
+    expect(one.lines).toEqual([{ kind: "split", session: "Góra", pair: ["one_arm_db_row", "db_bench_press"] }]);
+
+    const all = edit([{ op: "split_superset", session_key: "*", exercise_id: null }]);
+    if ("error" in all) throw new Error(all.error);
+    expect(all.plan.sessions[0]!.exercises.every((e) => !("superset" in e))).toBe(true);
+
+    // Removing one exercise of a pair leaves its partner as a normal exercise.
+    const removed = edit([{ op: "remove_exercise", session_key: "A", exercise_id: "db_curl" }]);
+    if ("error" in removed) throw new Error(removed.error);
+    expect(removed.plan.sessions[0]!.exercises.find((e) => e.exerciseId === "cable_pushdown")!.superset).toBeUndefined();
+
+    expect(edit([{ op: "split_superset", session_key: "B", exercise_id: null }])).toHaveProperty("error");
+    expect(edit([{ op: "split_superset", session_key: "A", exercise_id: "lat_pulldown" }])).toHaveProperty("error");
+    expect(edit([{ op: "set_exercise", session_key: "A", exercise_id: "db_curl" }])).toHaveProperty("error");
+  });
 });

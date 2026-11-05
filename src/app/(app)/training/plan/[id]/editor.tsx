@@ -214,6 +214,20 @@ export function PlanEditor({
                         onClick={() => update(s.key, (x) => ({ ...x, exercises: x.exercises.filter((_, j) => j !== i).map((y) => (y.superset === e.superset ? { ...y, superset: undefined } : y)) }))}><Trash2 size={16} /></button>
                     </div>
                   </div>
+                  {/* Shown once per pair, on its first exercise; "Split" makes both normal exercises again. */}
+                  {(() => {
+                    const partner = e.superset === undefined ? -1 : s.exercises.findIndex((y, j) => j !== i && y.superset === e.superset);
+                    if (partner < i) return null;
+                    return (
+                      <p className="flex items-center gap-2 text-xs font-medium text-accent">
+                        <span>{t("plan.supersetWith", { name: exName(lookup(s.exercises[partner]!.exerciseId), locale, s.exercises[partner]!.exerciseId) })}</span>
+                        <button type="button" className="rounded-md px-2 py-1 font-semibold underline-offset-2 hover:underline"
+                          onClick={() => update(s.key, (x) => ({ ...x, exercises: x.exercises.map((y) => (y.superset === e.superset ? { ...y, superset: undefined } : y)) }))}>
+                          {t("plan.unpair")}
+                        </button>
+                      </p>
+                    );
+                  })()}
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                     <span className="inline-flex items-center gap-1">
                       <button type="button" className="grid h-9 w-9 place-items-center rounded-lg bg-surface-2" aria-label={`${t("plan.sets")} −`} onClick={() => editEx(s.key, i, { sets: Math.max(1, e.sets - 1) })}><Minus size={14} /></button>

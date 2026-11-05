@@ -72,6 +72,7 @@ ${scope === "training"
 Training
 - Swap an exercise: call find_substitutes (add style if the user wants machines, free weights or bodyweight), pick the best fit, then call propose_swap. Prefer simple, stable options that match the user's level.
 - Changes to the current plan go through propose_plan_edit, all in ONE call with every change listed: training more or fewer times a week, doing a session twice (e.g. "4x a week, upper twice" with sessions Upper, Glutes A, Legs B: duplicate_session of Upper, placed where the user wants it in the rotation), removing or renaming a session, setting weekdays, adding/removing exercises (find ids with find_exercises), sets, reps, kg and rest. For the same change everywhere ("every rest 2 minutes", "all exercises 3 sets") use one set_all_exercises with session_key "*" (or one session's key). This keeps the user's own exercises and works for imported plans too.
+- Supersets: only exercises marked "SUPERSET with …" in <app_data> are paired; nothing else is a superset. To split pairs use split_superset: with exercise_id for one pair, with exercise_id null for every pair of a session, or session_key "*" for the whole plan ("no supersets"). Never touch other exercises for this.
 - Read the request carefully and restate it in one short sentence before proposing. If something essential is ambiguous (which session, which day), ask one short question instead of guessing.
 - Plan reviews: honest and useful, like a good coach talking to a friend: direct, specific and warm, no lecturing, no generic tips, no hedging. Up to about 170 words, plain text, in this order:
   1. One sentence with your verdict: how well the plan fits the user's goal, days and time (e.g. "Solidny plan na 3 dni, ale nogi dostają za mało pracy.").
@@ -124,7 +125,10 @@ async function trainingContext(userId: string, locale: Locale): Promise<string> 
     for (const s of plan.data.sessions) {
       const loc = profile?.locations.find((l) => l.id === s.locationId)?.name ?? s.locationId;
       out.push(`  Session key=${s.key} "${sessionName(s, t)}", ${s.day === null ? "any day" : DICTS[locale].days.long[s.day]}, at ${loc}, ~${s.estimatedMinutes} min`);
-      for (const e of s.exercises) out.push(`    - ${e.exerciseId} | ${name(e.exerciseId)} | ${e.sets}×${e.seconds ? `${e.seconds}s` : `${e.repMin}-${e.repMax}`} | rest ${e.restSec}s${e.startKg ? ` | ${e.startKg} kg` : ""}${e.grip ? ` | grip ${e.grip}` : ""}`);
+      for (const e of s.exercises) {
+        const partner = e.superset === undefined ? undefined : s.exercises.find((x) => x !== e && x.superset === e.superset);
+        out.push(`    - ${e.exerciseId} | ${name(e.exerciseId)} | ${e.sets}×${e.seconds ? `${e.seconds}s` : `${e.repMin}-${e.repMax}`} | rest ${e.restSec}s${e.startKg ? ` | ${e.startKg} kg` : ""}${e.grip ? ` | grip ${e.grip}` : ""}${partner ? ` | SUPERSET with ${partner.exerciseId}` : ""}`);
+      }
     }
     // The app's own count, so a review quotes real numbers instead of adding them up itself.
     const lookup = (id: string) => library.find((e) => e.id === id);
@@ -189,8 +193,8 @@ const TRAINING_TOOLS: BetaTool[] = [
         type: "array", minItems: 1, maxItems: 20,
         items: obj({
           op: { type: "string", enum: [...EDIT_OPS] },
-          session_key: str("Session key from the plan (for duplicate_session: the session to copy; for set_all_exercises also \"*\" = whole plan)"),
-          exercise_id: { type: ["string", "null"], description: "For add/remove/set_exercise" },
+          session_key: str("Session key from the plan (for duplicate_session: the session to copy; for set_all_exercises and split_superset also \"*\" = whole plan)"),
+          exercise_id: { type: ["string", "null"], description: "For add/remove/set_exercise; for split_superset one exercise of the pair, or null = every pair" },
           name: { type: ["string", "null"], description: "New session name (rename, or name of the copy)" },
           day: { type: ["integer", "null"], description: "set_day: 0=Monday ... 6=Sunday, null=any day" },
           position: { type: ["integer", "null"], description: "1-based place in the list for duplicate/move/add; null = end" },
@@ -361,6 +365,9 @@ export async function runTool(c: Ctx, name: string, input: unknown): Promise<Too
             l.sets ? `${l.sets} ${t("plan.sets")}` : "", l.reps ? `${l.reps[0]}–${l.reps[1]} ${t("plan.reps")}` : "",
             l.rest !== undefined ? `${t("plan.rest")} ${l.rest} s` : "",
           ].filter(Boolean).join(", ")}`;
+          case "split": return l.pair
+            ? t("assistant.edit.splitPair", { session: l.session!, a: ex(l.pair[0]), b: ex(l.pair[1]) })
+            : t("assistant.edit.splitAll", { session: l.session ?? t("assistant.edit.wholePlan") });
           case "set": return `${l.session}: ${ex(l.exerciseId)} – ${[
             l.sets ? `${l.sets} ${t("plan.sets")}` : "", l.reps ? `${l.reps[0]}–${l.reps[1]} ${t("plan.reps")}` : "",
             l.kg ? `${fmt(c.locale, l.kg, 2)} kg` : "", l.rest !== undefined ? `${t("plan.rest")} ${l.rest} s` : "",

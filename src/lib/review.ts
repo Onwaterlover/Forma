@@ -70,10 +70,3 @@ export function weeklyReview(i: ReviewInput): Review {
   if (!tip) tip = weight === null && !enoughFood && !training?.done ? { key: "lowData" } : { key: "keep" };
   return { weight, food, training, tip };
 }
-
-/** Monday of the week an ISO date falls in. */
-export function mondayOf(iso: string): string {
-  const d = new Date(`${iso.slice(0, 10)}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
-  return d.toISOString().slice(0, 10);
-}

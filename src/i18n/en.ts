@@ -252,7 +252,7 @@ export const en: Dict = {
     deleteWeightConfirm: "Delete the weigh-in for this day?", recentWeights: "Recent weigh-ins", allWeights: "Show all ({n})", chartSoon: "The chart appears from the second weigh-in. Weigh yourself in the morning a few times a week – on the Today screen.", noWeight: "No weigh-ins yet. A few per week is enough — a single reading says little.", fluctuation: "Weight fluctuates 1–2 kg day to day (water, food in the gut, salt). Watch the trend, not single days.",
     training: "Training", workoutsPerWeek: "Workouts per week", thisWeek: "Workouts this week", doneThisWeek: "{n} this week", avgPerWeek: "On average {n} a week over the last 7 weeks.", when: { morning: "morning", day: "daytime", evening: "evening" }, records: "Records", maxLoad: "Heaviest weight", e1rm: "Estimated 1RM", e1rmNote: "An Epley-formula estimate, not a measured maximum.",
     repsAt: "{reps} reps × {weight} kg", noRecords: "Records appear once you log sets in detailed mode.", calories: "Calories (last 14 days)", avg: "average {n} kcal",
-    weekly: "Weekly summary", analyze: "Analyse (AI)", analyzeAgain: "Analyse again", analyzing: "Analysing…",
+    weekly: "Weekly summary",
     review: {
       title: "Last week · {range}", details: "Details", weight: "Weight (trend): {delta} kg", food: "Food: {kcal} kcal on average ({days} of 7 days logged)", target: "target {n}",
       protein_line: "protein {g} of {target} g", training: "Workouts: {done} of {planned}", trainingNoPlan: "Workouts: {done}", sets: "{n} sets",

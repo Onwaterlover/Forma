@@ -12,11 +12,9 @@ import { planSchema } from "./schemas";
 import { DICTS, exName, fmt, translator, type Locale } from "@/i18n";
 import { medianOf, scale, type Nutrients } from "@/nutrition/calc";
 import { hourIn, suggestMeal } from "@/nutrition/meal";
-import { weightTrend } from "@/nutrition/energy";
-import { mondayOf, weeklyReview, type Goal } from "./review";
 import { todayIso, weekdayOf } from "./ctx";
 import {
-  createSuggestion, currentTarget, diaryDay, getActivePlan, getPrefs, getProduct, getProfile, getSettings, intakeHistory, libraryFor, listWeights, listWorkouts,
+  createSuggestion, currentTarget, diaryDay, getActivePlan, getPrefs, getProduct, getProfile, libraryFor, listWeights, listWorkouts,
   findAiEstimate, recentProducts, saveAiEstimate, searchProducts, type Product,
 } from "./data";
 import { searchRemote } from "./off";
@@ -563,8 +561,8 @@ async function runGemini(o: { locale: Locale; scope: Scope; history: ChatTurn[] 
     }
     const data = (await res.json().catch(() => null)) as { candidates?: { content?: GContent }[]; promptFeedback?: { blockReason?: string }; error?: { message?: string } } | null;
     if (!res.ok) {
-      // A model that doesn't take this thinking setting: ask again without it.
-      if (res.status === 400 && thinking && /thinking/i.test(data?.error?.message ?? "")) { thinking = null; continue; }
+      // A model that doesn't take this thinking setting (whatever the error says): ask again without it.
+      if (res.status === 400 && thinking) { thinking = null; continue; }
       console.error("gemini", res.status, data?.error?.message);
       if (res.status === 429 || res.status === 503) return { error: "busy" };
       if (res.status === 401 || res.status === 403 || /api key/i.test(data?.error?.message ?? "")) return { error: "key" };
@@ -644,79 +642,3 @@ export async function estimateFood(query: string, locale: Locale): Promise<{ nam
   return { name: `${d.name} (≈ ${translator(locale)(web ? "nutrition.webEstimate" : "nutrition.aiEstimate")})`, basis: d.basis, state: d.state,
     nutrients: { kcal: Math.round(d.kcal), protein: round(d.protein), carbs: round(d.carbs), fat: round(d.fat), fiber: round(d.fiber), sugar: null, satFat: null, salt: null } };
 }
-
-/**
- * "Analyse" on the Progress page: the last four weeks of the user's own data (weight trend, food, workouts) in a
- * few concrete sentences. One model call, no tools; nothing is changed.
- */
-export async function analyzeProgress(userId: string, locale: Locale): Promise<{ text: string } | { error: string }> {
-  const today = todayIso();
-  const start = shiftDays(mondayOf(today), -28);
-  const [weights, intake, workouts, target, settings, plan] = await Promise.all([
-    listWeights(userId, shiftDays(start, -14)), intakeHistory(userId, start), listWorkouts(userId, 80), currentTarget(userId), getSettings(userId), getActivePlan(userId),
-  ]);
-  const trend = weightTrend(weights);
-  // Planned workouts count only for weeks the plan existed throughout.
-  const plannedIn = (weekStart: string) => (plan && plan.created_at.slice(0, 10) <= weekStart ? plan.data.sessions.length : null);
-  const rows: string[] = [];
-  for (let k = 4; k >= 0; k--) {
-    const weekStart = shiftDays(mondayOf(today), -7 * k);
-    const weekEnd = k === 0 ? today : shiftDays(weekStart, 6);
-    const inWeek = (iso: string) => iso.slice(0, 10) >= weekStart && iso.slice(0, 10) <= weekEnd;
-    const done = workouts.filter((w) => w.status === "completed" && inWeek(w.started_at));
-    const r = weeklyReview({
-      goal: settings.weightGoal ?? ((target?.goal as Goal) || null), trend,
-      days: intake.filter((d) => d.kcal > 0 && inWeek(d.date)).map((d) => ({ kcal: d.kcal, protein: d.protein })),
-      target: target ? { kcal: target.kcal, protein: target.protein_g } : null,
-      workouts: { done: done.length, planned: plannedIn(weekStart), sets: done.reduce((a, w) => a + w.logged_sets, 0), setsBefore: 0 }, weekStart, weekEnd,
-    });
-    const atEnd = [...trend].reverse().find((p) => p.date <= weekEnd);
-    rows.push(`${weekStart}${k === 0 ? " (this week so far)" : ""}: weight trend ${atEnd ? `${atEnd.trend} kg` : "?"}${r.weight !== null ? ` (${r.weight > 0 ? "+" : ""}${r.weight} kg/week)` : ""}; `
-      + `food ${r.food ? `${r.food.days}/7 days logged, avg ${r.food.kcal} kcal, protein ${r.food.protein} g` : "not logged"}; `
-      + `workouts ${done.length}${plannedIn(weekStart) ? `/${plannedIn(weekStart)} planned` : ""}, ${done.reduce((a, w) => a + w.logged_sets, 0)} sets logged`);
-  }
-  const data = [
-    `Today: ${today}. Goal: ${settings.weightGoal ?? target?.goal ?? "not set"}. Target: ${target?.kcal ?? "?"} kcal, protein ${target?.protein_g ?? "?"} g.`,
-    `Weeks (Monday start), oldest first:`, ...rows.map((r) => `- ${r}`),
-  ].join("\n");
-  const prompt = `You are the coach in Forma, a private training and nutrition app. Analyse the user's last weeks from the data below and reply in ${LANG[locale]}, plain text, under 110 words:
-first line: a one-sentence verdict (how things are going toward the goal);
-then at most 3 lines starting with "- ", most important first, each an observation with a number from the data and one concrete action.
-Human, direct and kind, like a good coach; no generic advice, no lecturing, never guilt. Don't invent data: if something is missing or too thin to judge, say what to log instead. Weight trend is smoothed; days with few calories logged may be incomplete logs, not real intake.
-<data>
-${data}
-</data>`;
-  try {
-    if (aiProvider() === "gemini") {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-        method: "POST", cache: "no-store",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], ...(LOW_THINKING ? { generationConfig: { thinkingConfig: LOW_THINKING } } : {}) }),
-        signal: AbortSignal.timeout(30_000),
-      });
-      const out = (await res.json().catch(() => null)) as { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[]; error?: { message?: string } } | null;
-      if (!res.ok) {
-        console.error("gemini", res.status, out?.error?.message);
-        return { error: res.status === 429 || res.status === 503 ? "busy" : res.status === 401 || res.status === 403 ? "key" : "unavailable" };
-      }
-      const text = out?.candidates?.[0]?.content?.parts?.filter((p) => !p.thought).map((p) => p.text ?? "").join("").trim();
-      return text ? { text } : { error: "unavailable" };
-    }
-    if (aiProvider() === "anthropic") {
-      const res = await anthropic().messages.create({ model: MODEL, max_tokens: 700, messages: [{ role: "user", content: prompt }] });
-      const text = res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("").trim();
-      return text ? { text } : { error: "unavailable" };
-    }
-    return { error: "not_configured" };
-  } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) return { error: "key" };
-    if (e instanceof Anthropic.RateLimitError) return { error: "busy" };
-    return { error: "unavailable" };
-  }
-}
-
-const shiftDays = (iso: string, days: number) => {
-  const d = new Date(`${iso}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-};

@@ -251,7 +251,7 @@ export const pl = {
     deleteWeightConfirm: "Usunąć ważenie z tego dnia?", recentWeights: "Ostatnie ważenia", allWeights: "Pokaż wszystkie ({n})", chartSoon: "Wykres pojawi się od drugiego ważenia. Najlepiej waż się rano, kilka razy w tygodniu – na ekranie „Dziś”.", noWeight: "Brak ważeń. Wystarczy kilka w tygodniu — pojedynczy pomiar niewiele mówi.", fluctuation: "Waga z dnia na dzień waha się o 1–2 kg (woda, jedzenie w żołądku, sól). Patrz na trend, nie na pojedyncze dni.",
     training: "Trening", workoutsPerWeek: "Treningi w tygodniu", thisWeek: "Treningi w tym tygodniu", doneThisWeek: "{n} w tym tygodniu", avgPerWeek: "Średnio {n} na tydzień w ostatnich 7 tygodniach.", when: { morning: "rano", day: "w dzień", evening: "wieczorem" }, records: "Rekordy", maxLoad: "Największy ciężar", e1rm: "Szacowane 1RM", e1rmNote: "Szacunek ze wzoru Epleya, nie zmierzone maksimum.",
     repsAt: "{reps} powt. × {weight} kg", noRecords: "Rekordy pojawią się po zapisaniu serii w trybie szczegółowym.", calories: "Kalorie (ostatnie 14 dni)", avg: "średnio {n} kcal",
-    weekly: "Podsumowanie tygodnia", analyze: "Analizuj (AI)", analyzeAgain: "Analizuj jeszcze raz", analyzing: "Analizuję…",
+    weekly: "Podsumowanie tygodnia",
     review: {
       title: "Zeszły tydzień · {range}", details: "Szczegóły", weight: "Waga (trend): {delta} kg", food: "Jedzenie: średnio {kcal} kcal ({days} z 7 dni w dzienniku)", target: "cel {n}",
       protein_line: "białko {g} z {target} g", training: "Treningi: {done} z {planned}", trainingNoPlan: "Treningi: {done}", sets: "{n} serii",

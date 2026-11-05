@@ -1,5 +1,5 @@
 import { Bars, Sparkline, TrendChart } from "@/components/charts";
-import { Camera, ChevronRight } from "lucide-react";
+import { Camera, ChevronRight, CircleCheck } from "lucide-react";
 import Link from "next/link";
 import { Card, Empty, LinkButton, Notice, PageHeader, SectionTitle } from "@/components/ui";
 import { bestPoint, exerciseTrend, personalRecords } from "@/engine/progression";
@@ -11,8 +11,6 @@ import {
 import { measurementTrends } from "@/lib/measurements";
 import { weeklyReview, type Goal } from "@/lib/review";
 import { weightTrend } from "@/nutrition/energy";
-import { aiProvider } from "@/lib/assistant";
-import { ProgressAnalysis } from "./analysis";
 import { MeasurementForm } from "./measurement-form";
 import { metricLabel, metricUnit } from "./sets";
 import { WeightForm } from "./weight-form";
@@ -124,10 +122,15 @@ export default async function ProgressPage() {
     <>
       <PageHeader title={t("progress.title")} action={<LinkButton href="/progress/photos" variant="secondary" size="sm"><Camera size={16} aria-hidden />{t("progress.photos")}</LinkButton>} />
 
-      {/* Last week in one sentence; the numbers are folded under "Details"; the AI analysis only on request. */}
+      {/* Last week in one sentence (green when on track); the numbers are folded under "Details". */}
       <Card className="mb-4 space-y-3">
         <h2 className="text-sm font-semibold text-muted">{t("progress.review.title", { range: `${fmtDate(locale, weekStart, { day: "numeric", month: "short" })} – ${fmtDate(locale, weekEnd, { day: "numeric", month: "short" })}` })}</h2>
-        <p className="text-[15px] leading-relaxed">{tipText}</p>
+        <Notice tone={review.tip.key === "keep" ? "accent" : "neutral"} className={review.tip.key === "keep" ? "border border-accent/40" : undefined}>
+          <span className="flex items-start gap-2">
+            {review.tip.key === "keep" && <CircleCheck size={18} className="mt-0.5 shrink-0 text-accent" aria-hidden />}
+            <span className={review.tip.key === "keep" ? "font-medium text-accent" : undefined}>{tipText}</span>
+          </span>
+        </Notice>
         {(review.weight !== null || review.food || review.training) && (
           <details className="text-sm">
             <summary className="cursor-pointer text-muted">{t("progress.review.details")}</summary>
@@ -149,7 +152,6 @@ export default async function ProgressPage() {
             </ul>
           </details>
         )}
-        {aiProvider() && settings.ai && <ProgressAnalysis />}
       </Card>
 
       <SectionTitle>{t("progress.bodyweight")}</SectionTitle>

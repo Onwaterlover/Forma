@@ -207,7 +207,8 @@ export function WorkoutLogger({
     if (!unsaved) return;
     const onClick = (e: MouseEvent) => {
       const el = (e.target as Element | null)?.closest("a[href], [data-nav]");
-      if (el && !window.confirm(t("workout.leaveUnsaved"))) { e.preventDefault(); e.stopPropagation(); }
+      // A link opening a new tab (the technique video) doesn't leave the page.
+      if (el && !(el instanceof HTMLAnchorElement && el.target === "_blank") && !window.confirm(t("workout.leaveUnsaved"))) { e.preventDefault(); e.stopPropagation(); }
     };
     const onUnload = (e: BeforeUnloadEvent) => e.preventDefault();
     document.addEventListener("click", onClick, true);

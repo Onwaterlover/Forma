@@ -586,7 +586,8 @@ export async function estimateFood(query: string, locale: Locale): Promise<{ nam
       headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
       // JSON mode doesn't go together with search on every model, so the web answer is read from its text.
       body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: web ? fromWeb : fromTables }] }], ...(web ? { tools: [{ google_search: {} }] } : { generationConfig: { responseMimeType: "application/json", temperature: 0 } }) }),
-      signal: AbortSignal.timeout(web ? 25_000 : 20_000),
+      // A slow web search gives way to the quick fallback instead of keeping the user waiting.
+      signal: AbortSignal.timeout(web ? 12_000 : 20_000),
     });
     const data = (await res.json().catch(() => null)) as { candidates?: { content?: { parts?: { text?: string }[] }; groundingMetadata?: { groundingChunks?: unknown[] } }[] } | null;
     const c = res.ok ? data?.candidates?.[0] : undefined;

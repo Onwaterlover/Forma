@@ -1,7 +1,7 @@
 "use client";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { productFor, removeRecipe, saveRecipeAction } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, Switch, useToast } from "@/components/client";
 import { Badge, Button, Card, Empty, Field, Input } from "@/components/ui";
@@ -25,10 +25,14 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
   // Servings are loaded for one ingredient at a time and tagged with it; the amount editor appears once they are
   // in, so it opens in the right unit instead of switching from grams to pieces.
   const [editServings, setEditServings] = useState<{ idx: number; list: { label: string; amount: number }[] } | null>(null);
+  const loadSeq = useRef(0);
   const loadServings = (k: number, pid: string | null) => {
+    // Only the latest request counts: a slower answer for an ingredient opened before must not replace it.
+    const n = ++loadSeq.current;
     if (!pid) return setEditServings({ idx: k, list: [] });
     setEditServings(null);
-    productFor(pid).then((pr) => setEditServings({ idx: k, list: pr ? servingsWithSlice(pr, t, locale) : [] })).catch(() => setEditServings({ idx: k, list: [] }));
+    const done = (list: { label: string; amount: number }[]) => { if (n === loadSeq.current) setEditServings({ idx: k, list }); };
+    productFor(pid).then((pr) => done(pr ? servingsWithSlice(pr, t, locale) : [])).catch(() => done([]));
   };
   const editIngredient = (k: number) => {
     setEditIdx(editIdx === k ? null : k);

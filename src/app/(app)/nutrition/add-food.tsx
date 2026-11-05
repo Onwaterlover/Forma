@@ -257,8 +257,11 @@ function SearchTab({ onPick, onScan, children }: { onPick: (p: Product) => void;
   const searchRemote = async (have: Product[] = local, id = seq.current) => {
     setLoading(true);
     setError(null);
-    // Nothing found here fits the words typed: the web lookup starts right away, alongside Open Food Facts.
-    const early = !have.some((p) => fits(p, q)) && q.trim().length >= 4 ? estimate(id) : null;
+    // Nothing found here fits the words typed: the web lookup starts alongside Open Food Facts, once typing has
+    // paused a little longer (a half-typed word would otherwise be looked up, and stored, for nothing).
+    const early = !have.some((p) => fits(p, q)) && q.trim().length >= 4
+      ? new Promise((r) => setTimeout(r, 900)).then(() => (id === seq.current ? estimate(id) : undefined))
+      : null;
     const r = await fetch(`/api/food/search?q=${encodeURIComponent(q)}&remote=1`).then((x) => x.json()).catch(() => ({ error: "unavailable" }));
     if (id !== seq.current) return;
     setLoading(false);

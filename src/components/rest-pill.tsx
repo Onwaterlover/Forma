@@ -25,7 +25,12 @@ export function RestPill() {
   const [now, setNow] = useState<number | null>(null);
   const [rest, setRest] = useState<StoredRest | null>(null);
   useEffect(() => {
-    const read = () => { setRest(readRest()); setNow(Date.now()); };
+    // Re-renders only while a rest is running (the same stored rest keeps its object).
+    const read = () => {
+      const r = readRest();
+      setRest((prev) => (prev && r && prev.workoutId === r.workoutId && prev.endsAt === r.endsAt && prev.total === r.total ? prev : r));
+      if (r) setNow(Date.now());
+    };
     read();
     const iv = setInterval(read, 1000);
     return () => clearInterval(iv);

@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { suggestNext } from "@/engine/progression";
 import { summarizeWorkout } from "@/engine/summary";
 import { pageCtx, shiftDate, todayIso, weekdayOf } from "@/lib/ctx";
-import { exerciseHistory, getActivePlan, getCustomExercises, getPlan, getPrefs, getProfile, getWorkout, libraryFor, workoutDatesSince } from "@/lib/data";
+import { exerciseHistory, getActivePlan, getCustomExercises, getPlan, getPrefs, getProfile, getWorkout, libraryFor, listWorkoutRevisions, workoutDatesSince } from "@/lib/data";
+import { RevisionList } from "../../training/revisions";
 import { WorkoutLogger, type ExerciseInfo } from "./logger";
 import { SummaryCard } from "./summary";
 
@@ -55,9 +56,21 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
     );
   }
 
+  // Earlier versions of a finished workout (before corrections or restores), to undo a change.
+  const revisions = finished ? await listWorkoutRevisions(user.id, workout.id) : [];
+  const history = revisions.length ? (
+    <details className="rounded-[var(--radius-card)] border border-border px-4 py-1">
+      <summary className="cursor-pointer py-2 text-sm font-medium">{t("workout.revisions", { n: revisions.length })}</summary>
+      <p className="text-xs text-muted">{t("workout.revisionsHint")}</p>
+      <RevisionList items={revisions} kind="versions" />
+    </details>
+  ) : null;
+
   return (
     <>
       <WorkoutLogger
+        // A finished workout shows what the server has: after a restore or a saved correction it starts afresh.
+        key={finished ? workout.clientUpdatedAt : workout.id}
         initial={workout}
         info={info}
         profile={profile}
@@ -67,6 +80,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ id: st
         originalIds={originalIds}
         supersets={supersets}
         summary={summary}
+        history={history}
       />
     </>
   );

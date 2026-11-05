@@ -286,6 +286,23 @@ ALTER TABLE food_products ADD COLUMN aliases text;
 ALTER TABLE food_products ADD COLUMN sort_rank integer
 `,
   },
+  {
+    // Earlier versions of finished workouts (before a correction, a restore or a delete), kept 90 days so a change
+    // can be undone. workout_id has no foreign key on purpose: a deleted workout's copy must survive it.
+    version: 6,
+    sql: `
+CREATE TABLE workout_revisions (
+  id text PRIMARY KEY,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  workout_id text NOT NULL,
+  reason text NOT NULL CHECK (reason IN ('edit','delete','restore')),
+  data text NOT NULL,
+  created_at text NOT NULL
+);
+CREATE INDEX workout_revisions_user ON workout_revisions(user_id, workout_id, created_at);
+ALTER TABLE workout_revisions ENABLE ROW LEVEL SECURITY
+`,
+  },
 ];
 // Row Level Security is enabled with no policies: Supabase's public API keys can read nothing.
 // The app connects as the database owner on the server and enforces per-user access in src/lib/data.ts.

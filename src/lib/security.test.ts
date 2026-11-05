@@ -318,3 +318,33 @@ describe("save as meal", () => {
     expect(await data.getRecipe(B, id)).toBeNull();
   });
 });
+
+describe("workout history", () => {
+  it("keeps the version before a correction or delete, privately, and restores it", async () => {
+    const id = crypto.randomUUID();
+    await data.upsertWorkout(A, workout(id, "2026-10-20T11:00:00.000Z", 8));
+    // The same data saved again (e.g. a sync after reconnecting) keeps no copy.
+    await data.upsertWorkout(A, workout(id, "2026-10-20T11:30:00.000Z", 8));
+    expect(await data.listWorkoutRevisions(A, id)).toEqual([]);
+    // A correction keeps the version before it, for its owner only.
+    await data.upsertWorkout(A, workout(id, "2026-10-20T12:00:00.000Z", 5));
+    const [rev] = await data.listWorkoutRevisions(A, id);
+    expect(rev).toMatchObject({ reason: "edit", sets: 1 });
+    expect(await data.listWorkoutRevisions(B, id)).toEqual([]);
+    expect(await data.restoreWorkoutRevision(B, rev!.id)).toBeNull();
+    expect(await data.restoreWorkoutRevision(A, rev!.id)).toBe(id);
+    expect((await data.getWorkout(A, id))!.exercises[0]!.sets[0]!.reps).toBe(8);
+    expect((await data.listWorkoutRevisions(A, id))[0]).toMatchObject({ reason: "restore" });
+    // Deleting keeps a copy that can be restored from the history; someone else can't delete it.
+    await data.deleteWorkout(B, id);
+    expect(await data.getWorkout(A, id)).not.toBeNull();
+    await data.deleteWorkout(A, id);
+    expect(await data.getWorkout(A, id)).toBeNull();
+    const [gone] = await data.listDeletedWorkouts(A);
+    expect(gone).toMatchObject({ workoutId: id, reason: "delete" });
+    expect(await data.listDeletedWorkouts(B)).toEqual([]);
+    expect(await data.restoreWorkoutRevision(A, gone!.id)).toBe(id);
+    expect((await data.getWorkout(A, id))!.exercises[0]!.sets[0]!.reps).toBe(8);
+    expect((await data.listDeletedWorkouts(A)).some((r) => r.workoutId === id)).toBe(false);
+  });
+});

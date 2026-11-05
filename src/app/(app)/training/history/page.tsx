@@ -2,13 +2,14 @@ import Link from "next/link";
 import { Badge, Card, Empty, PageHeader } from "@/components/ui";
 import { fmtDate } from "@/i18n";
 import { pageCtx } from "@/lib/ctx";
-import { listWorkouts } from "@/lib/data";
+import { listDeletedWorkouts, listWorkouts } from "@/lib/data";
+import { RevisionList } from "../revisions";
 
 export const dynamic = "force-dynamic";
 
 export default async function HistoryPage() {
   const { user, locale, t } = await pageCtx();
-  const workouts = await listWorkouts(user.id, 100);
+  const [workouts, deleted] = await Promise.all([listWorkouts(user.id, 100), listDeletedWorkouts(user.id)]);
   return (
     <>
       <PageHeader back={{ href: "/training", label: t("nav.training") }} title={t("workout.history")} />
@@ -38,6 +39,14 @@ export default async function HistoryPage() {
             })}
           </ul>
         </Card>
+      )}
+      {/* Deleted workouts can be brought back for 90 days. */}
+      {deleted.length > 0 && (
+        <details className="mt-6 rounded-[var(--radius-card)] border border-border px-4 py-1">
+          <summary className="cursor-pointer py-2 text-sm font-medium">{t("workout.deletedTitle", { n: deleted.length })}</summary>
+          <p className="text-xs text-muted">{t("workout.deletedHint")}</p>
+          <RevisionList items={deleted} kind="deleted" />
+        </details>
       )}
     </>
   );

@@ -19,7 +19,7 @@ import { translator, exName } from "@/i18n";
 import { requireUser } from "@/lib/auth";
 import {
   addCustomExercise, createPlan, deletePlan, exerciseHistory, getActivePlan, getPlan, getPlanVersion, getPrefs, getProfile, getSettings, getWorkout, libraryFor,
-  renamePlan, saveProfile, savePlanVersion, saveSettings, setPlanStatus, setPref, upsertWorkout, type WorkoutPayload,
+  renamePlan, restoreWorkoutRevision, saveProfile, savePlanVersion, saveSettings, setPlanStatus, setPref, upsertWorkout, type WorkoutPayload,
 } from "@/lib/data";
 import { nowIso } from "@/lib/db";
 import { planSchema } from "@/lib/schemas";
@@ -461,4 +461,15 @@ async function recordNotToday(planId: string, sessionKey: string, note: "skipped
     locationId: session.locationId, mode: "simple", status: "abandoned", startedAt: now, endedAt: now, notes: note, clientUpdatedAt: now, exercises: [],
   });
   revalidatePath("/");
+}
+
+/** Puts back an earlier version of a workout, or a deleted one; the version it replaces is kept in turn. */
+export async function restoreWorkout(revisionId: string): Promise<{ id?: string; error?: string }> {
+  const user = await requireUser();
+  if (typeof revisionId !== "string" || revisionId.length > 64) return { error: "invalid" };
+  const id = await restoreWorkoutRevision(user.id, revisionId);
+  if (!id) return { error: "not_found" };
+  revalidatePath("/training/history");
+  revalidatePath(`/workout/${id}`);
+  return { id };
 }

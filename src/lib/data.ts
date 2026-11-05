@@ -235,33 +235,108 @@ export interface WorkoutPayload {
  */
 export async function upsertWorkout(userId: string, w: WorkoutPayload): Promise<"saved" | "stale" | "forbidden"> {
   return (await db()).tx(async (q) => {
-    const existing = await q.get<{ user_id: string; client_updated_at: string }>("SELECT user_id, client_updated_at FROM workouts WHERE id = ? FOR UPDATE", [w.id]);
+    const existing = await q.get<{ user_id: string; client_updated_at: string; status: string }>("SELECT user_id, client_updated_at, status FROM workouts WHERE id = ? FOR UPDATE", [w.id]);
     if (existing && existing.user_id !== userId) return "forbidden";
     if (existing && existing.client_updated_at > w.clientUpdatedAt) return "stale";
-    const now = nowIso();
-    if (existing) {
-      await q.run("UPDATE workouts SET name=?, location_id=?, mode=?, status=?, started_at=?, ended_at=?, notes=?, client_updated_at=?, updated_at=? WHERE id=?",
-        [w.name, w.locationId, w.mode, w.status, w.startedAt, w.endedAt, w.notes, w.clientUpdatedAt, now, w.id]);
-      await q.run("DELETE FROM workout_exercises WHERE workout_id = ?", [w.id]);
-    } else {
-      await q.run("INSERT INTO workouts (id, user_id, plan_id, plan_version, session_key, name, location_id, mode, status, started_at, ended_at, notes, client_updated_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        [w.id, userId, w.planId, w.planVersion, w.sessionKey, w.name, w.locationId, w.mode, w.status, w.startedAt, w.endedAt, w.notes, w.clientUpdatedAt, now]);
+    // A finished workout being changed: its current version is kept first, so the change can be undone.
+    if (existing && existing.status !== "in_progress") {
+      const before = await readWorkout(q, userId, w.id);
+      if (before && workoutSignature(before) !== workoutSignature(w)) await keepRevision(q, userId, before, "edit");
     }
-    for (const [i, e] of w.exercises.entries()) {
-      const weId = `${w.id}:${i}`;
-      await q.run("INSERT INTO workout_exercises (id, workout_id, position, exercise_id, exercise_name, loading, target, completed, skipped, notes) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        [weId, w.id, i, e.exerciseId, e.name, e.loading, e.target ? JSON.stringify(e.target) : null, e.completed ? 1 : 0, e.skipped ? 1 : 0, e.notes]);
-      for (const [j, s] of e.sets.entries()) {
-        await q.run("INSERT INTO workout_sets (id, workout_exercise_id, position, set_type, reps, weight_kg, rir, rpe, duration_s, completed) VALUES (?,?,?,?,?,?,?,?,?,?)",
-          [`${weId}:${j}`, weId, j, s.type, s.reps, s.weightKg, s.rir, s.rpe, s.durationS, s.completed ? 1 : 0]);
-      }
-    }
+    await writeWorkout(q, userId, w, !!existing);
     return "saved";
   });
 }
 
+/** What a workout records (not ids or sync times), to tell a real change from the same data saved again. */
+const workoutSignature = (w: WorkoutPayload) => JSON.stringify([
+  w.name, w.status, w.mode, w.notes, w.locationId, w.startedAt, w.endedAt,
+  w.exercises.map((e) => [e.exerciseId, e.name, e.completed, e.skipped, e.notes, e.sets.map((s) => [s.type, s.reps, s.weightKg, s.rir, s.rpe, s.durationS, s.completed])]),
+]);
+
+const REVISION_DAYS = 90;
+
+async function keepRevision(q: Q, userId: string, w: WorkoutPayload, reason: "edit" | "delete" | "restore") {
+  await q.run("DELETE FROM workout_revisions WHERE user_id = ? AND created_at < ?", [userId, new Date(Date.now() - REVISION_DAYS * 86_400_000).toISOString()]);
+  await q.run("INSERT INTO workout_revisions (id, user_id, workout_id, reason, data, created_at) VALUES (?, ?, ?, ?, ?, ?)", [newId(), userId, w.id, reason, JSON.stringify(w), nowIso()]);
+}
+
+async function writeWorkout(q: Q, userId: string, w: WorkoutPayload, exists: boolean) {
+  const now = nowIso();
+  if (exists) {
+    await q.run("UPDATE workouts SET name=?, location_id=?, mode=?, status=?, started_at=?, ended_at=?, notes=?, client_updated_at=?, updated_at=? WHERE id=?",
+      [w.name, w.locationId, w.mode, w.status, w.startedAt, w.endedAt, w.notes, w.clientUpdatedAt, now, w.id]);
+    await q.run("DELETE FROM workout_exercises WHERE workout_id = ?", [w.id]);
+  } else {
+    await q.run("INSERT INTO workouts (id, user_id, plan_id, plan_version, session_key, name, location_id, mode, status, started_at, ended_at, notes, client_updated_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      [w.id, userId, w.planId, w.planVersion, w.sessionKey, w.name, w.locationId, w.mode, w.status, w.startedAt, w.endedAt, w.notes, w.clientUpdatedAt, now]);
+  }
+  for (const [i, e] of w.exercises.entries()) {
+    const weId = `${w.id}:${i}`;
+    await q.run("INSERT INTO workout_exercises (id, workout_id, position, exercise_id, exercise_name, loading, target, completed, skipped, notes) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      [weId, w.id, i, e.exerciseId, e.name, e.loading, e.target ? JSON.stringify(e.target) : null, e.completed ? 1 : 0, e.skipped ? 1 : 0, e.notes]);
+    for (const [j, s] of e.sets.entries()) {
+      await q.run("INSERT INTO workout_sets (id, workout_exercise_id, position, set_type, reps, weight_kg, rir, rpe, duration_s, completed) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        [`${weId}:${j}`, weId, j, s.type, s.reps, s.weightKg, s.rir, s.rpe, s.durationS, s.completed ? 1 : 0]);
+    }
+  }
+}
+
+export interface WorkoutRevision { id: string; workoutId: string; reason: "edit" | "delete" | "restore"; createdAt: string; name: string; startedAt: string; sets: number }
+
+const toRevision = (r: { id: string; workout_id: string; reason: WorkoutRevision["reason"]; data: string; created_at: string }): WorkoutRevision => {
+  const w = json<WorkoutPayload>(r.data, null as never);
+  return { id: r.id, workoutId: r.workout_id, reason: r.reason, createdAt: r.created_at, name: w.name, startedAt: w.startedAt,
+    sets: w.exercises.reduce((n, e) => n + e.sets.filter((s) => s.completed).length, 0) };
+};
+
+/** Earlier versions of one workout, newest first. */
+export async function listWorkoutRevisions(userId: string, workoutId: string): Promise<WorkoutRevision[]> {
+  const rows = await (await db()).all<{ id: string; workout_id: string; reason: WorkoutRevision["reason"]; data: string; created_at: string }>(
+    "SELECT * FROM workout_revisions WHERE user_id = ? AND workout_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 20",
+    [userId, workoutId, new Date(Date.now() - REVISION_DAYS * 86_400_000).toISOString()],
+  );
+  return rows.map(toRevision);
+}
+
+/** Workouts deleted in the last 90 days that can still be restored (their last copy), newest first. */
+export async function listDeletedWorkouts(userId: string): Promise<WorkoutRevision[]> {
+  const rows = await (await db()).all<{ id: string; workout_id: string; reason: WorkoutRevision["reason"]; data: string; created_at: string }>(
+    `SELECT DISTINCT ON (r.workout_id) r.* FROM workout_revisions r
+     WHERE r.user_id = ? AND r.reason = 'delete' AND r.created_at >= ? AND NOT EXISTS (SELECT 1 FROM workouts w WHERE w.id = r.workout_id)
+     ORDER BY r.workout_id, r.created_at DESC`,
+    [userId, new Date(Date.now() - REVISION_DAYS * 86_400_000).toISOString()],
+  );
+  return rows.map(toRevision).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20);
+}
+
+/**
+ * Puts a kept version back. The version being replaced is kept in turn, so a restore can be undone too.
+ * Returns the workout id, or null if the version isn't this user's (or the id now belongs to someone else).
+ */
+export async function restoreWorkoutRevision(userId: string, revisionId: string): Promise<string | null> {
+  return (await db()).tx(async (q) => {
+    const r = await q.get<{ data: string }>("SELECT data FROM workout_revisions WHERE id = ? AND user_id = ?", [revisionId, userId]);
+    if (!r) return null;
+    const w = json<WorkoutPayload>(r.data, null as never);
+    const existing = await q.get<{ user_id: string }>("SELECT user_id FROM workouts WHERE id = ? FOR UPDATE", [w.id]);
+    if (existing && existing.user_id !== userId) return null;
+    if (existing) {
+      const current = await readWorkout(q, userId, w.id);
+      if (current) await keepRevision(q, userId, current, "restore");
+    }
+    // A plan deleted in the meantime: the workout comes back without its link to it.
+    const plan = w.planId ? await q.get("SELECT 1 AS ok FROM plans WHERE id = ? AND user_id = ?", [w.planId, userId]) : null;
+    await writeWorkout(q, userId, { ...w, planId: plan ? w.planId : null, planVersion: plan ? w.planVersion : null, clientUpdatedAt: nowIso() }, !!existing);
+    return w.id;
+  });
+}
+
 export async function getWorkout(userId: string, id: string): Promise<WorkoutPayload | null> {
-  const d = await db();
+  return readWorkout(await db(), userId, id);
+}
+
+async function readWorkout(d: Q, userId: string, id: string): Promise<WorkoutPayload | null> {
   const w = await d.get<Record<string, unknown>>("SELECT * FROM workouts WHERE id = ? AND user_id = ?", [id, userId]);
   if (!w) return null;
   const exs = await d.all<Record<string, unknown>>("SELECT * FROM workout_exercises WHERE workout_id = ? ORDER BY position", [id]);
@@ -358,8 +433,14 @@ export async function loggedExerciseIds(userId: string): Promise<string[]> {
   return rows.map((r) => r.exercise_id);
 }
 
+/** Deletes a workout; a copy is kept for 90 days so it can be restored from the history. */
 export async function deleteWorkout(userId: string, id: string) {
-  await (await db()).run("DELETE FROM workouts WHERE id = ? AND user_id = ?", [id, userId]);
+  await (await db()).tx(async (q) => {
+    const w = await readWorkout(q, userId, id);
+    if (!w) return;
+    await keepRevision(q, userId, w, "delete");
+    await q.run("DELETE FROM workouts WHERE id = ? AND user_id = ?", [id, userId]);
+  });
 }
 
 // ── Food products ────────────────────────────────────────────────────────
@@ -879,7 +960,7 @@ export async function deleteMeasurement(userId: string, date: string) {
 // ── Account ──────────────────────────────────────────────────────────────
 const USER_TABLES = [
   "user_settings", "training_profiles", "exercise_prefs", "custom_exercises", "plans", "workouts", "food_favorites",
-  "recipes", "diary_entries", "diary_days", "calorie_targets", "bodyweight", "body_measurements", "ai_suggestions",
+  "recipes", "diary_entries", "diary_days", "calorie_targets", "bodyweight", "body_measurements", "ai_suggestions", "workout_revisions",
 ] as const;
 
 export async function exportUser(userId: string) {

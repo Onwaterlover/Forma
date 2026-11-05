@@ -38,7 +38,7 @@ function newSet(w: WorkoutPayload, ei: number, j: number, weightKg: number | nul
 }
 
 export function WorkoutLogger({
-  initial, info, profile, prefs, custom, settings, originalIds, summary, supersets = {},
+  initial, info, profile, prefs, custom, settings, originalIds, summary, history, supersets = {},
 }: {
   supersets?: Record<string, number>;
   initial: WorkoutPayload;
@@ -50,6 +50,8 @@ export function WorkoutLogger({
   originalIds: string[] | null;
   /** Recap card rendered by the server once the workout is finished. */
   summary?: ReactNode;
+  /** Earlier versions of a finished workout, shown under its buttons. */
+  history?: ReactNode;
 }) {
   const { t, locale } = useI18n();
   const toast = useToast();
@@ -518,10 +520,13 @@ export function WorkoutLogger({
             <Button variant="ghost" onClick={cancelCorrections}>{t("common.cancel")}</Button>
           </div>
         ) : (
-          <div className="flex gap-2">
-            <Button full variant="secondary" onClick={() => { draft.current = latest.current; setEditing(true); window.scrollTo({ top: 0 }); }}><Pencil size={16} aria-hidden />{t("workout.editWorkout")}</Button>
-            <Button variant="ghost" className="text-danger" onClick={() => setSheet({ kind: "delete" })}><Trash2 size={16} aria-hidden />{t("common.delete")}</Button>
-          </div>
+          <>
+            <div className="flex gap-2">
+              <Button full variant="secondary" onClick={() => { draft.current = latest.current; setEditing(true); window.scrollTo({ top: 0 }); }}><Pencil size={16} aria-hidden />{t("workout.editWorkout")}</Button>
+              <Button variant="ghost" className="text-danger" onClick={() => setSheet({ kind: "delete" })}><Trash2 size={16} aria-hidden />{t("common.delete")}</Button>
+            </div>
+            {history}
+          </>
         )
       ) : (
         <div className="flex gap-2">

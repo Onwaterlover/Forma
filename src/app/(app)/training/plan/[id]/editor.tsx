@@ -214,17 +214,33 @@ export function PlanEditor({
                         onClick={() => update(s.key, (x) => ({ ...x, exercises: x.exercises.filter((_, j) => j !== i).map((y) => (y.superset === e.superset ? { ...y, superset: undefined } : y)) }))}><Trash2 size={16} /></button>
                     </div>
                   </div>
-                  {/* Shown once per pair, on its first exercise; "Split" makes both normal exercises again. */}
+                  {/* Superset: named once, on its first exercise, with "Split". "Join with next" builds one (up to 3). */}
                   {(() => {
-                    const partner = e.superset === undefined ? -1 : s.exercises.findIndex((y, j) => j !== i && y.superset === e.superset);
-                    if (partner < i) return null;
+                    const others = e.superset === undefined ? [] : s.exercises.filter((y, j) => j !== i && y.superset === e.superset);
+                    const isFirst = others.length > 0 && s.exercises.findIndex((y) => y.superset === e.superset) === i;
+                    const next = s.exercises[i + 1];
+                    const size = (y: PlannedExercise) => (y.superset === undefined ? 1 : s.exercises.filter((z) => z.superset === y.superset).length);
+                    const canJoin = !!next && (e.superset === undefined || next.superset !== e.superset) && size(e) + size(next) <= 3;
+                    if (!isFirst && !canJoin) return null;
                     return (
-                      <p className="flex items-center gap-2 text-xs font-medium text-accent">
-                        <span>{t("plan.supersetWith", { name: exName(lookup(s.exercises[partner]!.exerciseId), locale, s.exercises[partner]!.exerciseId) })}</span>
-                        <button type="button" className="rounded-md px-2 py-1 font-semibold underline-offset-2 hover:underline"
-                          onClick={() => update(s.key, (x) => ({ ...x, exercises: x.exercises.map((y) => (y.superset === e.superset ? { ...y, superset: undefined } : y)) }))}>
-                          {t("plan.unpair")}
-                        </button>
+                      <p className="flex flex-wrap items-center gap-x-2 text-xs font-medium">
+                        {isFirst && <span className="text-accent">{t("plan.supersetWith", { name: others.map((y) => exName(lookup(y.exerciseId), locale, y.exerciseId)).join(", ") })}</span>}
+                        {isFirst && (
+                          <button type="button" className="rounded-md px-2 py-1 font-semibold text-accent underline-offset-2 hover:underline"
+                            onClick={() => update(s.key, (x) => ({ ...x, exercises: x.exercises.map((y) => (y.superset === e.superset ? { ...y, superset: undefined } : y)) }))}>
+                            {t("plan.unpair")}
+                          </button>
+                        )}
+                        {canJoin && (
+                          <button type="button" className="-ml-2 rounded-md px-2 py-1 text-muted underline-offset-2 hover:underline"
+                            onClick={() => update(s.key, (x) => {
+                              const group = e.superset ?? next.superset ?? Math.max(0, ...x.exercises.map((y) => y.superset ?? 0)) + 1;
+                              const old = next.superset;
+                              return { ...x, exercises: x.exercises.map((y, j) => (j === i || j === i + 1 || (old !== undefined && y.superset === old) ? { ...y, superset: group } : y)) };
+                            })}>
+                            {t("plan.joinNext")}
+                          </button>
+                        )}
                       </p>
                     );
                   })()}

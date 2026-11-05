@@ -358,17 +358,17 @@ export function WorkoutLogger({
         const placeholderReps = (j: number) =>
           sug && (sug.kind === "add_reps" || sug.kind === "increase_load") ? sug.reps : inf?.last?.sets[j]?.r ?? tg?.repMin ?? null;
         const doneSets = e.sets.filter((s) => s.completed).length;
-        // Superset with the exercise next to it: accent bar on both cards and one short line saying which.
+        // Superset: accent bar and one short line naming the others, wherever they are in the list (the plan may have
+        // changed after this workout started, so they need not be next to each other).
         const group = supersets[e.exerciseId];
-        const withNext = group !== undefined && supersets[w.exercises[i + 1]?.exerciseId ?? ""] === group;
-        const withPrev = group !== undefined && supersets[w.exercises[i - 1]?.exerciseId ?? ""] === group;
+        const mates = group === undefined ? [] : w.exercises.filter((x, j) => j !== i && supersets[x.exerciseId] === group);
         // All sets done (or ticked off in simple mode): one line with what was done; a tap opens it again.
         if (!finished && !e.skipped && (e.completed || (doneSets > 0 && doneSets === e.sets.length)) && !reopened.includes(e.id)) {
           const done = e.sets.filter((s) => s.completed).map((s) => (s.durationS ? `${s.durationS}s` : s.weightKg ? `${fmt(locale, s.weightKg, 2)}×${s.reps ?? "?"}` : `${s.reps ?? "?"}`)).join(", ");
           return (
             // The whole card is the button, edges included, so any tap opens it again.
             <button key={`${e.id}-${e.exerciseId}`} type="button" aria-expanded={false} onClick={() => setReopened((r) => [...r, e.id])}
-              className={cx("flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left shadow-[var(--shadow)] hover:bg-surface-2 sm:px-5", (withNext || withPrev) && "border-l-4 border-l-accent")}>
+              className={cx("flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 text-left shadow-[var(--shadow)] hover:bg-surface-2 sm:px-5", mates.length > 0 && "border-l-4 border-l-accent")}>
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{e.name}</span>
                 {done && <span className="block truncate text-sm text-muted tabular-nums">{done}</span>}
@@ -378,10 +378,10 @@ export function WorkoutLogger({
           );
         }
         return (
-          <Card key={`${e.id}-${e.exerciseId}`} className={cx("space-y-3", e.skipped && "opacity-60", (withNext || withPrev) && "border-l-4 border-l-accent")}>
+          <Card key={`${e.id}-${e.exerciseId}`} className={cx("space-y-3", e.skipped && "opacity-60", mates.length > 0 && "border-l-4 border-l-accent")}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                {(withNext || withPrev) && <p className="text-xs font-semibold text-accent">{t(withNext ? "workout.supersetNext" : "workout.supersetPrev")}</p>}
+                {mates.length > 0 && <p className="text-xs font-semibold text-accent">{t("plan.supersetWith", { name: mates.map((x) => x.name).join(", ") })}</p>}
                 <h2 className="text-lg font-semibold leading-snug">{e.name}</h2>
                 {tg && (
                   <p className="text-sm text-muted">

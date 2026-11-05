@@ -81,7 +81,7 @@ export function PlanView({
                       <span className="text-sm tabular-nums text-muted">{label}</span>
                       <span className="min-w-0">
                         <span className="block text-[15px] font-medium leading-snug print:text-[10.5px] print:leading-tight">{exName(lookup(e.exerciseId), locale, e.exerciseId)}</span>
-                        {inSuperset && !prevSame && <span className="block text-xs font-medium text-accent print:text-[8.5px]">{t("plan.supersetWithNext", { n: label.replace(/[a-z]$/, "") })}</span>}
+                        {inSuperset && !prevSame && <span className="block text-xs font-medium text-accent print:text-[8.5px]">{t("plan.supersetWithNext", { list: new Intl.ListFormat(locale, { type: "conjunction" }).format(numbering(s.exercises).filter((_, j) => s.exercises[j]!.superset === e.superset)) })}</span>}
                         {e.grip && <span className="block text-xs text-muted print:text-[8.5px]">{t("plan.grip")} {t(`plan.grips.${e.grip}`)}</span>}
                       </span>
                       <span className="text-right text-[15px] font-semibold tabular-nums print:text-[10.5px]">{prescriptionText(locale, e, profile?.experience === "beginner")}</span>

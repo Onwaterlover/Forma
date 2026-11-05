@@ -41,13 +41,14 @@ export function estimateSeconds(exercises: PlannedExercise[], lookup: Lookup): n
       }
     }
 
-    const partnerIdx = pe.superset === undefined ? -1 : exercises.findIndex((o, j) => j > i && o.superset === pe.superset);
-    if (partnerIdx >= 0) {
-      const partner = exercises[partnerIdx]!;
-      done.add(partnerIdx);
-      const rounds = Math.max(pe.sets, partner.sets);
-      total += rounds * (workSec(pe, ex) + workSec(partner, lookup(partner.exerciseId)) + TIME.supersetSwitchSec);
-      total += (rounds - 1) * Math.max(pe.restSec, partner.restSec);
+    // A superset (two or three exercises) is done in rounds: one set of each, then the rest.
+    const later = pe.superset === undefined ? [] : exercises.flatMap((o, j) => (j > i && o.superset === pe.superset ? [j] : []));
+    if (later.length) {
+      later.forEach((j) => done.add(j));
+      const group = [pe, ...later.map((j) => exercises[j]!)];
+      const rounds = Math.max(...group.map((x) => x.sets));
+      total += rounds * (group.reduce((a, x) => a + workSec(x, lookup(x.exerciseId)), 0) + TIME.supersetSwitchSec * (group.length - 1));
+      total += (rounds - 1) * Math.max(...group.map((x) => x.restSec));
     } else {
       total += pe.sets * workSec(pe, ex) + (pe.sets - 1) * pe.restSec;
     }

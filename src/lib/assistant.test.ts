@@ -72,6 +72,29 @@ describe("assistant tools", () => {
     expect(await ai.runTool(c, "propose_plan_edit", { changes: [{ op: "remove_session", session_key: "Z" }] })).toHaveProperty("error");
   });
 
+  it("makes the superset the user named (bench + curls + kickbacks) and shows it in the card", async () => {
+    const auth = await import("./auth");
+    const C = await auth.createUser("ai-c@test.test", "C", "password-cccc-1", false);
+    const pe = (exerciseId: string) => ({ exerciseId, sets: 3, repMin: 8, repMax: 12, restSec: 90, effort: "leave_1_3", progression: "double", pattern: "h_push", priority: 2 });
+    await data.createPlan(C, "Plan", "imported", {
+      engineVersion: "1", split: "imported", weeklySets: {}, tradeoffs: [], notes: [],
+      sessions: [{ key: "A", template: "IMPORTED", name: "Góra", day: null, locationId: "", exercises: ["db_bench_press", "lat_pulldown", "db_curl", "db_triceps_kickback"].map(pe), estimatedMinutes: 40 }],
+    } as never, "imported", true);
+    const c = ctx(C);
+    const none = { name: null, day: null, position: null, sets: null, rep_min: null, rep_max: null, kg: null, rest_sec: null };
+    const r = await ai.runTool(c, "propose_plan_edit", { changes: [
+      { op: "join_superset", session_key: "A", exercise_id: "db_bench_press", partner_id: "db_curl", ...none },
+      { op: "join_superset", session_key: "A", exercise_id: "db_curl", partner_id: "db_triceps_kickback", ...none },
+    ] });
+    expect(typeof r).toBe("string");
+    expect(c.proposals[0]!.lines.join(" | ")).toMatch(/superseria Wyciskanie hantli.* \+ Uginanie.* \+ .*kickback/i);
+    // What Apply saves: the three next to each other, in one superset.
+    const stored = ai.planEditPayload.parse((await data.pendingSuggestion(C, c.proposals[0]!.id))!.payload);
+    const ex = stored.plan.sessions[0]!.exercises;
+    expect(ex.map((e) => e.exerciseId)).toEqual(["db_bench_press", "db_curl", "db_triceps_kickback", "lat_pulldown"]);
+    expect(ex.slice(0, 3).every((e) => e.superset === ex[0]!.superset && e.superset !== undefined)).toBe(true);
+  });
+
   it("not in the database: proposes the median of similar products, named as such", async () => {
     await data.searchProducts(A, "jablko", 1); // makes sure the basic foods exist
     const c = ctx(A);

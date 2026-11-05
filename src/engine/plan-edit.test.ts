@@ -68,4 +68,28 @@ describe("plan edits by the assistant", () => {
     expect(edit([{ op: "split_superset", session_key: "A", exercise_id: "lat_pulldown" }])).toHaveProperty("error");
     expect(edit([{ op: "set_exercise", session_key: "A", exercise_id: "db_curl" }])).toHaveProperty("error");
   });
+  it("joins exercises into a superset of two or three, placed next to each other", () => {
+    const solo: Plan = structuredClone(plan);
+    solo.sessions[0]!.exercises = [pe("db_bench_press"), pe("lat_pulldown"), pe("db_curl"), pe("db_triceps_kickback")];
+    const edit = (changes: object[]) => applyPlanEdits(solo, changes as never, EXERCISES, defaultProfile());
+
+    const tri = edit([
+      { op: "join_superset", session_key: "A", exercise_id: "db_bench_press", partner_id: "db_curl" },
+      { op: "join_superset", session_key: "A", exercise_id: "db_curl", partner_id: "db_triceps_kickback" },
+    ]);
+    if ("error" in tri) throw new Error(tri.error);
+    const ex = tri.plan.sessions[0]!.exercises;
+    expect(ex.map((e) => e.exerciseId)).toEqual(["db_bench_press", "db_curl", "db_triceps_kickback", "lat_pulldown"]);
+    expect(new Set(ex.slice(0, 3).map((e) => e.superset)).size).toBe(1);
+    expect(ex[0]!.superset).toBeDefined();
+    expect(ex[3]!.superset).toBeUndefined();
+    expect(tri.lines.at(-1)).toEqual({ kind: "join", session: "Góra", ids: ["db_bench_press", "db_curl", "db_triceps_kickback"] });
+
+    expect(edit([
+      { op: "join_superset", session_key: "A", exercise_id: "db_bench_press", partner_id: "db_curl" },
+      { op: "join_superset", session_key: "A", exercise_id: "db_curl", partner_id: "db_triceps_kickback" },
+      { op: "join_superset", session_key: "A", exercise_id: "db_curl", partner_id: "lat_pulldown" },
+    ])).toHaveProperty("error");
+    expect(edit([{ op: "join_superset", session_key: "A", exercise_id: "db_curl", partner_id: null }])).toHaveProperty("error");
+  });
 });

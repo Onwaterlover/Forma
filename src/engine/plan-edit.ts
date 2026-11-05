@@ -6,12 +6,14 @@ import { prescribe } from "./prescribe";
 
 export const EDIT_OPS = [
   "duplicate_session", "remove_session", "rename_session", "move_session", "set_day",
-  "add_exercise", "remove_exercise", "set_exercise", "set_all_exercises", "split_superset",
+  "add_exercise", "remove_exercise", "set_exercise", "set_all_exercises", "split_superset", "join_superset",
 ] as const;
 export type EditOp = {
   op: (typeof EDIT_OPS)[number];
   session_key: string;
   exercise_id?: string | null;
+  /** join_superset: the exercise to do in rounds with exercise_id. */
+  partner_id?: string | null;
   name?: string | null;
   /** 0 = Monday … 6 = Sunday; null = any day. */
   day?: number | null;
@@ -33,7 +35,9 @@ export type EditLine =
   | { kind: "set"; session: string; exerciseId: string; sets?: number; reps?: [number, number]; kg?: number; rest?: number }
   | { kind: "set_all"; session: string | null; sets?: number; reps?: [number, number]; rest?: number }
   /** A superset split into normal exercises: one pair (both ids), or every pair of a session / the plan. */
-  | { kind: "split"; session: string | null; pair?: [string, string] };
+  | { kind: "split"; session: string | null; pair?: [string, string] }
+  /** Exercises now done as one superset (2–3), in their order in the session. */
+  | { kind: "join"; session: string; ids: string[] };
 
 const KEYS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -145,6 +149,23 @@ export function applyPlanEdits(
         if (!partner) return { error: `${o.exercise_id} is not in a superset in session ${s.key}.` };
         s.exercises = s.exercises.map((x) => (x.superset === e.superset ? solo(x) : x));
         lines.push({ kind: "split", session: label(s), pair: [e.exerciseId, partner.exerciseId] });
+        break;
+      }
+      case "join_superset": {
+        const a = s.exercises.find((x) => x.exerciseId === o.exercise_id);
+        const b = s.exercises.find((x) => x.exerciseId === o.partner_id);
+        if (!a || !b || a === b) return { error: `join_superset needs exercise_id and partner_id: two different exercises of session ${s.key}.` };
+        // Joining an exercise that is already in a superset adds the other one to that group (three = a tri-set).
+        const group = a.superset ?? b.superset ?? Math.max(0, ...s.exercises.map((x) => x.superset ?? 0)) + 1;
+        const merged = [a.superset, b.superset].filter((g) => g !== undefined);
+        const members = s.exercises.filter((x) => x === a || x === b || (x.superset !== undefined && merged.includes(x.superset)));
+        if (members.length > 3) return { error: "A superset can have at most 3 exercises." };
+        for (const x of members) x.superset = group;
+        // Members go next to each other, where the first of them was.
+        const first = s.exercises.indexOf(members[0]!);
+        s.exercises = s.exercises.filter((x) => !members.includes(x));
+        s.exercises.splice(first, 0, ...members);
+        lines.push({ kind: "join", session: label(s), ids: members.map((x) => x.exerciseId) });
         break;
       }
       case "set_exercise": {

@@ -59,3 +59,21 @@ describe("AI food estimate", () => {
     expect(await data.getProduct(a, id)).toBeNull();
   });
 });
+
+describe("progress analysis", () => {
+  it("sends the weekly data in one call and returns the coach's text", async () => {
+    const auth = await import("./auth");
+    const u = await auth.createUser("an-a@test.test", "A", "password-aaaa-1", false);
+    await data.addWeight(u, new Date().toISOString().slice(0, 10), 80);
+    const bodies: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, init: { body: string }) => {
+      bodies.push(init.body);
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "Idzie dobrze.\n- Waga 80 kg." }] } }] }));
+    }));
+    const r = await ai.analyzeProgress(u, "pl");
+    expect(r).toEqual({ text: "Idzie dobrze.\n- Waga 80 kg." });
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0]).toContain("Weeks (Monday start)");
+    expect(bodies[0]).toContain("this week so far");
+  });
+});

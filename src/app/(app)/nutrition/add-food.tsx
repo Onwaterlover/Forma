@@ -23,7 +23,7 @@ export function mealNow(entries: { meal: string | null; createdAt: string }[] = 
 }
 
 export function AddFood({
-  open, onClose, date, today, view: startView, product, favorites, recipes, recents = [], entries = [],
+  open, onClose, date, today, view: startView, product, favorites, recipes, recents = [], entries = [], meal: presetMeal,
 }: {
   open: boolean;
   onClose: () => void;
@@ -35,6 +35,8 @@ export function AddFood({
   product: Product | null;
   favorites: Product[];
   recents?: (Product & { lastAmount: number })[];
+  /** Opened from a meal's "+": entries go into that meal. */
+  meal?: string;
   /** Today's diary entries, to suggest the meal. */
   entries?: { meal: string | null; createdAt: string }[];
   recipes: RecipeLite[];
@@ -55,9 +57,9 @@ export function AddFood({
       setView(startView);
       setPicked(product);
       setBarcodeForNew(null);
-      setMeal(date === today ? mealNow(entries) : null);
+      setMeal(presetMeal ?? (date === today ? mealNow(entries) : null));
     }
-  }, [open, startView, product, date, today]);
+  }, [open, startView, product, date, today, presetMeal]);
 
   const add = (p: Product, amount: number, close = false) =>
     start(async () => {

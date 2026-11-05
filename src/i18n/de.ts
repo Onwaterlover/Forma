@@ -252,9 +252,9 @@ export const de: Dict = {
     deleteWeightConfirm: "Wiegung von diesem Tag löschen?", recentWeights: "Letzte Wiegungen", allWeights: "Alle anzeigen ({n})", chartSoon: "Die Kurve erscheint ab der zweiten Wiegung. Am besten morgens, ein paar Mal pro Woche – auf dem Bildschirm „Heute“.", noWeight: "Noch keine Wiegungen. Ein paar pro Woche reichen — eine einzelne Messung sagt wenig.", fluctuation: "Das Gewicht schwankt von Tag zu Tag um 1–2 kg (Wasser, Mageninhalt, Salz). Achte auf den Trend, nicht auf einzelne Tage.",
     training: "Training", workoutsPerWeek: "Einheiten pro Woche", thisWeek: "Trainings diese Woche", doneThisWeek: "{n} diese Woche", avgPerWeek: "Im Schnitt {n} pro Woche in den letzten 7 Wochen.", when: { morning: "morgens", day: "tagsüber", evening: "abends" }, records: "Rekorde", maxLoad: "Höchstes Gewicht", e1rm: "Geschätztes 1RM", e1rmNote: "Schätzung nach der Epley-Formel, kein gemessenes Maximum.",
     repsAt: "{reps} Wdh. × {weight} kg", noRecords: "Rekorde erscheinen, sobald du Sätze im Detailmodus einträgst.", calories: "Kalorien (letzte 14 Tage)", avg: "im Schnitt {n} kcal",
-    weekly: "Wochenrückblick",
+    weekly: "Wochenrückblick", analyze: "Analysieren (KI)", analyzeAgain: "Nochmal analysieren", analyzing: "Analysiere…",
     review: {
-      title: "Letzte Woche · {range}", weight: "Gewicht (Trend): {delta} kg", food: "Essen: im Schnitt {kcal} kcal ({days} von 7 Tagen eingetragen)", target: "Ziel {n}",
+      title: "Letzte Woche · {range}", details: "Details", weight: "Gewicht (Trend): {delta} kg", food: "Essen: im Schnitt {kcal} kcal ({days} von 7 Tagen eingetragen)", target: "Ziel {n}",
       protein_line: "Eiweiß {g} von {target} g", training: "Einheiten: {done} von {planned}", trainingNoPlan: "Einheiten: {done}", sets: "{n} Sätze",
       lowData: "Zu wenige Daten aus der letzten Woche für einen Rat. 2–3 Wiegungen und ein paar eingetragene Tage reichen.",
       keep: "Alles im Plan. Nichts ändern.",

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { addProductEntry, addRecipeEntry, copyFromYesterday, editEntry, productFor, recipeFor, removeEntry, saveMealFromEntries, undoRemove } from "@/app/actions/nutrition";
 import { Sheet, useToast } from "@/components/client";
-import { Button, Card, cx, Empty, Input, Meter, Select } from "@/components/ui";
+import { Button, Card, cx, Input, Meter, Select } from "@/components/ui";
 import { fmt, fmtDate } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { DiaryEntry, Product, Recipe } from "@/lib/data";
@@ -42,7 +42,8 @@ export function Diary({
   const { t, locale } = useI18n();
   const toast = useToast();
   const router = useRouter();
-  const [adding, setAdding] = useState<null | { view: "search" | "scan"; product: (Product & { lastAmount?: number }) | null }>(null);
+  // `meal`: opened from a meal's "+", so the entry goes into that meal.
+  const [adding, setAdding] = useState<null | { view: "search" | "scan"; product: (Product & { lastAmount?: number }) | null; meal?: string }>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   // Loaded per entry and tagged with its id: until this entry's data is in, nothing stale (the previous entry's
   // pieces) or provisional (grams) is shown, so the unit doesn't flip after opening.
@@ -103,7 +104,8 @@ export function Diary({
       toast({ text: `${t("common.deleted")}: ${e.name}`, action: { label: t("common.undo"), run: () => start(() => undoRemove(e.id)) } });
     });
 
-  const groups = [...MEALS, null].map((m) => ({ meal: m, items: entries.filter((e) => e.meal === m) })).filter((g) => g.items.length > 0);
+  // The four meals are always shown (each with its "+"); entries without a meal only when there are some.
+  const groups = [...MEALS, null].map((m) => ({ meal: m, items: entries.filter((e) => e.meal === m) })).filter((g) => g.meal || g.items.length > 0);
 
   return (
     <>
@@ -150,41 +152,51 @@ export function Diary({
         <Link href="/nutrition/recipes" className="inline-flex h-9 items-center gap-2 rounded-xl px-3 text-sm font-medium hover:bg-surface-2"><Utensils size={16} aria-hidden />{t("nutrition.recipes")}</Link>
       </div>
 
-      {entries.length === 0 ? (
-        <Empty>{t("nutrition.empty")}<br /><span className="text-xs">{t("nutrition.help")}</span></Empty>
-      ) : (
-        <div className="space-y-3">
-          {groups.map((g) => (
-            <Card key={g.meal ?? "none"} className="p-0 sm:p-0">
-              {(groups.length > 1 || g.meal) && (
-                <p className="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {g.meal ? t(`nutrition.meal.${g.meal}`) : t("nutrition.noMeal")}
-                  {/* The meal's calories right beside its name. */}
-                  <span className="ml-2 font-medium normal-case tracking-normal tabular-nums text-accent">{t("nutrition.mealTotal", { n: fmt(locale, g.items.reduce((a, e) => a + (e.values.kcal ?? 0), 0)) })}</span>
-                </p>
-              )}
-              <ul className="divide-y divide-border">
-                {g.items.map((e) => (
-                  <li key={e.id}>
-                    <button type="button" onClick={() => { setEditing(e); setAmount(e.amount); }} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-surface-2">
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{e.name}</span>
-                        <span className="block text-xs text-muted tabular-nums">
-                          {e.basis === "portion" ? t("nutrition.portion") : `${fmt(locale, e.amount, 1)} ${e.basis}`}
-                          {" · "}{t("nutrition.protein").slice(0, 1)} {fmt(locale, e.values.protein, 1)} · {t("nutrition.carbs").slice(0, 1)} {fmt(locale, e.values.carbs, 1)} · {t("nutrition.fat").slice(0, 1)} {fmt(locale, e.values.fat, 1)}
-                        </span>
-                      </span>
-                      <span className="shrink-0 font-medium tabular-nums">{e.values.kcal === null ? t("nutrition.missing") : <>{fmt(locale, e.values.kcal)}<span className="ml-0.5 text-xs font-normal text-muted">kcal</span></>}</span>
+      <Card className="p-0 sm:p-0">
+        <ul className="divide-y divide-border">
+          {groups.map((g) => {
+            const name = g.meal ? t(`nutrition.meal.${g.meal}`) : t("nutrition.noMeal");
+            return (
+              <li key={g.meal ?? "none"}>
+                <div className="flex min-h-12 items-center justify-between gap-2 py-1 pl-4 pr-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                    {name}
+                    {/* The meal's calories right beside its name. */}
+                    {g.items.length > 0 && <span className="ml-2 font-medium normal-case tracking-normal tabular-nums text-accent">{t("nutrition.mealTotal", { n: fmt(locale, g.items.reduce((a, e) => a + (e.values.kcal ?? 0), 0)) })}</span>}
+                  </p>
+                  {g.meal && (
+                    <button type="button" aria-label={`${t("common.add")}: ${name}`} onClick={() => setAdding({ view: "search", product: null, meal: g.meal! })}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-accent hover:bg-accent-soft">
+                      <Plus size={20} aria-hidden />
                     </button>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))}
-          {/* Only for values shown above (sugar, salt etc. are not shown; fibre only when switched on). */}
-          {totals.incomplete?.some((k) => ["kcal", "protein", "carbs", "fat"].includes(k) || (k === "fiber" && showFiber)) ? <p className="text-xs text-muted">* {t("nutrition.incompleteValue")}</p> : null}
-        </div>
-      )}
+                  )}
+                </div>
+                {g.items.length > 0 && (
+                  <ul className="divide-y divide-border border-t border-border">
+                    {g.items.map((e) => (
+                      <li key={e.id}>
+                        <button type="button" onClick={() => { setEditing(e); setAmount(e.amount); }} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-surface-2">
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{e.name}</span>
+                            <span className="block text-xs text-muted tabular-nums">
+                              {e.basis === "portion" ? t("nutrition.portion") : `${fmt(locale, e.amount, 1)} ${e.basis}`}
+                              {" · "}{t("nutrition.protein").slice(0, 1)} {fmt(locale, e.values.protein, 1)} · {t("nutrition.carbs").slice(0, 1)} {fmt(locale, e.values.carbs, 1)} · {t("nutrition.fat").slice(0, 1)} {fmt(locale, e.values.fat, 1)}
+                            </span>
+                          </span>
+                          <span className="shrink-0 font-medium tabular-nums">{e.values.kcal === null ? t("nutrition.missing") : <>{fmt(locale, e.values.kcal)}<span className="ml-0.5 text-xs font-normal text-muted">kcal</span></>}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+      {entries.length === 0 && <p className="mt-2 text-xs text-muted">{t("nutrition.help")}</p>}
+      {/* Only for values shown above (sugar, salt etc. are not shown; fibre only when switched on). */}
+      {totals.incomplete?.some((k) => ["kcal", "protein", "carbs", "fat"].includes(k) || (k === "fiber" && showFiber)) ? <p className="mt-2 text-xs text-muted">* {t("nutrition.incompleteValue")}</p> : null}
 
       {/* Recently logged recipes and saved meals first (one tap logs them again), then products. */}
       {recentMeals.length > 0 && (
@@ -240,7 +252,7 @@ export function Diary({
       {/* No daily "complete / incomplete" question: every logged day counts; a week that wasn't fully logged is
           marked once in the weekly check-in, and the weekly review notices when the log and the scale disagree. */}
 
-      <AddFood open={!!adding} onClose={() => { setAdding(null); router.refresh(); }} date={date} today={today} view={adding?.view ?? "search"} product={adding?.product ?? null} favorites={favorites} recents={recents} entries={entries} recipes={recipes} />
+      <AddFood open={!!adding} onClose={() => { setAdding(null); router.refresh(); }} date={date} today={today} view={adding?.view ?? "search"} product={adding?.product ?? null} meal={adding?.meal} favorites={favorites} recents={recents} entries={entries} recipes={recipes} />
 
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.name ?? ""}>
         {editing && (

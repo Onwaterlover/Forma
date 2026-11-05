@@ -11,6 +11,8 @@ import {
 import { measurementTrends } from "@/lib/measurements";
 import { weeklyReview, type Goal } from "@/lib/review";
 import { weightTrend } from "@/nutrition/energy";
+import { aiProvider } from "@/lib/assistant";
+import { ProgressAnalysis } from "./analysis";
 import { MeasurementForm } from "./measurement-form";
 import { metricLabel, metricUnit } from "./sets";
 import { WeightForm } from "./weight-form";
@@ -99,7 +101,8 @@ export default async function ProgressPage() {
     days: intake.filter((d) => d.kcal > 0 && inWeek(d.date)).map((d) => ({ kcal: d.kcal, protein: d.protein })),
     target: target ? { kcal: target.kcal, protein: target.protein_g } : null,
     workouts: {
-      done: doneIn(weekStart, weekEnd).length, planned: planned || null,
+      // Workouts planned count only for a week the plan existed throughout (a new plan has nothing to miss yet).
+      done: doneIn(weekStart, weekEnd).length, planned: plan && plan.created_at.slice(0, 10) <= weekStart ? planned || null : null,
       sets: doneIn(weekStart, weekEnd).reduce((a, w) => a + w.logged_sets, 0),
       setsBefore: doneIn(shiftDate(weekStart, -7), shiftDate(weekStart, -1)).reduce((a, w) => a + w.logged_sets, 0),
     },
@@ -121,10 +124,14 @@ export default async function ProgressPage() {
     <>
       <PageHeader title={t("progress.title")} action={<LinkButton href="/progress/photos" variant="secondary" size="sm"><Camera size={16} aria-hidden />{t("progress.photos")}</LinkButton>} />
 
-      <Card className="mb-4 space-y-2">
-        <h2 className="font-semibold">{t("progress.review.title", { range: `${fmtDate(locale, weekStart, { day: "numeric", month: "short" })} – ${fmtDate(locale, weekEnd, { day: "numeric", month: "short" })}` })}</h2>
+      {/* Last week in one sentence; the numbers are folded under "Details"; the AI analysis only on request. */}
+      <Card className="mb-4 space-y-3">
+        <h2 className="text-sm font-semibold text-muted">{t("progress.review.title", { range: `${fmtDate(locale, weekStart, { day: "numeric", month: "short" })} – ${fmtDate(locale, weekEnd, { day: "numeric", month: "short" })}` })}</h2>
+        <p className="text-[15px] leading-relaxed">{tipText}</p>
         {(review.weight !== null || review.food || review.training) && (
-          <ul className="space-y-1 text-sm">
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted">{t("progress.review.details")}</summary>
+            <ul className="mt-1.5 space-y-1">
             {review.weight !== null && <li>{t("progress.review.weight", { delta: signed(review.weight, 2) })}</li>}
             {review.food && (
               <li>
@@ -139,9 +146,10 @@ export default async function ProgressPage() {
                 {review.training.sets > 0 && <span className="text-muted"> · {t("progress.review.sets", { n: review.training.sets })}{review.training.setsBefore > 0 ? ` (${signed(review.training.sets - review.training.setsBefore, 0)})` : ""}</span>}
               </li>
             )}
-          </ul>
+            </ul>
+          </details>
         )}
-        <Notice tone={review.tip.key === "keep" ? "accent" : "neutral"}>{tipText}</Notice>
+        {aiProvider() && settings.ai && <ProgressAnalysis />}
       </Card>
 
       <SectionTitle>{t("progress.bodyweight")}</SectionTitle>

@@ -4,7 +4,7 @@ import { prescribe } from "@/engine/prescribe";
 import { isLocale, translator } from "@/i18n";
 import { defaultProfile } from "@/engine/profile";
 import type { Plan } from "@/engine/types";
-import { aiConfigured, foodAvgPayload, foodPayload, planChangePayload, planEditPayload, prefPayload, quickPayload, runAssistant, swapPayload, type Proposal } from "@/lib/assistant";
+import { aiConfigured, analyzeProgress, foodAvgPayload, foodPayload, planChangePayload, planEditPayload, prefPayload, quickPayload, runAssistant, swapPayload, type Proposal } from "@/lib/assistant";
 import { requireUser, throttle } from "@/lib/auth";
 import { isIsoDate } from "@/lib/ctx";
 import { getPlan, getProfile, getSettings, libraryFor, pendingSuggestion, resolveSuggestion, saveAverageProduct } from "@/lib/data";
@@ -98,4 +98,14 @@ export async function applySuggestion(id: string, choices?: number[]): Promise<{
     return addQuickEntry({ ...q, date, meal });
   }
   return { error: "unknown" };
+}
+
+/** "Analyse" on the Progress page: a short read of the last weeks' data (counts toward the same daily limit). */
+export async function analyzeProgressAction(): Promise<{ text?: string; error?: string }> {
+  const user = await requireUser();
+  if (!aiConfigured()) return { error: "not_configured" };
+  if (!(await getSettings(user.id)).ai) return { error: "disabled" };
+  if (!(await throttle(`ai:${user.id}`, DAILY_LIMIT, 86_400_000))) return { error: "limit" };
+  const r = await analyzeProgress(user.id, isLocale(user.locale) ? user.locale : "pl");
+  return "error" in r ? { error: r.error } : { text: r.text };
 }

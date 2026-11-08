@@ -9,7 +9,6 @@ import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product, Recipe } from "@/lib/data";
 import { recipe as calc } from "@/nutrition/calc";
-import { MealSelect } from "./add-food";
 import { SearchResults } from "./food-search";
 
 type Item = { productId: string | null; name: string; grams: number | null; nutrients: Product["nutrients"] };
@@ -36,7 +35,8 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
   const [items, setItems] = useState<Item[]>([]);
   const [mode, setMode] = useState<"servings" | "grams">(startMode ?? "servings");
   const [amount, setAmount] = useState<number | null>(startAmount ?? 1);
-  const [meal, setMeal] = useState(startMeal);
+  // The meal is decided by the caller (the section's "+", or the time of day); no picker here.
+  const meal = startMeal;
   const [saveToRecipe, setSaveToRecipe] = useState(false);
   // Index of the ingredient being replaced, "new" while adding one, null when the search is closed.
   const [swap, setSwap] = useState<number | "new" | null>(null);
@@ -112,7 +112,7 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
           <Field label={t("nutrition.servings")} htmlFor="rl-serv"><DecimalInput id="rl-serv" value={form.servings} onChange={(v) => setForm({ ...form, servings: v })} /></Field>
           <Field label={t("nutrition.cookedYield")} htmlFor="rl-yield"><DecimalInput id="rl-yield" value={form.yieldG} onChange={(v) => setForm({ ...form, yieldG: v })} /></Field>
         </div>
-      ) : <MealSelect meal={meal} onChange={setMeal} />}
+      ) : null}
 
       {!editing && <>
       <div className="flex items-center gap-2">

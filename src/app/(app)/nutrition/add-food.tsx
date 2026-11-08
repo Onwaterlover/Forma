@@ -112,7 +112,7 @@ export function AddFood({
           {view !== "search" && (
             <button type="button" onClick={() => setView(view === "recipe" ? "meals" : "search")} className="-ml-1 inline-flex items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={16} aria-hidden />{t(view === "recipe" ? "nutrition.meals" : "nutrition.search")}</button>
           )}
-          {view !== "recipe" && <MealSelect meal={meal} onChange={setMeal} />}
+          {view !== "recipe" && view !== "meals" && <MealSelect meal={meal} onChange={setMeal} />}
 
           {view === "search" && (
             <SearchTab onPick={pick} onScan={() => setView("scan")}>

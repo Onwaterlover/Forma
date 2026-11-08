@@ -11,6 +11,8 @@ describe("meal suggestion", () => {
   it("goes by the time of day, and a second one of the same meal later is a snack", () => {
     expect(suggestMeal([], 8, at("08:00"))).toBe("breakfast");
     expect(suggestMeal([], 13, at("13:00"))).toBe("lunch");
+    // 11:00 is still breakfast time, not lunch.
+    expect(suggestMeal([], 11, at("11:00"))).toBe("breakfast");
     expect(suggestMeal([], 19, at("19:00"))).toBe("dinner");
     expect(suggestMeal([e("breakfast", "07:30")], 10.5, at("10:30"))).toBe("snack");
     expect(suggestMeal([e("lunch", "13:00")], 15.75, at("15:45"))).toBe("snack");

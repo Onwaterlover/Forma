@@ -6,7 +6,7 @@ export type Meal = (typeof MEALS)[number];
 
 /**
  * 1. Something added in the last hour: the same meal (a meal is often logged item by item).
- * 2. Otherwise the time of day (before 11 breakfast, before 17 lunch, before 22 dinner, later a snack); but when
+ * 2. Otherwise the time of day (before 12 breakfast, before 17 lunch, before 22 dinner, later a snack); but when
  *    that meal is already logged and more than 1.5 hours ago, it is a snack (a yoghurt at 10:30 after breakfast).
  * `hour`: local time of day as a decimal (13.5 = 13:30); `now`: epoch ms; entries are today's.
  */
@@ -14,7 +14,7 @@ export function suggestMeal(entries: { meal: string | null; createdAt: string }[
   const sorted = [...entries].filter((e) => e.meal).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const last = sorted[0];
   if (last && now - Date.parse(last.createdAt) <= 60 * 60_000 && (MEALS as readonly string[]).includes(last.meal!)) return last.meal as Meal;
-  const base: Meal = hour < 11 ? "breakfast" : hour < 17 ? "lunch" : hour < 22 ? "dinner" : "snack";
+  const base: Meal = hour < 12 ? "breakfast" : hour < 17 ? "lunch" : hour < 22 ? "dinner" : "snack";
   const earlier = sorted.find((e) => e.meal === base);
   return base !== "snack" && earlier && now - Date.parse(earlier.createdAt) > 90 * 60_000 ? "snack" : base;
 }

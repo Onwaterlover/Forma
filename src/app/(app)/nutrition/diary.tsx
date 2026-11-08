@@ -257,7 +257,7 @@ export function Diary({
 
       <AddFood open={!!adding} onClose={() => { setAdding(null); router.refresh(); }} date={date} today={today} view={adding?.view ?? "search"} product={adding?.product ?? null} meal={adding?.meal} favorites={favorites} recents={recents} entries={entries} recipes={recipes} />
 
-      <Sheet open={!!logging} onClose={() => setLogging(null)} title={logging?.name ?? ""} wide>
+      <Sheet open={!!logging} onClose={() => setLogging(null)} title={logging?.name ?? ""} wide full>
         {logging && (
           <RecipeLog key={logging.id} recipeId={logging.id} date={date} meal={date === today ? mealNow(entries) : null} amount={logging.amount} mode={logging.mode}
             onDone={() => { setLogging(null); router.refresh(); }} />

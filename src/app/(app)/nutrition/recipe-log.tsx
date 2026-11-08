@@ -1,10 +1,10 @@
 "use client";
 import { Plus, Repeat, X } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { addRecipeEntry, recipeFor } from "@/app/actions/nutrition";
+import { addRecipeEntry, recipeFor, saveRecipeAction } from "@/app/actions/nutrition";
 import { DecimalInput, Switch, useToast } from "@/components/client";
-import { Button, cx, Input } from "@/components/ui";
+import { Button, cx, Field, Input } from "@/components/ui";
 import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product, Recipe } from "@/lib/data";
@@ -39,14 +39,20 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
   const [swap, setSwap] = useState<number | "new" | null>(null);
   const [q, setQ] = useState("");
   const [pending, start] = useTransition();
+  const router = useRouter();
+  // "Edit recipe" right here (name, servings, cooked weight, ingredients), without leaving the diary.
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<{ name: string; servings: number | null; yieldG: number | null }>({ name: "", servings: 1, yieldG: null });
 
+  const load = (x: Recipe | null) => {
+    setR(x);
+    if (!x) return;
+    setItems(x.ingredients.map((i) => ({ ...i })));
+    setForm({ name: x.name, servings: x.servings, yieldG: x.cookedYieldG });
+  };
   useEffect(() => {
     let live = true;
-    recipeFor(recipeId).then((x) => {
-      if (!live) return;
-      setR(x);
-      if (x) setItems(x.ingredients.map((i) => ({ ...i })));
-    }).catch(() => live && setR(null));
+    recipeFor(recipeId).then((x) => live && load(x)).catch(() => live && setR(null));
     return () => { live = false; };
   }, [recipeId]);
 
@@ -57,8 +63,8 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
   const changed = items.length !== r.ingredients.length || items.some((i, k) => i.productId !== r.ingredients[k]!.productId || i.name !== r.ingredients[k]!.name || i.grams !== r.ingredients[k]!.grams);
   const rawNow = items.reduce((a, i) => a + (i.grams ?? 0), 0);
   // The weight after cooking follows the ingredients, like on the server.
-  const yieldNow = r.cookedYieldG && r.calc.rawWeight > 0 ? Math.round(r.cookedYieldG * (rawNow / r.calc.rawWeight)) : null;
-  const c = calc(items.map((i) => ({ ...i, grams: i.grams ?? 0 })), { cookedYieldG: yieldNow, servings: r.servings });
+  const yieldNow = editing ? form.yieldG : r.cookedYieldG && r.calc.rawWeight > 0 ? Math.round(r.cookedYieldG * (rawNow / r.calc.rawWeight)) : null;
+  const c = calc(items.map((i) => ({ ...i, grams: i.grams ?? 0 })), { cookedYieldG: yieldNow, servings: editing ? form.servings ?? 1 : r.servings });
   const grams = amount && amount > 0 ? (mode === "servings" ? (c.finalWeight / r.servings) * amount : amount) : 0;
   const kcal = c.per100.kcal === null ? null : (c.per100.kcal * grams) / 100;
 
@@ -76,10 +82,29 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
     </div>
   );
 
+  const saveRecipe = () => start(async () => {
+    const res = await saveRecipeAction({
+      id: r.id, name: form.name, cookedYieldG: form.yieldG, servings: form.servings ?? 1, isMeal: r.isMeal,
+      ingredients: items.map((i) => ({ productId: i.productId, name: i.name, grams: i.grams! })),
+    });
+    toast({ text: res.error ? t("common.error") : t("common.saved") });
+    if (res.error) return;
+    load(await recipeFor(r.id));
+    setEditing(false);
+    router.refresh();
+  });
+
   return (
     <div className="space-y-4">
-      <MealSelect meal={meal} onChange={setMeal} />
+      {editing ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label={t("nutrition.name")} htmlFor="rl-name"><Input id="rl-name" value={form.name} maxLength={80} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+          <Field label={t("nutrition.servings")} htmlFor="rl-serv"><DecimalInput id="rl-serv" value={form.servings} onChange={(v) => setForm({ ...form, servings: v })} /></Field>
+          <Field label={t("nutrition.cookedYield")} htmlFor="rl-yield"><DecimalInput id="rl-yield" value={form.yieldG} onChange={(v) => setForm({ ...form, yieldG: v })} /></Field>
+        </div>
+      ) : <MealSelect meal={meal} onChange={setMeal} />}
 
+      {!editing && <>
       <div className="flex items-center gap-2">
         <div className="inline-flex rounded-lg bg-surface-2 p-0.5 text-sm" role="group" aria-label={t("nutrition.unit")}>
           {(["servings", "grams"] as const).map((m) => (
@@ -99,11 +124,12 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
         <span className="font-semibold tabular-nums">{fmt(locale, grams)} g · {fmt(locale, kcal)} kcal</span>
         <span className="text-muted"> · {t("nutrition.wholeDish", { g: fmt(locale, c.finalWeight), kcal: fmt(locale, c.total.kcal) })}</span>
       </p>
+      </>}
 
       <section>
         <div className="mb-1 flex items-baseline justify-between gap-2">
           <p className="text-sm font-medium">{t("nutrition.ingredients")}</p>
-          <Link href={`/nutrition/recipes?open=${r.id}`} className="text-sm font-medium text-accent">{t("nutrition.editRecipe")}</Link>
+          {!editing && <button type="button" onClick={() => { setSaveToRecipe(false); setEditing(true); }} className="text-sm font-medium text-accent">{t("nutrition.editRecipe")}</button>}
         </div>
         <ul className="divide-y divide-border">
           {items.map((i, k) => (
@@ -129,6 +155,15 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
         )}
       </section>
 
+      {editing && (
+        <p className="text-sm text-muted">{t("nutrition.total")}: {fmt(locale, c.total.kcal)} kcal · {fmt(locale, c.perServing.kcal)} kcal {t("nutrition.perServing")}</p>
+      )}
+      {editing ? (
+        <div className="flex gap-2">
+          <Button full disabled={pending || !ready || !form.name.trim() || !(form.servings && form.servings > 0)} onClick={saveRecipe}>{t("common.save")}</Button>
+          <Button variant="ghost" disabled={pending} onClick={() => load(r)}>{t("common.cancel")}</Button>
+        </div>
+      ) : <>
       {changed && (
         <div className="space-y-1">
           <Switch checked={saveToRecipe} onChange={setSaveToRecipe} label={t("nutrition.saveToRecipe")} />
@@ -147,6 +182,7 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
         })}>
         {t("common.add")}
       </Button>
+      </>}
     </div>
   );
 }

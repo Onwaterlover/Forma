@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { isIsoDate, shiftDate } from "@/lib/ctx";
 import { energyEstimate } from "@/lib/estimate";
 import {
-  addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, intakeHistory, replaceEntriesWithMeal, saveCustomProduct, undoDelete, saveRecipe, setDayComplete,
+  addEntry, copyDay, deleteEntry, deleteRecipe, diaryDay, getProduct, getRecipe, intakeHistory, replaceEntriesWithMeal, saveCustomProduct, scaledYield, undoDelete, saveRecipe, setDayComplete,
   setFavorite, setTarget, updateEntry, type Recipe,
   saveAverageProduct, deleteOwnProduct, type Product,
 } from "@/lib/data";
@@ -29,11 +29,52 @@ export async function addProductEntry(input: { productId: string; amount: number
   return id ? { id } : { error: "not_found" };
 }
 
-export async function addRecipeEntry(input: { recipeId: string; amount: number; mode: "grams" | "servings"; date: string; meal: string | null }) {
+const ingredient = z.object({ productId: z.string().max(64).nullable(), name: z.string().max(120), grams: amount });
+
+/**
+ * Ingredients as stored in a recipe: nutrients are looked up on the server, never taken from the client.
+ * Ingredients without a product (e.g. from a meal saved from the diary) keep the snapshot they already have.
+ */
+async function resolveIngredients(userId: string, list: z.infer<typeof ingredient>[], existing: Recipe | null): Promise<Recipe["ingredients"] | null> {
+  const out: Recipe["ingredients"] = [];
+  for (const i of list) {
+    const prod = i.productId ? await getProduct(userId, i.productId) : null;
+    if (prod) {
+      out.push({ productId: prod.id, name: prod.name, grams: i.grams, nutrients: prod.nutrients });
+      continue;
+    }
+    const kept = existing?.ingredients.find((x) => x.productId === null && x.name === i.name);
+    if (!kept) return null;
+    out.push({ ...kept, grams: i.grams });
+  }
+  return out;
+}
+
+/**
+ * Logs a recipe or saved meal. `ingredients`: changed for this entry only (blueberries instead of mango today);
+ * with `saveToRecipe` the recipe itself is updated first.
+ */
+export async function addRecipeEntry(input: {
+  recipeId: string; amount: number; mode: "grams" | "servings"; date: string; meal: string | null;
+  ingredients?: { productId: string | null; name: string; grams: number }[]; saveToRecipe?: boolean;
+}) {
   const user = await requireUser();
-  const p = z.object({ recipeId: z.string().max(64), amount, mode: z.enum(["grams", "servings"]), date, meal }).safeParse(input);
+  const p = z.object({
+    recipeId: z.string().max(64), amount, mode: z.enum(["grams", "servings"]), date, meal,
+    ingredients: z.array(ingredient).min(1).max(60).optional(), saveToRecipe: z.boolean().optional(),
+  }).safeParse(input);
   if (!p.success) return { error: "invalid" };
-  const id = await addEntry(user.id, { recipeId: p.data.recipeId, mode: p.data.mode, amount: p.data.amount, date: p.data.date, meal: p.data.meal });
+  let ingredients: Recipe["ingredients"] | undefined;
+  if (p.data.ingredients) {
+    const r = await getRecipe(user.id, p.data.recipeId);
+    const list = r && (await resolveIngredients(user.id, p.data.ingredients, r));
+    if (!r || !list) return { error: "not_found" };
+    if (p.data.saveToRecipe) {
+      await saveRecipe(user.id, { id: r.id, name: r.name, ingredients: list, cookedYieldG: scaledYield(r, list), servings: r.servings, isMeal: r.isMeal });
+      revalidatePath("/nutrition", "layout");
+    } else ingredients = list;
+  }
+  const id = await addEntry(user.id, { recipeId: p.data.recipeId, mode: p.data.mode, amount: p.data.amount, date: p.data.date, meal: p.data.meal, ingredients });
   done();
   return id ? { id } : { error: "not_found" };
 }
@@ -127,8 +168,6 @@ export async function productFor(id: string) {
   return await getProduct(user.id, id);
 }
 
-const ingredient = z.object({ productId: z.string().max(64).nullable(), name: z.string().max(120), grams: amount });
-
 /** Recipes snapshot each ingredient's nutrients at save time (looked up on the server, not taken from the client). */
 export async function saveRecipeAction(input: unknown): Promise<{ id?: string; error?: string }> {
   const user = await requireUser();
@@ -143,19 +182,8 @@ export async function saveRecipeAction(input: unknown): Promise<{ id?: string; e
     })
     .safeParse(input);
   if (!p.success) return { error: "invalid" };
-  const ingredients: Recipe["ingredients"] = [];
-  const existing = p.data.id ? await getRecipe(user.id, p.data.id) : null;
-  for (const i of p.data.ingredients) {
-    const prod = i.productId ? await getProduct(user.id, i.productId) : null;
-    if (prod) {
-      ingredients.push({ productId: prod.id, name: prod.name, grams: i.grams, nutrients: prod.nutrients });
-      continue;
-    }
-    // Ingredients without a product (e.g. a meal saved from the diary) keep their stored snapshot.
-    const kept = existing?.ingredients.find((x) => x.productId === null && x.name === i.name);
-    if (!kept) return { error: "not_found" };
-    ingredients.push({ ...kept, grams: i.grams });
-  }
+  const ingredients = await resolveIngredients(user.id, p.data.ingredients, p.data.id ? await getRecipe(user.id, p.data.id) : null);
+  if (!ingredients) return { error: "not_found" };
   const id = await saveRecipe(user.id, { ...p.data, ingredients });
   revalidatePath("/nutrition", "layout");
   return { id };

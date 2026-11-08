@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useI18n } from "@/i18n/client";
 import { cx, inputClass } from "./ui";
 
 // ── Choice cards (radio group with large touch targets) ─────────────────
@@ -93,6 +94,7 @@ export function Switch({ checked, onChange, label, hint, name }: { checked: bool
 // ── Native dialog as a bottom sheet on mobile, centered on desktop ──────
 /** `full`: takes the whole screen on phones (long flows such as adding food); desktop keeps the dialog. */
 export function Sheet({ open, onClose, title, children, wide, full }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean; full?: boolean }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -156,7 +158,7 @@ export function Sheet({ open, onClose, title, children, wide, full }: { open: bo
       <div className={cx("flex flex-col", full ? "h-full sm:max-h-[88dvh]" : "max-h-[88dvh] group-data-[kb]:h-full group-data-[kb]:max-h-none")}>
         <div className={cx("flex items-center justify-between gap-3 border-b border-border px-5 py-3.5", full && "max-sm:pt-[calc(0.875rem_+_env(safe-area-inset-top))]")}>
           <h2 className="text-base font-semibold">{title}</h2>
-          <button type="button" onClick={onClose} className="-mr-2 grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface-2" aria-label="Close">
+          <button type="button" onClick={onClose} className="-mr-2 grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface-2" aria-label={t("common.close")}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>

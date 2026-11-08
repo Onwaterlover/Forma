@@ -733,7 +733,7 @@ export async function addEntry(
   userId: string,
   e: { date: string; meal: string | null; amount: number } & (
     | { productId: string }
-    | { recipeId: string; mode: "grams" | "servings" }
+    | { recipeId: string; mode: "grams" | "servings"; ingredients?: Recipe["ingredients"] }
     | { quick: { name: string; kcal: number; protein?: number | null; carbs?: number | null; fat?: number | null } }
   ),
 ): Promise<string | null> {
@@ -753,10 +753,12 @@ export async function addEntry(
   } else if ("recipeId" in e) {
     const r = await getRecipe(userId, e.recipeId);
     if (!r) return null;
+    // Changed ingredients for this one entry (e.g. blueberries instead of mango today); the recipe stays as it is.
+    const calc = e.ingredients ? recipeCalc(e.ingredients, { cookedYieldG: scaledYield(r, e.ingredients), servings: r.servings }) : r.calc;
     name = r.name;
-    per100 = r.calc.per100;
+    per100 = calc.per100;
     recipeId = r.id;
-    if (e.mode === "servings") amount = (r.calc.finalWeight / r.servings) * e.amount;
+    if (e.mode === "servings") amount = (calc.finalWeight / r.servings) * e.amount;
   } else {
     // Quick entry: the user typed the values for this portion. Stored as "per 100" of a 100 g pseudo-portion.
     name = e.quick.name;
@@ -842,6 +844,12 @@ const toRecipe = (r: RecipeRow): Recipe => {
   const ingredients = json<Recipe["ingredients"]>(r.ingredients, []);
   return { id: r.id, name: r.name, ingredients, cookedYieldG: r.cooked_yield_g, servings: r.servings, isMeal: r.is_meal === 1, calc: recipeCalc(ingredients, { cookedYieldG: r.cooked_yield_g, servings: r.servings }) };
 };
+
+/** Weight after cooking for changed ingredients: the recipe's own yield, scaled with the raw weight. */
+export function scaledYield(r: Pick<Recipe, "cookedYieldG" | "calc">, ingredients: { grams: number }[]): number | null {
+  if (!r.cookedYieldG || r.calc.rawWeight <= 0) return null;
+  return Math.round(r.cookedYieldG * (ingredients.reduce((a, i) => a + i.grams, 0) / r.calc.rawWeight));
+}
 
 export async function listRecipes(userId: string): Promise<Recipe[]> {
   return (await (await db()).all<RecipeRow>("SELECT * FROM recipes WHERE user_id = ? ORDER BY updated_at DESC", [userId])).map(toRecipe);

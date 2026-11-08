@@ -6,7 +6,7 @@ import { energyMismatch, kjToKcal, sanitize, type Nutrients } from "./calc";
 export const OFF_FIELDS = [
   "code", "product_name", "product_name_pl", "product_name_de", "product_name_en", "product_name_cs", "product_name_sk", "product_name_it",
   "product_name_fr", "product_name_es", "product_name_uk", "generic_name", "generic_name_pl", "abbreviated_product_name", "brands", "quantity",
-  "product_quantity_unit", "serving_size", "serving_quantity", "nutriments", "nutrition_data_per",
+  "product_quantity", "product_quantity_unit", "serving_size", "serving_quantity", "nutriments", "nutrition_data_per",
 ].join(",");
 
 export interface ProductDraft {
@@ -20,6 +20,9 @@ export interface ProductDraft {
 }
 
 type OffNutriments = Record<string, unknown>;
+
+const PIECE = { pl: "1 szt.", de: "1 Stück", en: "1 piece" } as const;
+const PACK = { pl: "1 opakowanie", de: "1 Packung", en: "1 pack" } as const;
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
@@ -59,6 +62,14 @@ export function mapOffProduct(raw: unknown, lang: "pl" | "de" | "en" = "pl"): Pr
   // The serving's weight, or failing that the one written in its text ("1 bar (21.5 g)").
   const sq = Number(p.serving_quantity) || Number(str(p.serving_size)?.match(/(\d+(?:[.,]\d+)?)\s*(g|ml)\b/i)?.[1]?.replace(",", "."));
   if (Number.isFinite(sq) && sq > 0 && sq < 5000) servings.push({ label: str(p.serving_size) ?? `${sq} ${basis}`, amount: sq });
+  // No serving given, but the pack says what is in it: "105 g (3 x 35 g)" is a piece of 35 g, and a small single
+  // pack ("35 g": a bar, a yoghurt, a can) is eaten whole, so "1 Maxi King" means 35 g, not a guess.
+  if (!servings.length) {
+    const multi = qty.match(/\d+\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(g|ml)\b/);
+    const pack = Number(p.product_quantity) || Number(qty.match(/^\s*(\d+(?:[.,]\d+)?)\s*(g|ml)\b/)?.[1]?.replace(",", "."));
+    const piece = multi ? Number(multi[1]!.replace(",", ".")) : pack > 0 && pack <= (basis === "ml" ? 500 : 250) ? pack : 0;
+    if (piece > 0 && piece < 2000) servings.push({ label: `${multi ? PIECE[lang] : PACK[lang]} (${piece} ${basis})`, amount: piece });
+  }
 
   const warnings: ProductDraft["warnings"] = [];
   if (Object.values(nutrients).every((v) => v === null)) warnings.push("no_nutrition");

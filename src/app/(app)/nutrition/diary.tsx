@@ -12,6 +12,7 @@ import type { DiaryEntry, Product, Recipe } from "@/lib/data";
 import type { Nutrients, NutrientKey } from "@/nutrition/calc";
 import { macroTargets } from "@/nutrition/energy";
 import { AddFood, AmountInput, mealNow, servingsWithSlice, type RecipeLite } from "./add-food";
+import { RecipeLog } from "./recipe-log";
 
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
@@ -45,6 +46,8 @@ export function Diary({
   // `meal`: opened from a meal's "+", so the entry goes into that meal.
   const [adding, setAdding] = useState<null | { view: "search" | "scan"; product: (Product & { lastAmount?: number }) | null; meal?: string }>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
+  // A recent meal opened by its name: amount and ingredients before adding.
+  const [logging, setLogging] = useState<{ id: string; name: string; amount: number; mode: "servings" | "grams" } | null>(null);
   // Loaded per entry and tagged with its id: until this entry's data is in, nothing stale (the previous entry's
   // pieces) or provisional (grams) is shown, so the unit doesn't flip after opening.
   const [editServings, setEditServings] = useState<{ entry: string; list: { label: string; amount: number }[] } | null>(null);
@@ -205,10 +208,10 @@ export function Diary({
           <ul className="divide-y divide-border rounded-[var(--radius-card)] border border-border bg-surface px-3">
             {recentMeals.map((m) => (
               <li key={m.id} className="flex items-center gap-2">
-                <Link href={`/nutrition/recipes?open=${m.id}`} className="min-w-0 flex-1 py-2.5">
+                <button type="button" onClick={() => setLogging(m)} className="min-w-0 flex-1 py-2.5 text-left">
                   <span className="block truncate text-[15px] font-medium">{m.name}</span>
                   <span className="block text-xs text-muted">{m.mode === "servings" ? `${fmt(locale, m.amount)} × ${t("nutrition.portion")}` : `${fmt(locale, m.amount)} g`}{m.kcal !== null ? ` · ${fmt(locale, m.kcal)} kcal` : ""}</span>
-                </Link>
+                </button>
                 <button type="button" disabled={pending} aria-label={`${t("common.add")} ${m.name}`}
                   onClick={() => start(async () => {
                     const r = await addRecipeEntry({ recipeId: m.id, amount: m.amount, mode: m.mode, date, meal: date === today ? mealNow(entries) : null });
@@ -253,6 +256,13 @@ export function Diary({
           marked once in the weekly check-in, and the weekly review notices when the log and the scale disagree. */}
 
       <AddFood open={!!adding} onClose={() => { setAdding(null); router.refresh(); }} date={date} today={today} view={adding?.view ?? "search"} product={adding?.product ?? null} meal={adding?.meal} favorites={favorites} recents={recents} entries={entries} recipes={recipes} />
+
+      <Sheet open={!!logging} onClose={() => setLogging(null)} title={logging?.name ?? ""} wide>
+        {logging && (
+          <RecipeLog key={logging.id} recipeId={logging.id} date={date} meal={date === today ? mealNow(entries) : null} amount={logging.amount} mode={logging.mode}
+            onDone={() => { setLogging(null); router.refresh(); }} />
+        )}
+      </Sheet>
 
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.name ?? ""}>
         {editing && (

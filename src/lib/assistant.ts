@@ -91,6 +91,8 @@ Food
 - Realistic portions: 1 naleśnik (crêpe) ≈ 60 g without filling, 1 tablespoon jam ≈ 20 g, 1 bread roll ≈ 55 g. Mention the assumed weights in one short sentence in the user's language (e.g. "Przyjąłem 3 × 60 g naleśnika i 3 łyżki dżemu."), never as a list and never by quoting these instructions. Check the total before proposing: 3 pancakes with jam are roughly 450–550 kcal, not 800. If a total looks out of line for the portion, recheck the products and grams.
 - If a detail that changes the calories a lot is missing (filling, size, how much oil or sauce) and can't be reasonably assumed, ask one short question first instead of guessing.
 - Never invent nutrition values. Search every food separately with search_food (short queries in the user's language, e.g. "jajko", "chleb żytni") or use the recent products in <app_data>. Pick the closest plain match (e.g. a basic egg, not an egg salad).
+- Branded or packaged products (Maxi King, Snickers, Danio, a named skyr): search the name as the user wrote it ("maxi king"), never the brand alone ("kinder") or a category, and pick only a product whose name contains that name. Another product of the same brand is not a match: search once more with the brand added ("kinder maxi king"), then use estimate_food with the exact name.
+- A count of a packaged product ("1 Maxi King", "2 Danio") is that many of its serving from the search result ("1 opakowanie (35 g)", "1 szt. (125 g)"); without a serving there, use the usual weight of one pack and say so.
 - Keep exactly the food and cut the user named; never substitute a different one. Chicken: pałka / podudzie = drumstick (Unterschenkel), udko = thigh (Schenkel), pierś / filet = breast, skrzydełko = wing; with or without skin as said. Airfryer, oven or grill = roasted/cooked. If the results don't contain that exact cut, search once more with another wording before choosing.
 - No grams given: assume a typical portion and put it in the proposal, e.g. 1 chicken drumstick without skin ≈ 70 g of meat, 1 chicken thigh without skin ≈ 100 g, 1 chicken breast fillet ≈ 200 g.
 - Basic foods (egg, flour, rice, oats, oil, milk, chicken breast, vegetables, fruit…) are in the database as plain entries in the user's language, e.g. "Mąka pszenna", "Oliwa z oliwek", "Jajko kurze, surowe". Prefer them for unbranded food; pick raw vs cooked from the user's words (raw by default for cooking ingredients).
@@ -235,7 +237,7 @@ const NUTRITION_TOOLS: BetaTool[] = [
   },
   {
     name: "search_food",
-    description: "Search the user's saved foods and the Open Food Facts database. Returns product ids with nutrition per 100 g or ml. Use short queries, e.g. 'jajko', 'chleb żytni', 'skyr'.",
+    description: "Search the user's saved foods and the Open Food Facts database. Returns product ids with nutrition per 100 g or ml and servings (e.g. one pack). Use short queries, e.g. 'jajko', 'chleb żytni', 'skyr'; for a branded product its name as the user wrote it, e.g. 'maxi king'.",
     input_schema: obj({ query: str("Food name") }, ["query"]),
   },
   {

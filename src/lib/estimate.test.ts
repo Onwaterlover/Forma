@@ -47,6 +47,27 @@ describe("AI food estimate", () => {
     reply({ food: true, name: "X", basis: "g", state: null, kcal: 900, protein: 10, carbs: 10, fat: 1, fiber: 0 });
     expect(await ai.estimateFood("coś", "pl")).toBeNull();
   });
+  it("a recipe logged with changed ingredients counts the change for that entry only", async () => {
+    const auth = await import("./auth");
+    const { emptyNutrients } = await import("@/nutrition/calc");
+    const u = await auth.createUser("recipe-log@test.test", "R", "password-rrrr-1", false);
+    const n = (kcal: number) => ({ ...emptyNutrients(), kcal, protein: 0, carbs: 0, fat: 0 });
+    // Porridge: 100 g oats (380 kcal/100 g) + 100 g mango (60) = 440 kcal raw, cooked to 400 g, 2 servings.
+    const id = await data.saveRecipe(u, { name: "Owsianka", cookedYieldG: 400, servings: 2, isMeal: false, ingredients: [
+      { productId: null, name: "Płatki", grams: 100, nutrients: n(380) },
+      { productId: null, name: "Mango", grams: 100, nutrients: n(60) },
+    ] });
+    const r = (await data.getRecipe(u, id))!;
+    // Today blueberries (57) instead of mango, and 150 g of them: raw 250 g, so cooked 500 g; 1 serving = 250 g.
+    const today = [r.ingredients[0]!, { productId: null, name: "Borówki", grams: 150, nutrients: n(57) }];
+    const e = await data.addEntry(u, { date: "2026-11-08", meal: null, recipeId: id, mode: "servings", amount: 1, ingredients: today });
+    const day = await data.diaryDay(u, "2026-11-08");
+    const entry = day.entries.find((x) => x.id === e)!;
+    expect(entry.amount).toBe(250);
+    expect(Math.round(entry.values.kcal!)).toBe(Math.round((380 + 1.5 * 57) / 2));
+    // The recipe itself is unchanged.
+    expect((await data.getRecipe(u, id))!.ingredients.map((i) => i.name)).toEqual(["Płatki", "Mango"]);
+  });
   it("own products can be deleted only by their owner; diary entries keep their values", async () => {
     const auth = await import("./auth");
     const { emptyNutrients } = await import("@/nutrition/calc");

@@ -1,7 +1,7 @@
 "use client";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { productFor, removeRecipe, saveRecipeAction } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, Switch, useToast } from "@/components/client";
 import { Badge, Button, Card, Empty, Field, Input } from "@/components/ui";
@@ -9,7 +9,8 @@ import { fmt } from "@/i18n";
 import { useI18n } from "@/i18n/client";
 import type { Product, Recipe } from "@/lib/data";
 import { recipe as calc } from "@/nutrition/calc";
-import { AmountInput, ProductList, servingsWithSlice } from "../add-food";
+import { AmountInput, servingsWithSlice } from "../add-food";
+import { SearchResults } from "../food-search";
 
 type Draft = { id?: string; name: string; ingredients: { productId: string | null; name: string; grams: number | null; nutrients: Product["nutrients"] }[]; cookedYieldG: number | null; servings: number | null; isMeal: boolean };
 
@@ -41,35 +42,8 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
   // The ingredient search opens with the "Add ingredient" button (and on its own for an empty recipe).
   const [searching, setSearching] = useState(false);
   const [q, setQ] = useState("");
-  const [found, setFound] = useState<Product[] | null>(null);
-  const [remote, setRemote] = useState<Product[] | null>(null);
-  const [remoteState, setRemoteState] = useState<"idle" | "loading" | "error">("idle");
   const [pending, start] = useTransition();
 
-  // Same search as adding food: own + basic foods as you type; Open Food Facts on request or when little is found.
-  useEffect(() => {
-    setFound(null);
-    setRemote(null);
-    setRemoteState("idle");
-    if (q.trim().length < 2) return;
-    let live = true;
-    const h = setTimeout(async () => {
-      const r = await fetch(`/api/food/search?q=${encodeURIComponent(q)}`).then((x) => x.json()).catch(() => ({ products: [] }));
-      if (!live) return;
-      setFound(r.products ?? []);
-      if (q.trim().length >= 3) searchOff(r.products ?? [], () => live);
-    }, 450);
-    return () => { live = false; clearTimeout(h); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q]);
-  const searchOff = async (have: Product[], live = () => true) => {
-    setRemoteState("loading");
-    const r = await fetch(`/api/food/search?q=${encodeURIComponent(q)}&remote=1`).then((x) => x.json()).catch(() => ({ error: "x" }));
-    if (!live()) return;
-    if (r.error) return setRemoteState("error");
-    setRemoteState("idle");
-    setRemote((r.products ?? []).filter((p: Product) => !have.some((x) => x.id === p.id)));
-  };
   const addIngredient = (p: Product) => {
     if (!draft) return;
     setDraft({ ...draft, ingredients: [...draft.ingredients, { productId: p.id, name: p.name, grams: 100, nutrients: p.nutrients }] });
@@ -78,6 +52,14 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
     // Open the new ingredient's amount right away (starts at 100 g).
     setEditIdx(draft.ingredients.length);
     loadServings(draft.ingredients.length, p.id);
+  };
+
+  // Opened from the food diary ("Edit recipe"): closing or saving goes back there instead of staying here.
+  const leave = () => {
+    if (draft?.id && draft.id === openId) {
+      if (window.history.length > 1) router.back();
+      else router.push("/nutrition");
+    }
   };
 
   const preview = draft ? calc(draft.ingredients.map((i) => ({ ...i, grams: i.grams ?? 0 })), { cookedYieldG: draft.cookedYieldG, servings: draft.servings ?? 1 }) : null;
@@ -102,7 +84,7 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
         </Card>
       )}
 
-      <Sheet open={!!draft} onClose={() => { setDraft(null); setEditIdx(null); setSearching(false); setQ(""); }} title={draft?.id ? draft.name : t("nutrition.newRecipe")} wide full>
+      <Sheet open={!!draft} onClose={() => { leave(); setDraft(null); setEditIdx(null); setSearching(false); setQ(""); }} title={draft?.id ? draft.name : t("nutrition.newRecipe")} wide full>
         {draft && (
           <div className="space-y-4">
             <Field label={t("nutrition.name")} htmlFor="r-name"><Input id="r-name" value={draft.name} maxLength={80} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
@@ -142,22 +124,7 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
               ) : (
                 <Button variant="secondary" full className="mt-3" onClick={() => { setEditIdx(null); setSearching(true); }}><Plus size={18} aria-hidden />{t("nutrition.addIngredient")}</Button>
               )}
-              {(searching || draft.ingredients.length === 0) && q.trim().length >= 2 && (
-                // Always says what happened: searching, found (tap to add), or nothing found.
-                <div className="mt-2 max-h-72 overflow-y-auto rounded-xl border border-border px-3">
-                  {(() => {
-                    const all = [...(found ?? []), ...(remote ?? [])];
-                    if (found === null) return <p className="py-3 text-sm text-muted">{t("common.loading")}</p>;
-                    if (!all.length) return <p className="py-3 text-sm text-muted">{remoteState === "loading" ? t("nutrition.searchingRemote") : remoteState === "error" ? t("nutrition.unavailable") : t("nutrition.nothingFound")}</p>;
-                    return (
-                      <>
-                        <ProductList items={all} onPick={addIngredient} />
-                        {remoteState === "loading" && <p className="py-2 text-center text-xs text-muted">{t("nutrition.searchingRemote")}</p>}
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
+              {(searching || draft.ingredients.length === 0) && <SearchResults q={q} onPick={addIngredient} />}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label={t("nutrition.cookedYield")} htmlFor="r-yield" hint={t("nutrition.cookedYieldHint")}><DecimalInput id="r-yield" value={draft.cookedYieldG} onChange={(v) => setDraft({ ...draft, cookedYieldG: v })} /></Field>
@@ -174,7 +141,7 @@ export function Recipes({ recipes, openId }: { recipes: Recipe[]; openId?: strin
               onClick={() => start(async () => {
                 const r = await saveRecipeAction({ id: draft.id, name: draft.name, ingredients: draft.ingredients.map((i) => ({ productId: i.productId, name: i.name, grams: i.grams! })), cookedYieldG: draft.cookedYieldG, servings: draft.servings ?? 1, isMeal: draft.isMeal });
                 toast({ text: r.error ? t("common.error") : t("common.saved") });
-                if (!r.error) { setDraft(null); router.refresh(); }
+                if (!r.error) { leave(); setDraft(null); router.refresh(); }
               })}>{t("common.save")}</Button>
           </div>
         )}

@@ -3,6 +3,7 @@ import { gtinChecksumOk, normalizeBarcode, upcEToUpcA } from "./barcode";
 import { emptyNutrients, energyMismatch, medianOf, parseDecimal, recipe, sanitize, scale, sum, type Nutrients } from "./calc";
 import { adaptiveTdee, initialEstimate, proteinTarget, suggestTarget, weightTrend, type IntakeDay, type WeighIn } from "./energy";
 import { mapOffProduct } from "./off";
+import { countFromLabel } from "./slices";
 
 const n = (o: Partial<Nutrients>): Nutrients => ({ ...emptyNutrients(), ...o });
 const RICE_RAW = n({ kcal: 350, protein: 7, carbs: 78, fat: 0.6 });
@@ -300,5 +301,16 @@ describe("household units", () => {
   it("takes the serving weight from its text when the number is missing", () => {
     const p = mapOffProduct({ code: "4008400940024", product_name: "Kinder Bueno", serving_size: "1 bar (21.5 g)", nutriments: { "energy-kcal_100g": 572 } }, "en");
     expect(p?.servings).toEqual([{ label: "1 bar (21.5 g)", amount: 21.5 }]);
+  });
+
+  it("without a serving, a piece or a small pack comes from the pack size (1 Maxi King = 35 g)", () => {
+    const n = { "energy-kcal_100g": 521 };
+    const one = mapOffProduct({ code: "4008400553023", product_name: "Kinder Maxi King", quantity: "35 g", product_quantity: 35, nutriments: n }, "pl");
+    expect(one?.servings).toEqual([{ label: "1 opakowanie (35 g)", amount: 35 }]);
+    expect(countFromLabel(one!.servings[0]!.label)).toEqual({ n: 1, amount: 35 });
+    const three = mapOffProduct({ code: "4008400551920", product_name: "Kinder Maxi King 3er-Pack", quantity: "105 g (3 x 35 g)", product_quantity: 105, nutriments: n }, "pl");
+    expect(three?.servings).toEqual([{ label: "1 szt. (35 g)", amount: 35 }]);
+    // A big pack is not one portion.
+    expect(mapOffProduct({ code: "5900000000001", product_name: "Płatki", quantity: "500 g", product_quantity: 500, nutriments: n }, "pl")?.servings).toEqual([]);
   });
 });

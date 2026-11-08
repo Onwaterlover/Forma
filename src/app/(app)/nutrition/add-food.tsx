@@ -10,10 +10,11 @@ import type { Product } from "@/lib/data";
 import { energyMismatch, medianOf, NUTRIENT_KEYS, scale, type NutrientKey } from "@/nutrition/calc";
 import { countFromLabel, typicalPiece, typicalSlice, typicalUnits } from "@/nutrition/slices";
 import { suggestMeal } from "@/nutrition/meal";
+import { RecipeLog } from "./recipe-log";
 import { Scanner } from "./scanner";
 
 export type RecipeLite = { id: string; name: string; isMeal: boolean; servings: number; finalWeight: number; perServingKcal: number | null; totalKcal: number | null };
-type View = "search" | "scan" | "meals" | "custom" | "quick";
+type View = "search" | "scan" | "meals" | "recipe" | "custom" | "quick";
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
 /** Meal suggested when logging for today (the user can change it): see suggestMeal. */
@@ -50,6 +51,8 @@ export function AddFood({
   const [prefill, setPrefill] = useState<{ name: string; brand: string | null } | null>(null);
   const [scanned, setScanned] = useState(false);
   const [pending, start] = useTransition();
+  // A recipe or saved meal opened from the "Meals" tab (amount and ingredients before adding).
+  const [recipe, setRecipe] = useState<RecipeLite | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -87,7 +90,7 @@ export function AddFood({
     else toast({ text: data.error === "rate_limited" ? t("nutrition.rateLimited") : t("nutrition.unavailable") });
   }, [t, toast]);
 
-  const title = picked ? picked.name : view === "scan" ? t("nutrition.scan") : view === "meals" ? t("nutrition.meals") : view === "custom" ? t("nutrition.custom") : view === "quick" ? t("nutrition.quick") : t("nutrition.add");
+  const title = picked ? picked.name : view === "recipe" && recipe ? recipe.name : view === "scan" ? t("nutrition.scan") : view === "meals" ? t("nutrition.meals") : view === "custom" ? t("nutrition.custom") : view === "quick" ? t("nutrition.quick") : t("nutrition.add");
   // Picking closes the keyboard first, so it can't cover the amount; the search below stays mounted (hidden),
   // so its query and results are still there after adding, going back or starring the product.
   const pick = (p: Product) => {
@@ -106,9 +109,9 @@ export function AddFood({
       {(!picked || view === "search") && (
         <div className={cx("space-y-4", picked && "hidden")}>
           {view !== "search" && (
-            <button type="button" onClick={() => setView("search")} className="-ml-1 inline-flex items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={16} aria-hidden />{t("nutrition.search")}</button>
+            <button type="button" onClick={() => setView(view === "recipe" ? "meals" : "search")} className="-ml-1 inline-flex items-center gap-1 text-sm text-muted hover:text-text"><ChevronLeft size={16} aria-hidden />{t(view === "recipe" ? "nutrition.meals" : "nutrition.search")}</button>
           )}
-          <MealSelect meal={meal} onChange={setMeal} />
+          {view !== "recipe" && <MealSelect meal={meal} onChange={setMeal} />}
 
           {view === "search" && (
             <SearchTab onPick={pick} onScan={() => setView("scan")}>
@@ -133,7 +136,8 @@ export function AddFood({
             </SearchTab>
           )}
           {view === "scan" && open && <Scanner onCode={onCode} />}
-          {view === "meals" && <MealsTab recipes={recipes} pending={pending} onLog={(r, amount, mode) => start(async () => {
+          {view === "recipe" && recipe && <RecipeLog key={recipe.id} recipeId={recipe.id} date={date} meal={meal} onDone={onClose} />}
+          {view === "meals" && <MealsTab recipes={recipes} pending={pending} onOpen={(r) => { setRecipe(r); setView("recipe"); }} onLog={(r, amount, mode) => start(async () => {
             const res = await addRecipeEntry({ recipeId: r.id, amount, mode, date, meal });
             toast({ text: res.error ? t("common.error") : `${t("common.saved")}: ${r.name}` });
             if (!res.error) onClose();
@@ -153,7 +157,7 @@ export function AddFood({
   );
 }
 
-function MealSelect({ meal, onChange }: { meal: string | null; onChange: (m: string | null) => void }) {
+export function MealSelect({ meal, onChange }: { meal: string | null; onChange: (m: string | null) => void }) {
   const { t } = useI18n();
   return (
     <Select aria-label={t("nutrition.mealLabel")} value={meal ?? ""} onChange={(e) => onChange(e.target.value || null)} className="h-10">
@@ -426,10 +430,10 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
   );
 }
 
-function MealsTab({ recipes, onLog, pending }: { recipes: RecipeLite[]; onLog: (r: RecipeLite, amount: number, mode: "grams" | "servings") => void; pending: boolean }) {
+function MealsTab({ recipes, onLog, onOpen, pending }: { recipes: RecipeLite[]; onLog: (r: RecipeLite, amount: number, mode: "grams" | "servings") => void; onOpen: (r: RecipeLite) => void; pending: boolean }) {
   const { t, locale } = useI18n();
-  // A recipe is logged in servings or, e.g. for a cake, in grams of the finished dish (values per 100 g follow
-  // the weight after cooking when the recipe has one). Saved meals are logged whole, as before.
+  // Recipes and saved meals alike are logged in servings or in grams of the finished dish (values per 100 g follow
+  // the weight after cooking when the recipe has one). The name opens it: amount and ingredients, changeable.
   const [servings, setServings] = useState<Record<string, number | null>>({});
   const [grams, setGrams] = useState<Record<string, number | null>>({});
   const [byGrams, setByGrams] = useState<Record<string, boolean>>({});
@@ -443,30 +447,28 @@ function MealsTab({ recipes, onLog, pending }: { recipes: RecipeLite[]; onLog: (
         return (
           <li key={r.id} className="flex items-center gap-2 py-2">
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{r.name}</p>
-              <p className="text-xs text-muted">
-                {r.isMeal ? `${fmt(locale, r.totalKcal)} kcal` : g ? `${fmt(locale, per100)} kcal / 100 g` : `${fmt(locale, r.perServingKcal)} kcal ${t("nutrition.perServing")}`}
-              </p>
-              {!r.isMeal && (
-                <div className="mt-1 inline-flex rounded-lg bg-surface-2 p-0.5 text-xs" role="group" aria-label={t("nutrition.unit")}>
-                  {[false, true].map((v) => (
-                    <button key={String(v)} type="button" aria-pressed={g === v} onClick={() => setByGrams({ ...byGrams, [r.id]: v })}
-                      className={cx("min-h-8 rounded-md px-2.5", g === v ? "bg-surface font-medium shadow-sm" : "text-muted")}>
-                      {v ? t("nutrition.logGrams") : t("nutrition.logServings")}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {!r.isMeal && (
-              <div className="relative w-20">
-                <DecimalInput aria-label={g ? t("nutrition.logGrams") : t("nutrition.logServings")} value={value}
-                  onChange={(v) => (g ? setGrams({ ...grams, [r.id]: v }) : setServings({ ...servings, [r.id]: v }))} className={cx("h-10", g && "pr-6")} />
-                {g && <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted">g</span>}
+              <button type="button" onClick={() => onOpen(r)} className="block max-w-full text-left">
+                <span className="block truncate font-medium">{r.name}</span>
+                <span className="block text-xs text-muted">
+                  {g ? `${fmt(locale, per100)} kcal / 100 g` : `${fmt(locale, r.perServingKcal)} kcal ${t("nutrition.perServing")}`}
+                </span>
+              </button>
+              <div className="mt-1 inline-flex rounded-lg bg-surface-2 p-0.5 text-xs" role="group" aria-label={t("nutrition.unit")}>
+                {[false, true].map((v) => (
+                  <button key={String(v)} type="button" aria-pressed={g === v} onClick={() => setByGrams({ ...byGrams, [r.id]: v })}
+                    className={cx("min-h-8 rounded-md px-2.5", g === v ? "bg-surface font-medium shadow-sm" : "text-muted")}>
+                    {v ? t("nutrition.logGrams") : t("nutrition.logServings")}
+                  </button>
+                ))}
               </div>
-            )}
-            <button type="button" disabled={pending || (!r.isMeal && !(value && value > 0))} aria-label={`${t("common.add")} ${r.name}`}
-              onClick={() => (r.isMeal ? onLog(r, r.finalWeight, "grams") : value && onLog(r, value, g ? "grams" : "servings"))}
+            </div>
+            <div className="relative w-20">
+              <DecimalInput aria-label={g ? t("nutrition.logGrams") : t("nutrition.logServings")} value={value}
+                onChange={(v) => (g ? setGrams({ ...grams, [r.id]: v }) : setServings({ ...servings, [r.id]: v }))} className={cx("h-10", g && "pr-6")} />
+              {g && <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted">g</span>}
+            </div>
+            <button type="button" disabled={pending || !(value && value > 0)} aria-label={`${t("common.add")} ${r.name}`}
+              onClick={() => value && onLog(r, value, g ? "grams" : "servings")}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent hover:bg-accent hover:text-accent-contrast">
               <Plus size={20} />
             </button>

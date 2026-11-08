@@ -1,7 +1,7 @@
 "use client";
 import { ChevronLeft, Flame, PackagePlus, Plus, ScanBarcode, Star, Utensils } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
-import { addProductEntry, addQuickEntry, addRecipeEntry, averageProduct, productFor, removeOwnProduct, saveFood, toggleFavorite } from "@/app/actions/nutrition";
+import { addProductEntry, addQuickEntry, averageProduct, productFor, removeOwnProduct, saveFood, toggleFavorite } from "@/app/actions/nutrition";
 import { DecimalInput, Sheet, useToast } from "@/components/client";
 import { Badge, Button, cx, Field, Input, Notice, Select } from "@/components/ui";
 import { DICTS, fmt, type Locale, type T } from "@/i18n";
@@ -30,8 +30,8 @@ export function AddFood({
   onClose: () => void;
   date: string;
   today: string;
-  /** Where the sheet opens: the search list or straight into the camera scanner. */
-  view: "search" | "scan";
+  /** Where the sheet opens: the search list, straight into the camera scanner, or the user's meals. */
+  view: "search" | "scan" | "meals";
   /** Open directly on the amount screen for this product (e.g. tapped in "Recent"). */
   product: Product | null;
   favorites: Product[];
@@ -52,7 +52,8 @@ export function AddFood({
   const [scanned, setScanned] = useState(false);
   const [pending, start] = useTransition();
   // A recipe or saved meal opened from the "Meals" tab (amount and ingredients before adding).
-  const [recipe, setRecipe] = useState<RecipeLite | null>(null);
+  const [recipe, setRecipe] = useState<RecipeLite | "new" | null>(null);
+  const [newName, setNewName] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -90,7 +91,7 @@ export function AddFood({
     else toast({ text: data.error === "rate_limited" ? t("nutrition.rateLimited") : t("nutrition.unavailable") });
   }, [t, toast]);
 
-  const title = picked ? picked.name : view === "recipe" && recipe ? recipe.name : view === "scan" ? t("nutrition.scan") : view === "meals" ? t("nutrition.meals") : view === "custom" ? t("nutrition.custom") : view === "quick" ? t("nutrition.quick") : t("nutrition.add");
+  const title = picked ? picked.name : view === "recipe" && recipe ? (recipe === "new" ? newName ?? t("nutrition.newRecipe") : recipe.name) : view === "scan" ? t("nutrition.scan") : view === "meals" ? t("nutrition.meals") : view === "custom" ? t("nutrition.custom") : view === "quick" ? t("nutrition.quick") : t("nutrition.add");
   // Picking closes the keyboard first, so it can't cover the amount; the search below stays mounted (hidden),
   // so its query and results are still there after adding, going back or starring the product.
   const pick = (p: Product) => {
@@ -136,12 +137,8 @@ export function AddFood({
             </SearchTab>
           )}
           {view === "scan" && open && <Scanner onCode={onCode} />}
-          {view === "recipe" && recipe && <RecipeLog key={recipe.id} recipeId={recipe.id} date={date} meal={meal} onDone={onClose} />}
-          {view === "meals" && <MealsTab recipes={recipes} pending={pending} onOpen={(r) => { setRecipe(r); setView("recipe"); }} onLog={(r, amount, mode) => start(async () => {
-            const res = await addRecipeEntry({ recipeId: r.id, amount, mode, date, meal });
-            toast({ text: res.error ? t("common.error") : `${t("common.saved")}: ${r.name}` });
-            if (!res.error) onClose();
-          })} />}
+          {view === "recipe" && recipe && <RecipeLog key={recipe === "new" ? "new" : recipe.id} recipeId={recipe === "new" ? null : recipe.id} date={date} meal={meal} onDone={onClose} onSaved={setNewName} />}
+          {view === "meals" && <MealsTab recipes={recipes} onOpen={(r) => { setRecipe(r); setNewName(null); setView("recipe"); }} />}
           {view === "custom" && <CustomFood barcode={barcodeForNew} prefill={prefill} onSaved={async (id) => {
             const prod = await productFor(id);
             if (prod) setPicked(prod);
@@ -430,52 +427,28 @@ export function AmountPicker({ product, onAdd, onBack, pending, meal, onRescan }
   );
 }
 
-function MealsTab({ recipes, onLog, onOpen, pending }: { recipes: RecipeLite[]; onLog: (r: RecipeLite, amount: number, mode: "grams" | "servings") => void; onOpen: (r: RecipeLite) => void; pending: boolean }) {
+function MealsTab({ recipes, onOpen }: { recipes: RecipeLite[]; onOpen: (r: RecipeLite | "new") => void }) {
   const { t, locale } = useI18n();
-  // Recipes and saved meals alike are logged in servings or in grams of the finished dish (values per 100 g follow
-  // the weight after cooking when the recipe has one). The name opens it: amount and ingredients, changeable.
-  const [servings, setServings] = useState<Record<string, number | null>>({});
-  const [grams, setGrams] = useState<Record<string, number | null>>({});
-  const [byGrams, setByGrams] = useState<Record<string, boolean>>({});
-  if (!recipes.length) return <p className="py-4 text-center text-sm text-muted">{t("nutrition.noResults")}</p>;
+  // One line per recipe or saved meal; how much (servings or grams) and the ingredients come after tapping it.
   return (
-    <ul className="divide-y divide-border">
-      {recipes.map((r) => {
-        const g = !!byGrams[r.id];
-        const value = g ? (r.id in grams ? grams[r.id]! : 100) : (r.id in servings ? servings[r.id]! : 1);
-        const per100 = r.totalKcal === null || r.finalWeight <= 0 ? null : (r.totalKcal / r.finalWeight) * 100;
-        return (
-          <li key={r.id} className="flex items-center gap-2 py-2">
-            <div className="min-w-0 flex-1">
-              <button type="button" onClick={() => onOpen(r)} className="block max-w-full text-left">
-                <span className="block truncate font-medium">{r.name}</span>
-                <span className="block text-xs text-muted">
-                  {g ? `${fmt(locale, per100)} kcal / 100 g` : `${fmt(locale, r.perServingKcal)} kcal ${t("nutrition.perServing")}`}
+    <div className="space-y-2">
+      <Button variant="secondary" full onClick={() => onOpen("new")}><Plus size={18} aria-hidden />{t("nutrition.newRecipe")}</Button>
+      {!recipes.length ? <p className="py-4 text-center text-sm text-muted">{t("nutrition.noResults")}</p> : (
+        <ul className="divide-y divide-border">
+          {recipes.map((r) => (
+            <li key={r.id}>
+              <button type="button" onClick={() => onOpen(r)} className="flex w-full items-center gap-3 py-2.5 text-left">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{r.name}</span>
+                  <span className="block text-xs text-muted">{fmt(locale, r.perServingKcal)} kcal {t("nutrition.perServing")}</span>
                 </span>
+                <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><Plus size={20} /></span>
               </button>
-              <div className="mt-1 inline-flex rounded-lg bg-surface-2 p-0.5 text-xs" role="group" aria-label={t("nutrition.unit")}>
-                {[false, true].map((v) => (
-                  <button key={String(v)} type="button" aria-pressed={g === v} onClick={() => setByGrams({ ...byGrams, [r.id]: v })}
-                    className={cx("min-h-8 rounded-md px-2.5", g === v ? "bg-surface font-medium shadow-sm" : "text-muted")}>
-                    {v ? t("nutrition.logGrams") : t("nutrition.logServings")}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="relative w-20">
-              <DecimalInput aria-label={g ? t("nutrition.logGrams") : t("nutrition.logServings")} value={value}
-                onChange={(v) => (g ? setGrams({ ...grams, [r.id]: v }) : setServings({ ...servings, [r.id]: v }))} className={cx("h-10", g && "pr-6")} />
-              {g && <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted">g</span>}
-            </div>
-            <button type="button" disabled={pending || !(value && value > 0)} aria-label={`${t("common.add")} ${r.name}`}
-              onClick={() => value && onLog(r, value, g ? "grams" : "servings")}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent hover:bg-accent hover:text-accent-contrast">
-              <Plus size={20} />
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

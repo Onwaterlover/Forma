@@ -44,7 +44,7 @@ export function Diary({
   const toast = useToast();
   const router = useRouter();
   // `meal`: opened from a meal's "+", so the entry goes into that meal.
-  const [adding, setAdding] = useState<null | { view: "search" | "scan"; product: (Product & { lastAmount?: number }) | null; meal?: string }>(null);
+  const [adding, setAdding] = useState<null | { view: "search" | "scan" | "meals"; product: (Product & { lastAmount?: number }) | null; meal?: string }>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   // A recent meal opened by its name: amount and ingredients before adding.
   const [logging, setLogging] = useState<{ id: string; name: string; amount: number; mode: "servings" | "grams" } | null>(null);
@@ -141,10 +141,11 @@ export function Diary({
         </div>
       </Card>
 
-      {/* Four ways to log, one tap each: search, barcode, photo, describe (the last two only with AI). */}
-      <div className={cx("mb-2 grid gap-2", assistant ? "grid-cols-4" : "grid-cols-2")}>
+      {/* Ways to log, one tap each: search, barcode, own meals and recipes, describe (only with AI). */}
+      <div className={cx("mb-2 grid gap-2", assistant ? "grid-cols-4" : "grid-cols-3")}>
         <Button size="tile" onClick={() => setAdding({ view: "search", product: null })}><Search size={20} aria-hidden />{t("nutrition.searchShort")}</Button>
         <Button size="tile" variant="secondary" onClick={() => setAdding({ view: "scan", product: null })}><ScanBarcode size={20} aria-hidden />{t("nutrition.scan")}</Button>
+        <Button size="tile" variant="secondary" onClick={() => setAdding({ view: "meals", product: null })}><Utensils size={20} aria-hidden />{t("nutrition.meals")}</Button>
         {assistant}
       </div>
       <div className="mb-4 flex flex-wrap gap-1">

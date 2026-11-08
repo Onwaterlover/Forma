@@ -123,8 +123,6 @@ export function Assistant({ scope, date, enabled, provider, review, onClose }: {
         <Button variant="secondary" size="sm" onClick={() => setOpen(true)}><Sparkles size={16} aria-hidden />{t("assistant.open")}</Button>
       ) : (
         <>
-          {/* Opens the camera straight away; the picked photo is sent at once. */}
-          <Button variant="secondary" size="tile" onClick={() => { setMode("photo"); if (on) takePhoto(); else setOpen(true); }}><Camera size={20} aria-hidden />{t("assistant.takePhotoShort")}</Button>
           <Button variant="secondary" size="tile" onClick={() => { setMode("chat"); setOpen(true); }}><PenLine size={20} aria-hidden />{t("assistant.describeShort")}</Button>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
             onChange={async (e) => {

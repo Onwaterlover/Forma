@@ -18,14 +18,17 @@ type Item = { productId: string | null; name: string; grams: number | null; nutr
  * Logging a recipe or saved meal: how much (servings or grams), and its ingredients, which can be changed for this
  * entry only (blueberries instead of mango today) or, with the switch, in the recipe too.
  */
-export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount, mode: startMode, onDone }: {
-  recipeId: string;
+export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount, mode: startMode, onDone, onSaved }: {
+  /** null: a new recipe, written here first and then ready to add. */
+  recipeId: string | null;
   date: string;
   meal: string | null;
   /** Last logged amount, if any (e.g. from "Recent meals"). */
   amount?: number;
   mode?: "servings" | "grams";
   onDone: () => void;
+  /** After saving the recipe here (e.g. to show its new name as the title). */
+  onSaved?: (name: string) => void;
 }) {
   const { t, locale } = useI18n();
   const toast = useToast();
@@ -51,6 +54,12 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
     setForm({ name: x.name, servings: x.servings, yieldG: x.cookedYieldG });
   };
   useEffect(() => {
+    if (recipeId === null) {
+      load({ id: "", name: "", ingredients: [], cookedYieldG: null, servings: 1, isMeal: false, calc: calc([]) });
+      setEditing(true);
+      setSwap("new");
+      return;
+    }
     let live = true;
     recipeFor(recipeId).then((x) => live && load(x)).catch(() => live && setR(null));
     return () => { live = false; };
@@ -84,12 +93,13 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
 
   const saveRecipe = () => start(async () => {
     const res = await saveRecipeAction({
-      id: r.id, name: form.name, cookedYieldG: form.yieldG, servings: form.servings ?? 1, isMeal: r.isMeal,
+      id: r.id || undefined, name: form.name, cookedYieldG: form.yieldG, servings: form.servings ?? 1, isMeal: r.isMeal,
       ingredients: items.map((i) => ({ productId: i.productId, name: i.name, grams: i.grams! })),
     });
     toast({ text: res.error ? t("common.error") : t("common.saved") });
     if (res.error) return;
-    load(await recipeFor(r.id));
+    load(await recipeFor(res.id ?? r.id));
+    onSaved?.(form.name.trim());
     setEditing(false);
     router.refresh();
   });
@@ -161,7 +171,7 @@ export function RecipeLog({ recipeId, date, meal: startMeal, amount: startAmount
       {editing ? (
         <div className="flex gap-2">
           <Button full disabled={pending || !ready || !form.name.trim() || !(form.servings && form.servings > 0)} onClick={saveRecipe}>{t("common.save")}</Button>
-          <Button variant="ghost" disabled={pending} onClick={() => load(r)}>{t("common.cancel")}</Button>
+          {r.id && <Button variant="ghost" disabled={pending} onClick={() => { load(r); setSwap(null); setEditing(false); }}>{t("common.cancel")}</Button>}
         </div>
       ) : <>
       {changed && (
